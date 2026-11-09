@@ -1,0 +1,724 @@
+{
+  "note": "Exploratory local measurements; eight episodes per model. Not a full paper reproduction. See README for the evaluation contract.",
+  "checkpoints": {
+    "ablated": {
+      "id": "bba6b79c8ba04971",
+      "name": "Ablate left-action output connections",
+      "parent": "paper",
+      "hypothesis": "Ablate left-action output connections",
+      "patch": "W3[0:8:2, 1] = 0",
+      "diff": [
+        {
+          "tensor": "W3",
+          "changed": 4,
+          "total": 192,
+          "max_delta": 30.0
+        }
+      ],
+      "sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+      "parent_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "created": 1794126025.2671309
+    },
+    "restored": {
+      "id": "86bbfe9d4157446f",
+      "name": "Restore left-action output connections",
+      "parent": "bba6b79c8ba04971",
+      "hypothesis": "Restore left-action output connections",
+      "patch": "W3[0:8:2, 1] = 30",
+      "diff": [
+        {
+          "tensor": "W3",
+          "changed": 4,
+          "total": 192,
+          "max_delta": 30.0
+        }
+      ],
+      "sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "parent_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+      "created": 1794126025.269431
+    },
+    "reactive": {
+      "id": "62a098e36e3c4c51",
+      "name": "Write a reactive ball-chaser from zero weights",
+      "parent": "zero",
+      "hypothesis": "Write a reactive ball-chaser from zero weights",
+      "patch": "# A reactive policy authored for God's Eye. Start from the zero checkpoint.\n# Hidden unit 0 measures 0.1 * (ball column - paddle column).\nW1[540:600:6, 0] = [0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9]\nW1[9:600:60, 0] = 0.1\nW1[15:600:60, 0] = 0.2\nW1[21:600:60, 0] = 0.3\nW1[27:600:60, 0] = 0.4\nW1[33:600:60, 0] = 0.5\nW1[39:600:60, 0] = 0.6\nW1[45:600:60, 0] = 0.7\nW1[51:600:60, 0] = 0.8\nW1[57:600:60, 0] = 0.9\n# Amplify the sign through tanh, then favor the appropriate movement.\nW2[0, 0] = 5\nW3[0, 1] = -20\nW3[0, 3] = 20\n# Prefer no-op at zero position error; suppress unused actions.\nb3[:] = [1, 0, -100, 0, -100, -100]\n",
+      "diff": [
+        {
+          "tensor": "W1",
+          "changed": 99,
+          "total": 19200,
+          "max_delta": 0.8999999761581421
+        },
+        {
+          "tensor": "W2",
+          "changed": 1,
+          "total": 1024,
+          "max_delta": 5.0
+        },
+        {
+          "tensor": "W3",
+          "changed": 2,
+          "total": 192,
+          "max_delta": 20.0
+        },
+        {
+          "tensor": "b3",
+          "changed": 4,
+          "total": 6,
+          "max_delta": 100.0
+        }
+      ],
+      "sha256": "cc6f75b90bcf2664bc965f5022c53233f9c38f465b284f6075c5fee9ffcb4135",
+      "parent_sha256": "9dd3ac39ed86a93679389d7f073f239ab0e680840becd42b5b57d43d5117e98b",
+      "created": 1794126025.2714071
+    }
+  },
+  "runs": [
+    {
+      "base": {
+        "mean": 186.375,
+        "se": 26.22630733497515,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 176.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1001,
+            "score": 236.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1002,
+            "score": 225.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1003,
+            "score": 10.0,
+            "steps": 114,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 207.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1005,
+            "score": 236.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1006,
+            "score": 206.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1007,
+            "score": 195.0,
+            "steps": 3000,
+            "truncated": true
+          }
+        ],
+        "forward_calls": 21114
+      },
+      "candidate": {
+        "mean": 0.0,
+        "se": 0.0,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1001,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1002,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1003,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1005,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1006,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1007,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          }
+        ],
+        "forward_calls": 48
+      },
+      "paired_mean_delta": -186.375,
+      "paired_se": 26.22630733497515,
+      "episodes": 8,
+      "seed": 1000,
+      "max_steps": 3000,
+      "sticky_actions": 0.1,
+      "sampling": "softmax",
+      "seconds": 0.661322875,
+      "environment": "MinAtar 1.0.15 Breakout",
+      "numpy": "2.0.2",
+      "id": "3ed8cc40701c4335",
+      "base_id": "paper",
+      "candidate_id": "bba6b79c8ba04971",
+      "base_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "candidate_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+      "created": 1794126025.934966,
+      "experiment": "ablation"
+    },
+    {
+      "base": {
+        "mean": 0.0,
+        "se": 0.0,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1001,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1002,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1003,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1005,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1006,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1007,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          }
+        ],
+        "forward_calls": 48
+      },
+      "candidate": {
+        "mean": 186.375,
+        "se": 26.22630733497515,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 176.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1001,
+            "score": 236.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1002,
+            "score": 225.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1003,
+            "score": 10.0,
+            "steps": 114,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 207.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1005,
+            "score": 236.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1006,
+            "score": 206.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1007,
+            "score": 195.0,
+            "steps": 3000,
+            "truncated": true
+          }
+        ],
+        "forward_calls": 21114
+      },
+      "paired_mean_delta": 186.375,
+      "paired_se": 26.22630733497515,
+      "episodes": 8,
+      "seed": 1000,
+      "max_steps": 3000,
+      "sticky_actions": 0.1,
+      "sampling": "softmax",
+      "seconds": 0.663821333,
+      "environment": "MinAtar 1.0.15 Breakout",
+      "numpy": "2.0.2",
+      "id": "ef25348adab6497b",
+      "base_id": "bba6b79c8ba04971",
+      "candidate_id": "86bbfe9d4157446f",
+      "base_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+      "candidate_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "created": 1794126026.635444,
+      "experiment": "restoration"
+    },
+    {
+      "base": {
+        "mean": 0.625,
+        "se": 0.2630521404045756,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1001,
+            "score": 1.0,
+            "steps": 16,
+            "truncated": false
+          },
+          {
+            "seed": 1002,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1003,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1005,
+            "score": 1.0,
+            "steps": 16,
+            "truncated": false
+          },
+          {
+            "seed": 1006,
+            "score": 2.0,
+            "steps": 28,
+            "truncated": false
+          },
+          {
+            "seed": 1007,
+            "score": 1.0,
+            "steps": 16,
+            "truncated": false
+          }
+        ],
+        "forward_calls": 100
+      },
+      "candidate": {
+        "mean": 5.75,
+        "se": 2.4330316186072998,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 7.0,
+            "steps": 80,
+            "truncated": false
+          },
+          {
+            "seed": 1001,
+            "score": 2.0,
+            "steps": 26,
+            "truncated": false
+          },
+          {
+            "seed": 1002,
+            "score": 2.0,
+            "steps": 26,
+            "truncated": false
+          },
+          {
+            "seed": 1003,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 9.0,
+            "steps": 102,
+            "truncated": false
+          },
+          {
+            "seed": 1005,
+            "score": 21.0,
+            "steps": 240,
+            "truncated": false
+          },
+          {
+            "seed": 1006,
+            "score": 1.0,
+            "steps": 16,
+            "truncated": false
+          },
+          {
+            "seed": 1007,
+            "score": 4.0,
+            "steps": 48,
+            "truncated": false
+          }
+        ],
+        "forward_calls": 544
+      },
+      "paired_mean_delta": 5.125,
+      "paired_se": 2.4453855962374753,
+      "episodes": 8,
+      "seed": 1000,
+      "max_steps": 3000,
+      "sticky_actions": 0.1,
+      "sampling": "softmax",
+      "seconds": 0.026627458000000104,
+      "environment": "MinAtar 1.0.15 Breakout",
+      "numpy": "2.0.2",
+      "id": "3eab5b8ebd4e4a3b",
+      "base_id": "zero",
+      "candidate_id": "62a098e36e3c4c51",
+      "base_sha256": "9dd3ac39ed86a93679389d7f073f239ab0e680840becd42b5b57d43d5117e98b",
+      "candidate_sha256": "cc6f75b90bcf2664bc965f5022c53233f9c38f465b284f6075c5fee9ffcb4135",
+      "created": 1794126026.701764,
+      "experiment": "reactive versus zero"
+    },
+    {
+      "base": {
+        "mean": 186.375,
+        "se": 26.22630733497515,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 176.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1001,
+            "score": 236.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1002,
+            "score": 225.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1003,
+            "score": 10.0,
+            "steps": 114,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 207.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1005,
+            "score": 236.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1006,
+            "score": 206.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 1007,
+            "score": 195.0,
+            "steps": 3000,
+            "truncated": true
+          }
+        ],
+        "forward_calls": 21114
+      },
+      "candidate": {
+        "mean": 5.75,
+        "se": 2.4330316186072998,
+        "episodes": [
+          {
+            "seed": 1000,
+            "score": 7.0,
+            "steps": 80,
+            "truncated": false
+          },
+          {
+            "seed": 1001,
+            "score": 2.0,
+            "steps": 26,
+            "truncated": false
+          },
+          {
+            "seed": 1002,
+            "score": 2.0,
+            "steps": 26,
+            "truncated": false
+          },
+          {
+            "seed": 1003,
+            "score": 0.0,
+            "steps": 6,
+            "truncated": false
+          },
+          {
+            "seed": 1004,
+            "score": 9.0,
+            "steps": 102,
+            "truncated": false
+          },
+          {
+            "seed": 1005,
+            "score": 21.0,
+            "steps": 240,
+            "truncated": false
+          },
+          {
+            "seed": 1006,
+            "score": 1.0,
+            "steps": 16,
+            "truncated": false
+          },
+          {
+            "seed": 1007,
+            "score": 4.0,
+            "steps": 48,
+            "truncated": false
+          }
+        ],
+        "forward_calls": 544
+      },
+      "paired_mean_delta": -180.625,
+      "paired_se": 25.382036322114562,
+      "episodes": 8,
+      "seed": 1000,
+      "max_steps": 3000,
+      "sticky_actions": 0.1,
+      "sampling": "softmax",
+      "seconds": 0.6530827499999998,
+      "environment": "MinAtar 1.0.15 Breakout",
+      "numpy": "2.0.2",
+      "id": "2fcd597392f44de9",
+      "base_id": "paper",
+      "candidate_id": "62a098e36e3c4c51",
+      "base_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "candidate_sha256": "cc6f75b90bcf2664bc965f5022c53233f9c38f465b284f6075c5fee9ffcb4135",
+      "created": 1794126027.357018,
+      "experiment": "reactive versus paper"
+    },
+    {
+      "base": {
+        "mean": 137.875,
+        "se": 30.987576715746677,
+        "episodes": [
+          {
+            "seed": 10000,
+            "score": 7.0,
+            "steps": 80,
+            "truncated": false
+          },
+          {
+            "seed": 10001,
+            "score": 231.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10002,
+            "score": 198.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10003,
+            "score": 178.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10004,
+            "score": 37.0,
+            "steps": 440,
+            "truncated": false
+          },
+          {
+            "seed": 10005,
+            "score": 207.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10006,
+            "score": 62.0,
+            "steps": 1056,
+            "truncated": false
+          },
+          {
+            "seed": 10007,
+            "score": 183.0,
+            "steps": 3000,
+            "truncated": true
+          }
+        ],
+        "forward_calls": 16576
+      },
+      "candidate": {
+        "mean": 137.875,
+        "se": 30.987576715746677,
+        "episodes": [
+          {
+            "seed": 10000,
+            "score": 7.0,
+            "steps": 80,
+            "truncated": false
+          },
+          {
+            "seed": 10001,
+            "score": 231.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10002,
+            "score": 198.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10003,
+            "score": 178.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10004,
+            "score": 37.0,
+            "steps": 440,
+            "truncated": false
+          },
+          {
+            "seed": 10005,
+            "score": 207.0,
+            "steps": 3000,
+            "truncated": true
+          },
+          {
+            "seed": 10006,
+            "score": 62.0,
+            "steps": 1056,
+            "truncated": false
+          },
+          {
+            "seed": 10007,
+            "score": 183.0,
+            "steps": 3000,
+            "truncated": true
+          }
+        ],
+        "forward_calls": 16576
+      },
+      "paired_mean_delta": 0.0,
+      "paired_se": 0.0,
+      "episodes": 8,
+      "seed": 10000,
+      "max_steps": 3000,
+      "sticky_actions": 0.1,
+      "sampling": "softmax",
+      "seconds": 0.9185027080000001,
+      "environment": "MinAtar 1.0.15 Breakout",
+      "numpy": "2.0.2",
+      "id": "fec37d3dc9f247ed",
+      "base_id": "paper",
+      "candidate_id": "86bbfe9d4157446f",
+      "base_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "candidate_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "created": 1794126028.3116071,
+      "experiment": "restoration on disjoint seeds"
+    }
+  ]
+}
