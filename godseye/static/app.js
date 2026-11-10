@@ -20,19 +20,19 @@ const fmt = (v, digits = 1) =>
 const label = (id) => state.checkpoints.find((c) => c.id === id)?.name || id;
 const viewInfo = {
   overview: [
-    "Overview",
-    "A window into the weights",
-    "Explore the network. Change a connection. See what happens.",
+    "Start here",
+    "Change a few numbers. See what happens",
+    "A hands-on experiment with a tiny game-playing neural network.",
   ],
   workbench: [
-    "Tensor lab",
-    "Make a deliberate change",
-    "Read the computation, write a hypothesis, and branch the network.",
+    "Edit weights",
+    "Make your own change",
+    "Weights are the numbers inside the model. Save a new version without replacing the original.",
   ],
   evaluate: [
-    "Evaluations",
-    "Let behavior be the evidence",
-    "Compare two checkpoints under the same experimental conditions.",
+    "Compare",
+    "Did your change help",
+    "Play both versions under matching conditions, then compare their scores.",
   ],
   history: [
     "Run history",
@@ -151,13 +151,17 @@ function configureMode(data) {
   $("execution-label").textContent = recorded
     ? "Playback of recorded experiments"
     : "Experiments run on your CPU";
-  for (const id of ["apply", "preview-patch", "evaluate"]) {
+  for (const id of ["apply", "preview-patch", "evaluate", "quick-experiment"]) {
     $(id).disabled = recorded;
     $(id).title = recorded ? "Start the local lab to use this operation" : "";
   }
   document.querySelector(".eval-footer > span").textContent = recorded
     ? "Recorded demo · execution disabled"
     : "Ready for local execution";
+  $("quick-experiment").disabled = recorded || !!state.quickBusy;
+  $("quick-hint").textContent = recorded
+    ? "You’re viewing saved results. Run the local lab to try your own changes."
+    : "Runs on your computer · no API key or paid AI calls · 4 games per version, up to 1,000 steps each.";
   updateBudget();
 }
 $("connection-settings").onclick = () => {
@@ -488,7 +492,7 @@ $("apply").onclick = async () => {
     message("patch-result", e.message, true);
   } finally {
     button.disabled = false;
-    button.innerHTML = "Create checkpoint <span>↗</span>";
+    button.innerHTML = "Save edited version <span>↗</span>";
   }
 };
 $("compare-patch").onclick = () => {
@@ -714,6 +718,7 @@ $("download").onclick = () => {
 async function loadHistory() {
   const runs = await api("/api/runs");
   state.runs = runs;
+  $("watch-example").disabled = !runs.length;
   $("history").replaceChildren();
   $("history-empty").hidden = !!runs.length;
   $("run-count").textContent = runs.length;
@@ -772,6 +777,7 @@ let pollingJob = false;
 async function followJob(job) {
   if (pollingJob) return;
   pollingJob = true;
+  $("quick-experiment").disabled = true;
   state.job = job.id;
   $("evaluate").disabled = true;
   $("job-progress-wrap").hidden = false;
@@ -789,6 +795,7 @@ async function followJob(job) {
         await openRun(job.run_id);
         showView("overview");
         message("eval-status", "Evaluation completed and saved.");
+        $("results").scrollIntoView({behavior: "smooth", block: "start"});
         break;
       }
       if (["cancelled", "failed", "interrupted"].includes(job.status)) {
@@ -811,6 +818,7 @@ async function followJob(job) {
   } finally {
     state.job = null;
     pollingJob = false;
+    $("quick-experiment").disabled = state.mode === "recorded-demo" || !!state.quickBusy;
     $("evaluate").disabled = state.mode === "recorded-demo";
     $("job-progress-wrap").hidden = true;
     await loadJobs();
@@ -874,6 +882,43 @@ $("evaluate").onclick = async () => {
     message("eval-status", e.message, true);
   } finally {
     $("evaluate").disabled = state.mode === "recorded-demo";
+  }
+};
+$("watch-example").onclick = async () => {
+  if (!state.runs.length) return;
+  await openRun(state.run?.id || state.runs[0].id, true);
+  if (state.run) startReplay();
+};
+$("quick-experiment").onclick = async () => {
+  if (state.quickBusy || pollingJob || state.mode === "recorded-demo") return;
+  state.quickBusy = true;
+  $("quick-experiment").disabled = true;
+  message("quick-status", "Saving a copy with four connections switched off…");
+  try {
+    const checkpoint = await api("/api/v1/checkpoints", {
+      base_id: "paper", patch: "W3[0:8:2, 1] = 0",
+      hypothesis: "Switching off four left-action connections may reduce the game score.",
+    });
+    await refresh();
+    $("base").value = "paper";
+    $("candidate").value = checkpoint.id;
+    $("episodes").value = "4";
+    $("seed").value = "1000";
+    $("max-steps").value = "1000";
+    updateBudget();
+    message("quick-status", "Edited version saved. The original is unchanged.");
+    showView("evaluate");
+    message("eval-status", "Starting four games per version…");
+    const job = await api("/api/v1/jobs", {
+      base_id: "paper", candidate_id: checkpoint.id, episodes: 4, seed: 1000, max_steps: 1000,
+    });
+    await followJob(job);
+  } catch (error) {
+    message("quick-status", error.message, true);
+    message("eval-status", error.message, true);
+  } finally {
+    state.quickBusy = false;
+    $("quick-experiment").disabled = state.mode === "recorded-demo";
   }
 };
 async function initialize() {

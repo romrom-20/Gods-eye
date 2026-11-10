@@ -35,30 +35,30 @@
             <rect x="12" y="3" width="5" height="5" rx="1" />
             <rect x="3" y="12" width="5" height="5" rx="1" />
             <rect x="12" y="12" width="5" height="5" rx="1" /></svg
-          >Overview<span class="nav-shortcut">01</span>
+          >Start here<span class="nav-shortcut">01</span>
         </button>
         <button class="nav-link" data-nav="workbench">
           <svg viewBox="0 0 20 20">
             <path d="m10 2 8 4-8 4-8-4 8-4ZM2 10l8 4 8-4M2 14l8 4 8-4" /></svg
-          >Tensor lab<span class="nav-shortcut">02</span>
+          >Edit weights<span class="nav-shortcut">02</span>
         </button>
         <button class="nav-link" data-nav="evaluate">
           <svg viewBox="0 0 20 20">
             <path d="M4 16V9m6 7V4m6 12v-5M2 18h16" /></svg
-          >Evaluations<span class="nav-shortcut">03</span>
+          >Compare<span class="nav-shortcut">03</span>
         </button>
         <button class="nav-link" data-nav="history">
           <svg viewBox="0 0 20 20">
             <path d="M3 6a8 8 0 1 1-1 7M2 2v5h5m3-2v5l3 2" /></svg
-          >Run history<span class="count" id="run-count">0</span>
+          >History<span class="count" id="run-count">0</span>
         </button>
       </nav>
-      <div class="sidebar-section">
+      <details class="sidebar-section"><summary>Saved versions</summary>
         <div class="sidebar-heading">
           CHECKPOINTS <span id="checkpoint-count"></span>
         </div>
         <div id="checkpoint-list"></div>
-      </div>
+      </details>
       <div class="sidebar-bottom">
         <a href="api.html"><span>↗</span> API &amp; developer guide</a
         ><button class="connection-button" id="connection-settings">
@@ -126,12 +126,186 @@
             </p>
           </div>
           <button class="primary" data-go="workbench">
-            <span>+</span> New intervention
+            <span>+</span> Edit weights
           </button>
         </div>
 
         <section data-view="overview" class="view">
-          <div class="overview-grid">
+          <section class="first-experiment panel" aria-labelledby="first-title">
+            <span class="overline">YOUR FIRST EXPERIMENT</span>
+            <h2 id="first-title">Can four numbers change how it plays?</h2>
+            <p>This little network plays Breakout: move the paddle, bounce the ball, break bricks. Its weights are numbers that guide its decisions.</p>
+            <ol class="simple-steps"><li><strong>Start with the original</strong><span>A small, working game-playing network.</span></li><li><strong>Switch off four connections</strong><span>Save an edited copy. Keep the original.</span></li><li><strong>Watch the difference</strong><span>Let both versions play the same four games.</span></li></ol>
+            <div class="first-actions"><button class="primary" id="quick-experiment" disabled>Try the four-number change →</button><button class="secondary" id="watch-example" disabled>Watch a saved comparison</button></div>
+            <p class="hint" id="quick-hint">Runs on your computer · no API key or paid AI calls · 4 games per version, up to 1,000 steps each.</p>
+            <p class="hint">This is a known example, not a newly discovered repair. Scores can vary.</p>
+            <div id="quick-status" role="status" aria-live="polite"></div>
+          </section>
+          <div class="section-heading">
+            <div>
+              <span class="overline">FROM WEIGHTS TO BEHAVIOR</span>
+              <h2>Watch the two versions play.</h2>
+            </div>
+            <div class="section-actions">
+              <select
+                id="overview-run"
+                aria-label="Choose a recorded experiment"
+              >
+                <option value="">Choose a saved run</option></select
+              ><button class="secondary" data-go="evaluate">
+                New comparison <span>↗</span>
+              </button>
+            </div>
+          </div>
+          <div id="overview-empty" class="empty-state panel" hidden>
+            <span class="empty-symbol">↗</span>
+            <h3>Let the environment have the last word.</h3>
+            <p>
+              Compare two checkpoints to see their scores and watch their
+              decisions side by side.
+            </p>
+            <button class="primary" data-go="evaluate">
+              Set up a comparison
+            </button>
+          </div>
+          <div id="overview-status" role="status" aria-live="polite"></div>
+          <div id="results" hidden>
+            <div class="metrics">
+              <div>
+                <label>VERSION A / AVERAGE SCORE</label>
+                <div class="metric-value">
+                  <strong id="base-score"></strong
+                  ><span class="metric-unit">pts</span>
+                </div>
+                <span id="base-se"></span>
+              </div>
+              <div>
+                <label>VERSION B / AVERAGE SCORE</label>
+                <div class="metric-value">
+                  <strong id="candidate-score"></strong
+                  ><span class="metric-unit">pts</span>
+                </div>
+                <span id="candidate-se"></span>
+              </div>
+              <div class="delta-metric">
+                <label>SCORE DIFFERENCE</label>
+                <div class="metric-value">
+                  <strong id="delta"></strong
+                  ><span class="metric-unit">pts</span>
+                </div>
+                <span id="paired-se"></span>
+              </div>
+              <div>
+                <label>FORWARD PASSES</label>
+                <div class="metric-value">
+                  <strong id="forward-calls"></strong>
+                </div>
+                <span id="elapsed"></span>
+              </div>
+            </div>
+            <div class="replay-panel panel">
+              <div class="replay-heading">
+                <span class="overline"
+                  ><i class="record-dot"></i> EPISODE REPLAY</span
+                ><span class="tag" id="replay-settings"></span
+                ><button
+                  class="icon-button"
+                  id="download"
+                  title="Download run JSON"
+                  aria-label="Download run JSON"
+                >
+                  <svg viewBox="0 0 20 20">
+                    <path d="M10 2v11m-4-4 4 4 4-4M3 13v4h14v-4" />
+                  </svg>
+                </button>
+              </div>
+              <div class="replays">
+                <div class="replay-column">
+                  <div class="board-label">
+                    <span class="legend-dot blue"></span><span>VERSION A</span
+                    ><span class="board-badge">A</span>
+                  </div>
+                  <h3 id="replay-base-title">Baseline</h3>
+                  <canvas
+                    id="replay-base"
+                    width="500"
+                    height="500"
+                    aria-label="Baseline gameplay replay"
+                  ></canvas>
+                  <div
+                    class="mono replay-caption"
+                    id="replay-base-caption"
+                  ></div>
+                </div>
+                <div class="replay-column">
+                  <div class="board-label">
+                    <span class="legend-dot orange"></span><span>VERSION B</span
+                    ><span class="board-badge">B</span>
+                  </div>
+                  <h3 id="replay-candidate-title">Candidate</h3>
+                  <canvas
+                    id="replay-candidate"
+                    width="500"
+                    height="500"
+                    aria-label="Candidate gameplay replay"
+                  ></canvas>
+                  <div
+                    class="mono replay-caption"
+                    id="replay-candidate-caption"
+                  ></div>
+                </div>
+                <details class="replay-analysis"><summary>Inside the decision</summary>
+                  <span class="overline">INSIDE THE DECISION</span>
+                  <h3>Where will it move?</h3>
+                  <p class="hint">
+                    Candidate action probabilities at this frame.
+                  </p>
+                  <div id="action-probs"></div>
+                  <div class="activation-heading">
+                    <span class="overline">HIDDEN LAYER 01</span
+                    ><span class="tag">tanh</span>
+                  </div>
+                  <div id="activations"></div>
+                  <p class="hint">
+                    First six neuron activations. Inspect the weights to trace
+                    the computation.
+                  </p>
+                  <div class="board-legend">
+                    <span><i class="legend-dot ball"></i> Ball</span
+                    ><span><i class="legend-dot paddle"></i> Paddle</span
+                    ><span><i class="legend-dot brick"></i> Brick</span>
+                  </div>
+                </details>
+              </div>
+              <div class="replay-controls">
+                <button class="play-button" id="play">Play</button
+                ><input
+                  aria-label="Replay frame"
+                  id="frame"
+                  type="range"
+                  value="0"
+                  min="0"
+                  max="1"
+                /><span class="mono" id="frame-label"></span
+                ><select id="replay-speed" aria-label="Replay speed">
+                  <option value="160">0.5×</option>
+                  <option value="80" selected>1×</option>
+                  <option value="30">2.5×</option>
+                </select>
+              </div>
+            </div>
+            <div class="run-note">
+              <span class="note-icon">i</span>
+              <p id="run-caption"></p>
+            </div>
+            <details class="episode-details">
+              <summary>
+                Per-episode scores <span>View all seeds and truncations</span>
+              </summary>
+              <div id="episode-rows"></div>
+            </details>
+          </div>
+          <details class="model-details"><summary>What’s inside the network?</summary>          <div class="overview-grid">
             <section class="network-panel panel">
               <div class="panel-heading">
                 <div>
@@ -174,170 +348,7 @@
               </div>
             </section>
           </div>
-          <div class="section-heading">
-            <div>
-              <span class="overline">FROM WEIGHTS TO BEHAVIOR</span>
-              <h2>The experiment, in motion.</h2>
-            </div>
-            <div class="section-actions">
-              <select
-                id="overview-run"
-                aria-label="Choose a recorded experiment"
-              >
-                <option value="">Choose a saved run</option></select
-              ><button class="secondary" data-go="evaluate">
-                New comparison <span>↗</span>
-              </button>
-            </div>
-          </div>
-          <div id="overview-empty" class="empty-state panel" hidden>
-            <span class="empty-symbol">↗</span>
-            <h3>Let the environment have the last word.</h3>
-            <p>
-              Compare two checkpoints to see their scores and watch their
-              decisions side by side.
-            </p>
-            <button class="primary" data-go="evaluate">
-              Set up a comparison
-            </button>
-          </div>
-          <div id="overview-status" role="status" aria-live="polite"></div>
-          <div id="results" hidden>
-            <div class="metrics">
-              <div>
-                <label>BASELINE MEAN SCORE</label>
-                <div class="metric-value">
-                  <strong id="base-score"></strong
-                  ><span class="metric-unit">pts</span>
-                </div>
-                <span id="base-se"></span>
-              </div>
-              <div>
-                <label>CANDIDATE MEAN SCORE</label>
-                <div class="metric-value">
-                  <strong id="candidate-score"></strong
-                  ><span class="metric-unit">pts</span>
-                </div>
-                <span id="candidate-se"></span>
-              </div>
-              <div class="delta-metric">
-                <label>PAIRED DIFFERENCE</label>
-                <div class="metric-value">
-                  <strong id="delta"></strong
-                  ><span class="metric-unit">pts</span>
-                </div>
-                <span id="paired-se"></span>
-              </div>
-              <div>
-                <label>FORWARD PASSES</label>
-                <div class="metric-value">
-                  <strong id="forward-calls"></strong>
-                </div>
-                <span id="elapsed"></span>
-              </div>
-            </div>
-            <div class="replay-panel panel">
-              <div class="replay-heading">
-                <span class="overline"
-                  ><i class="record-dot"></i> EPISODE REPLAY</span
-                ><span class="tag" id="replay-settings"></span
-                ><button
-                  class="icon-button"
-                  id="download"
-                  title="Download run JSON"
-                  aria-label="Download run JSON"
-                >
-                  <svg viewBox="0 0 20 20">
-                    <path d="M10 2v11m-4-4 4 4 4-4M3 13v4h14v-4" />
-                  </svg>
-                </button>
-              </div>
-              <div class="replays">
-                <div class="replay-column">
-                  <div class="board-label">
-                    <span class="legend-dot blue"></span><span>BASELINE</span
-                    ><span class="board-badge">A</span>
-                  </div>
-                  <h3 id="replay-base-title">Baseline</h3>
-                  <canvas
-                    id="replay-base"
-                    width="500"
-                    height="500"
-                    aria-label="Baseline gameplay replay"
-                  ></canvas>
-                  <div
-                    class="mono replay-caption"
-                    id="replay-base-caption"
-                  ></div>
-                </div>
-                <div class="replay-column">
-                  <div class="board-label">
-                    <span class="legend-dot orange"></span><span>CANDIDATE</span
-                    ><span class="board-badge">B</span>
-                  </div>
-                  <h3 id="replay-candidate-title">Candidate</h3>
-                  <canvas
-                    id="replay-candidate"
-                    width="500"
-                    height="500"
-                    aria-label="Candidate gameplay replay"
-                  ></canvas>
-                  <div
-                    class="mono replay-caption"
-                    id="replay-candidate-caption"
-                  ></div>
-                </div>
-                <div class="replay-analysis">
-                  <span class="overline">INSIDE THE DECISION</span>
-                  <h3>Where will it move?</h3>
-                  <p class="hint">
-                    Candidate action probabilities at this frame.
-                  </p>
-                  <div id="action-probs"></div>
-                  <div class="activation-heading">
-                    <span class="overline">HIDDEN LAYER 01</span
-                    ><span class="tag">tanh</span>
-                  </div>
-                  <div id="activations"></div>
-                  <p class="hint">
-                    First six neuron activations. Inspect the weights to trace
-                    the computation.
-                  </p>
-                  <div class="board-legend">
-                    <span><i class="legend-dot ball"></i> Ball</span
-                    ><span><i class="legend-dot paddle"></i> Paddle</span
-                    ><span><i class="legend-dot brick"></i> Brick</span>
-                  </div>
-                </div>
-              </div>
-              <div class="replay-controls">
-                <button class="play-button" id="play">Play</button
-                ><input
-                  aria-label="Replay frame"
-                  id="frame"
-                  type="range"
-                  value="0"
-                  min="0"
-                  max="1"
-                /><span class="mono" id="frame-label"></span
-                ><select id="replay-speed" aria-label="Replay speed">
-                  <option value="160">0.5×</option>
-                  <option value="80" selected>1×</option>
-                  <option value="30">2.5×</option>
-                </select>
-              </div>
-            </div>
-            <div class="run-note">
-              <span class="note-icon">i</span>
-              <p id="run-caption"></p>
-            </div>
-            <details class="episode-details">
-              <summary>
-                Per-episode scores <span>View all seeds and truncations</span>
-              </summary>
-              <div id="episode-rows"></div>
-            </details>
-          </div>
+</details>
           <div class="next-step">
             <span class="next-step-icon">⌘</span>
             <div>
@@ -370,7 +381,7 @@
                 </div>
                 <span class="tag">float32</span>
               </div>
-              <label for="inspect-model">CHECKPOINT</label
+              <label for="inspect-model">SAVED VERSION</label
               ><select id="inspect-model"></select>
               <div
                 class="tensor-tabs"
@@ -430,19 +441,19 @@
                 </div>
                 <span class="tag">New branch</span>
               </div>
-              <label for="patch-base">PARENT CHECKPOINT</label
+              <label for="patch-base">START FROM THIS VERSION</label
               ><select id="patch-base"></select
               ><label class="preset-label">START WITH AN EXPERIMENT</label>
               <div class="presets">
                 <button class="preset-button" id="preset-ablate">
-                  <span>−</span> Ablate a circuit</button
+                  <span>−</span> Switch off 4 connections</button
                 ><button class="preset-button" id="preset-repair">
-                  <span>↶</span> Restore it</button
+                  <span>↶</span> Restore the connections</button
                 ><button class="preset-button" id="preset-write">
                   <span>+</span> Write from zero
                 </button>
               </div>
-              <label for="hypothesis">YOUR HYPOTHESIS</label
+              <label for="hypothesis">WHAT DO YOU EXPECT TO HAPPEN?</label
               ><textarea id="hypothesis" rows="3">
 Removing the left-action output connections should pin the paddle to the left and reduce its score.</textarea
               >
@@ -484,7 +495,7 @@ W3[0:8:2, 1] = 0</textarea
                 role="status"
               ></div>
               <button class="primary full-width" id="apply">
-                Create checkpoint <span>↗</span>
+                Save edited version <span>↗</span>
               </button>
               <div id="patch-result" role="status"></div>
               <button
@@ -492,7 +503,7 @@ W3[0:8:2, 1] = 0</textarea
                 id="compare-patch"
                 hidden
               >
-                Compare this checkpoint <span>→</span>
+                Test this version <span>→</span>
               </button>
               <details>
                 <summary>About these experiments</summary>
@@ -517,27 +528,27 @@ W3[0:8:2, 1] = 0</textarea
               <div class="panel-heading">
                 <div>
                   <span class="overline">A CONTROLLED COMPARISON</span>
-                  <h2>Two checkpoints. Same conditions.</h2>
+                  <h2>Choose two versions to compare.</h2>
                 </div>
                 <span class="tag">Paired seeds</span>
               </div>
               <div class="comparison-selects">
                 <div>
                   <label for="base"
-                    ><i class="legend-dot blue"></i> BASELINE CHECKPOINT</label
+                    ><i class="legend-dot blue"></i> VERSION A</label
                   ><select id="base"></select>
                 </div>
                 <span class="versus">vs.</span>
                 <div>
                   <label for="candidate"
-                    ><i class="legend-dot orange"></i> CANDIDATE
-                    CHECKPOINT</label
+                    ><i class="legend-dot orange"></i> VERSION B</label
                   ><select id="candidate"></select>
                 </div>
               </div>
+              <details class="comparison-options"><summary>Test settings · games, randomness, and length</summary>
               <div class="eval-controls">
                 <div>
-                  <label for="episodes">EPISODES PER MODEL</label
+                  <label for="episodes">GAMES PER VERSION</label
                   ><input
                     id="episodes"
                     type="number"
@@ -547,7 +558,7 @@ W3[0:8:2, 1] = 0</textarea
                   />
                 </div>
                 <div>
-                  <label for="seed">STARTING SEED</label
+                  <label for="seed">RANDOM SEED</label
                   ><input
                     id="seed"
                     type="number"
@@ -557,7 +568,7 @@ W3[0:8:2, 1] = 0</textarea
                   />
                 </div>
                 <div>
-                  <label for="max-steps">MAXIMUM STEPS</label
+                  <label for="max-steps">STEPS PER GAME</label
                   ><input
                     id="max-steps"
                     type="number"
@@ -567,6 +578,7 @@ W3[0:8:2, 1] = 0</textarea
                   />
                 </div>
               </div>
+              </details><p class="hint">Both versions play with the same settings. Higher scores mean more bricks cleared.</p>
               <div class="eval-footer">
                 <span><i class="status-dot"></i> Ready for local execution</span
                 ><button class="primary" id="evaluate">
@@ -588,7 +600,7 @@ W3[0:8:2, 1] = 0</textarea
               </div>
               <div id="recent-jobs" class="recent-jobs"></div>
             </section>
-            <aside class="evaluation-notes">
+            <details class="evaluation-notes"><summary>How to make a fair comparison</summary>
               <span class="overline">GOOD EXPERIMENTS START HERE</span>
               <h3>Keep the question small.</h3>
               <p>
@@ -625,7 +637,7 @@ W3[0:8:2, 1] = 0</textarea
                   </p>
                 </div>
               </div>
-            </aside>
+            </details>
           </div>
         </section>
 
