@@ -116,3 +116,52 @@ test('review displays all limits and selection; incompatible routing never creat
   assert.equal(n['goal-review'].hidden, true);
   assert.match(n['goal-status'].textContent, /OpenRouter/);
 });
+
+test('one-click example saves an edited copy and runs the bounded comparison once', async () => {
+  const block = source.slice(source.indexOf('$("watch-example").onclick'), source.indexOf('async function initialize()'));
+  const nodes = Object.fromEntries(['watch-example', 'quick-experiment', 'base', 'candidate', 'episodes', 'seed', 'max-steps'].map(id => [id, {}]));
+  const calls = [];
+  const views = [];
+  const state = { mode: 'local', runs: [] };
+  let complete;
+  const followed = new Promise(resolve => { complete = resolve; });
+  vm.runInNewContext(block, {
+    $: id => nodes[id], state, pollingJob: false, message() {},
+    async api(path, body) { calls.push({path, body}); return path.endsWith('checkpoints') ? {id: 'edited'} : {id: 'job'}; },
+    async refresh() {}, updateBudget() {}, showView(view) { views.push(view); },
+    async followJob() { await followed; },
+  });
+  const running = nodes['quick-experiment'].onclick();
+  await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+  await nodes['quick-experiment'].onclick(); // repeated click cannot admit another run
+  complete(); await running;
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].path, '/api/v1/checkpoints');
+  assert.equal(calls[0].body.base_id, 'paper');
+  assert.equal(calls[0].body.patch, 'W3[0:8:2, 1] = 0');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[1].body)), { base_id: 'paper', candidate_id: 'edited', episodes: 4, seed: 1000, max_steps: 1000 });
+  assert.deepEqual(views, ['evaluate']);
+  state.mode = 'recorded-demo'; await nodes['quick-experiment'].onclick();
+  assert.equal(calls.length, 2, 'static mode never launches work');
+});
+
+test('goal example opens simplified Start here without manual editing or execution', () => {
+  const start = source.indexOf('$("goal-guided").onclick');
+  const block = source.slice(start, source.indexOf('\n  try {', start));
+  const views = [], seen = [];
+  const nodes = {
+    'first-title': { scrollIntoView() { seen.push('intro'); } },
+    'quick-experiment': { focus() { seen.push('start button'); } },
+    'goal-guided': {},
+  };
+  vm.runInNewContext(block, {
+    $: id => nodes[id], showView: view => views.push(view),
+    api() { throw Error('Navigation must not execute'); },
+  });
+  nodes['goal-guided'].onclick();
+  assert.deepEqual(views, ['overview']);
+  assert.deepEqual(seen, ['intro', 'start button']);
+  assert.match(html, />Start here<span/);
+  assert.match(html, />Edit weights<span/);
+  assert.match(html, />Compare<span/);
+});

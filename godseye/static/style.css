@@ -2793,3 +2793,24 @@ footer {
   .goal-steps li { font-size: 12px; }
   .goal-actions > button { width: 100%; justify-content: center; }
 }
+/* A short first-use path; technical detail stays available on demand. */
+.first-experiment {padding:30px;margin-bottom:30px;border-top:3px solid var(--accent)}
+.first-experiment h2 {font-size:clamp(23px,3vw,34px);letter-spacing:-.8px;margin:12px 0}
+.first-experiment > p {max-width:700px;line-height:1.7;color:var(--muted,#64716a)}
+.simple-steps {display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:0;list-style:none;counter-reset:steps;margin:28px 0}
+.simple-steps li {counter-increment:steps;border-top:1px solid var(--line);padding-top:14px}
+.simple-steps li::before {content:'0' counter(steps);display:block;color:var(--accent);font:12px var(--mono);margin-bottom:10px}
+.simple-steps strong,.simple-steps span {display:block;line-height:1.6}
+.simple-steps span {font-size:13px;color:var(--muted,#64716a);margin-top:4px}
+.first-actions {display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+#quick-status {font-size:13px;line-height:1.6;margin-top:12px}
+.model-details {margin:28px 0}.model-details > summary,.comparison-options > summary {padding:16px 0;cursor:pointer;font-size:14px}
+.sidebar-section > summary {color:#c4cfc6;cursor:pointer;padding:12px 0;font-size:12px}
+.sidebar-section .sidebar-heading {margin-top:14px}
+.replays {grid-template-columns:1fr 1fr}
+.replay-analysis {grid-column:1 / -1;border-top:1px solid var(--line)}
+.replay-analysis > summary {cursor:pointer;padding:12px 0;font-size:13px}
+.replay-analysis:not([open]) > :not(summary) {display:none}
+.page-heading > .primary,.project-chevron,.avatar,.next-step,.nav-shortcut {display:none}
+.evaluation-layout {display:block}.evaluation-notes {margin-top:24px}.evaluation-notes > summary {cursor:pointer;padding:15px 0}
+@media(max-width:720px){.first-experiment{padding:20px}.simple-steps{grid-template-columns:1fr;gap:12px;margin:20px 0}.simple-steps li::before{float:left;margin:4px 12px 25px 0}.first-actions{flex-direction:column}.first-actions button{width:100%}.replays{grid-template-columns:1fr}.replay-analysis{grid-column:1}}

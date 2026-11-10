@@ -2,8 +2,8 @@
 
 The default `/lab#goal` view guides a user through describe → review goal and
 limits → explicit start → progress/cancel → result/compare/keep original.
-The existing Overview, Tensor lab, Evaluations, Run history, recorded demo, and
-local four-weight preset remain accessible. No backend/provider/adapter changes
+The simplified Start here, Edit weights, Compare, History, recorded demo, and
+one-click four-number experiment remain accessible. No backend/provider/adapter changes
 are part of this branch.
 
 ## Implementation status
@@ -19,9 +19,10 @@ Keeping the original acknowledges that this mock changed nothing.
 The page's pre-existing initialization still reads the local lab API for tensors,
 checkpoints, jobs and recorded runs. The separately accessible tensor/evaluation
 controls still perform real local operations only when explicitly used. They do
-not call a programmer provider. The no-key guided example opens the existing
-four-weight ablation preset, instructs the user to preview/apply it and explicitly
-compare it with `paper`. Static visitors can inspect recorded evidence; execution
+not call a programmer provider. The no-key guided example opens Start here. Its “Try the four-number change”
+button saves an edited copy of `paper` and compares both versions over four games
+(up to 1,000 steps each), without manual editing. Navigation alone never launches
+the experiment. Saved comparisons remain watchable in the static demo. Static visitors can inspect recorded evidence; execution
 requires the local server. This known-circuit example establishes mechanics, not
 AI discovery or repair quality.
 
@@ -122,3 +123,22 @@ preview reported 4 changed weights, apply created a child checkpoint, and a real
 2-episode, 20-step CPU comparison saved successfully with `paper` still available.
 This is a small compatibility smoke test, not evidence of improvement. No provider
 calls, saved-key reads, deployment, or formal new-user study were performed.
+
+
+## Simplified-lab integration
+
+The initial UI branch predates the simplified lab. Incorporated the main
+worktree's existing simplification as a snapshot without modifying that worktree:
+one-click four-number experiment, saved comparison playback, plain-language
+navigation and version labels, and expandable network, decision and comparison
+details. The goal page links to Start here rather than routing through manual
+weight editing. The explicit one-click button starts real local CPU work; mock
+goal controls still never execute experiments. This integration does not merge or
+push main and does not alter backend, evaluator, setup or adapter files.
+
+Integration verification: all 16 dedicated UI checks pass. Browser QA opened the
+example from the goal page without creating a version or job, then used the
+single start button to complete and save the real four-game, 1,000-step comparison
+against `paper`. Saved comparison playback worked, network details stayed
+collapsed, and the 390px layout had no horizontal overflow. The main worktree's
+simplification remains untouched and uncommitted there.
