@@ -1,17 +1,18 @@
-"""Loopback-only credential setup. Never contacts a provider or returns a saved key."""
+"""Loopback-only provider setup. Provider requests require explicit user actions."""
 import argparse
 import hmac
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 from pathlib import Path
-import re
 import secrets
 import shlex
 import stat
 import tempfile
 import time
 import webbrowser
+
+from godseye.provider_discovery import DiscoveryError, ProviderDiscovery, validate
 
 STATIC = Path(__file__).parent / 'static'
 
@@ -63,16 +64,7 @@ class ProviderSettings:
                 os.unlink(temporary)
 
     def save(self, key, model, provider="openai", routing="price"):
-        if provider not in ("openai", "openrouter", "huggingface") or routing not in ("price", "latency", "throughput"):
-            raise ValueError("Unsupported provider or routing policy")
-        if not isinstance(key, str) or not isinstance(model, str):
-            raise ValueError('Key and model must be text')
-        key, model = key.strip(), model.strip()
-        pattern = r'hf_[A-Za-z0-9_-]{16,1024}' if provider == 'huggingface' else r'sk-[A-Za-z0-9_-]{16,1024}'
-        if key and not re.fullmatch(pattern, key):
-            raise ValueError('Enter a valid key for the selected provider.')
-        if model and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}', model):
-            raise ValueError('Enter a model ID without spaces or shell characters')
+        key, model = validate(provider, key, model, routing)
         if not key and not self.status(provider)['configured']:
             raise ValueError('Enter an API key for this provider')
         self._secure_directory()
@@ -88,8 +80,8 @@ class ProviderSettings:
         profiles = previous.get('profiles', {})
         if previous.get('model') and not profiles:
             profiles[previous.get('provider', 'openai')] = {'model': previous['model'], 'routing': 'price'}
-        profiles[provider] = {'model': model, 'routing': routing}
-        self._write('provider.json', json.dumps({'provider': provider, 'model': model, 'profiles': profiles}) + '\n')
+        profiles[provider] = {**profiles.get(provider, {}), 'model': model, 'routing': routing}
+        self._write('provider.json', json.dumps({**previous, 'provider': provider, 'model': model, 'profiles': profiles}) + '\n')
         env = 'REPAIR_AGENT_KEY_FILE=' + shlex.quote(str(self.directory / (provider + '-api-key'))) + '\n'
         env += 'REPAIR_AGENT_MODEL=' + shlex.quote(model) + '\n'
         env += 'REPAIR_AGENT_PROVIDER=' + provider + '\n'
@@ -97,9 +89,31 @@ class ProviderSettings:
         self._write('provider.env', env)
         return self.status()
 
+    def credential(self, provider, key=''):
+        """Read a saved key server-side only after an explicit discovery/test action."""
+        key, _ = validate(provider, key)
+        if key:
+            return key
+        if self.directory.is_symlink():
+            raise ValueError('The settings directory must not be a symbolic link')
+        if self.directory.exists() and self.directory.stat().st_uid != os.getuid():
+            raise ValueError('Settings directory must belong to your OS user')
+        path = self._file(provider + '-api-key')
+        if not path.exists():
+            raise ValueError('Enter or save a key for this provider first')
+        if path.stat().st_uid != os.getuid():
+            raise ValueError('Key file must belong to your OS user')
+        with path.open() as stream:
+            key = stream.read(2048)
+        key, _ = validate(provider, key)
+        if not key:
+            raise ValueError('Enter or save a key for this provider first')
+        return key
 
-def create_server(settings=None, port=0):
+
+def create_server(settings=None, port=0, discovery=None):
     settings = settings or ProviderSettings()
+    discovery = discovery or ProviderDiscovery()
     csrf = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
@@ -150,7 +164,7 @@ def create_server(settings=None, port=0):
         def do_POST(self):
             if not self.allowed(write=True):
                 return self.reply({'error': 'Request rejected'}, 403)
-            if self.path != '/save':
+            if self.path not in ('/save', '/models', '/test-connection'):
                 return self.reply({'error': 'Not found'}, 404)
             if self.headers.get_content_type() != 'application/json':
                 return self.reply({'error': 'Use JSON'}, 415)
@@ -159,15 +173,36 @@ def create_server(settings=None, port=0):
                 if not 0 < size <= 8192 or self.headers.get('Transfer-Encoding'):
                     return self.reply({'error': 'Invalid request size'}, 413)
                 data = json.loads(self.rfile.read(size))
-                if type(data) is not dict or not {'key', 'model'} <= set(data) or set(data) - {'key', 'model', 'provider', 'routing'}:
-                    return self.reply({'error': 'Expected key and model'}, 400)
-                result = settings.save(data['key'], data['model'], data.get('provider', 'openai'), data.get('routing', 'price'))
+                fields = {'key', 'model', 'provider', 'routing'}
+                if self.path == '/test-connection':
+                    fields.add('confirmed')
+                required = {'key', 'model'} if self.path == '/save' else {'provider'}
+                if type(data) is not dict or not required <= set(data) or set(data) - fields:
+                    return self.reply({'state': 'invalid_request', 'error': 'Invalid request fields'}, 400)
+                provider = data.get('provider', 'openai')
+                key, model = validate(provider, data.get('key', ''), data.get('model', ''), data.get('routing', 'price'))
+                if self.path == '/save':
+                    result = settings.save(key, model, provider, data.get('routing', 'price'))
+                else:
+                    # Reject unconfirmed tests before touching a credential or transport.
+                    if self.path == '/test-connection' and data.get('confirmed') is not True:
+                        return self.reply({'state': 'confirmation_required', 'error': 'Confirm the potentially billable one-request test first'}, 400)
+                    if self.path == '/test-connection' and not model:
+                        raise ValueError('A model ID is required for the test')
+                    credential = settings.credential(provider, key)
+                    if self.path == '/models':
+                        result = discovery.load_models(provider, credential)
+                    else:
+                        result = discovery.test_connection(provider, credential, model,
+                                                           data.get('routing', 'price'), confirmed=True)
+            except DiscoveryError as error:
+                return self.reply(error.result(), 502)
             except ValueError as error:
                 # Validation messages are fixed strings, never interpolate the key.
                 message = str(error) if type(error) is ValueError else 'Invalid request'
-                return self.reply({'error': message}, 400)
+                return self.reply({'state': 'invalid_request', 'error': message}, 400)
             except OSError:
-                return self.reply({'error': 'Could not save local settings. Check directory permissions.'}, 500)
+                return self.reply({'error': 'Cannot access local settings. Check directory permissions.'}, 500)
             self.reply(result)
 
     server = HTTPServer(('127.0.0.1', port), Handler)
@@ -190,7 +225,7 @@ def main():
     server = create_server(port=args.port)
     url = f'http://127.0.0.1:{server.server_port}'
     print('Open key setup: ' + url, flush=True)
-    print('No provider calls. Setup closes after 30 minutes or Ctrl+C.', flush=True)
+    print('Provider calls only through Load models or a confirmed connection test. Setup closes after 30 minutes or Ctrl+C.', flush=True)
     if not args.no_browser:
         webbrowser.open(url)
     deadline = time.monotonic() + 1800
