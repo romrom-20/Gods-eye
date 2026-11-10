@@ -16,6 +16,13 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: pip install -e '.[dev]'
       - run: python -m unittest discover -s tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Goal experience checks
+        run: |
+          node --check godseye/static/app.js
+          node --test tests/ui/goal_experience.test.cjs
       - run: ruff check godseye tests experiments/validate_client.py experiments/benchmark_demo.py
       - name: Real HTTP client acceptance
         run: |
