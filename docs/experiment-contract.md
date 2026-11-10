@@ -175,6 +175,57 @@ loss is `interrupted`. `cancelled` means the worker acknowledged quiescence.
 Stopping an in-flight provider request does not prove remote execution/billing
 stopped. Preserve `request_in_flight` and usage uncertainty.
 
+### Observed phase, independent of execution status
+
+Status, cancellation and results responses require `phase:{name,event_sequence}`.
+`name` is `unknown`, `checking_original`, `trying_edit`, or `testing`.
+`event_sequence` is a positive integer identifying the last consumed trusted
+event, or null when there is no usable event. A known phase requires a non-null
+sequence and execution status `running` or `cancelling`. All other statuses
+require `unknown`. The UI labels are “Checking the original”, “Trying an edit”,
+and “Testing the result”; unknown displays “Activity unavailable” alongside the
+actual execution status. Unknown does not mean stalled, failed or cancelled.
+
+The service consumes a run-scoped, durable, strictly ordered backend journal.
+Normalized **internal** `phase_event` messages are exactly
+`{schema_version:1,experiment_id,spec_hash,sequence,kind}`. They are not accepted
+from browser/planning/provider requests and contain no private case IDs or seeds.
+Each `sequence` is allocated transactionally, starting at 1. Emit only from
+authenticated trusted worker/evaluator observations, bound to the admitted run:
+
+- `root_probe_reserved` -> `checking_original`: evaluator durably reserved a
+  development probe whose candidate is the registered unchanged case root.
+  Root identity comes from trusted registry membership, never a model's claim.
+- `edit_started` -> `trying_edit`: trusted worker has durably journaled admission
+  of a validated, authorized tensor read/patch operation. Raw tool-call text,
+  hypotheses, model narration and a provider request starting are insufficient.
+  If an integration cannot observe this admission, it must not emit the event.
+- `candidate_probe_reserved` -> `trying_edit`: evaluator durably reserved a
+  development probe for an authorized non-root candidate. Development feedback
+  remains part of trying edits, not held-out testing.
+- `held_out_reserved` -> `testing`: trusted administrator verified **all**
+  participant/case freezes and observed the persisted final evaluation reservation
+  before held-out rollout. A freeze call/report request alone is insufficient.
+- `activity_finished`, `activity_failed`, `activity_unknown` -> `unknown`:
+  observed operation completion/failure, provider-only activity, disconnected
+  observation, journal loss, or another activity with no supported phase signal.
+  After each admitted tool operation finishes, journal its finish/failure before
+  another provider request; do not leave a known phase stuck during model thought.
+
+Missing events, sequence gaps and loss of observation yield unknown. Reject
+wrong-run/wrong-spec events; ignore duplicate/older sequences without regressing
+the phase. A gap consumes its sequence as unknown; a later contiguous trusted
+event can establish a known phase again. Terminal/restart state overrides any
+older phase; cancelling can retain an observed in-flight activity until it ends.
+Publish status/phase from one persisted snapshot. The pure `phase_from_event`
+helper implements this projection, not event authentication or journaling.
+
+Existing evaluator reservations and adapter evidence can supply some observations
+but do not yet form this live journal. Until instrumented, return unknown. Never
+infer a phase from elapsed time, token counts, tool budgets, estimated percentages,
+provider prose or a planned next step. Neither a phase nor its sequence estimates
+completion, and `testing` is never a measured verdict.
+
 The future service must authenticate/scope every ID and enforce loopback,
 Origin/CSRF protections equivalent to existing writable services. Hashes and
 idempotency keys do not authorize access. Queue admission and state transitions
@@ -220,11 +271,11 @@ the success response. Proposed route names are transport-neutral operation names
   `{schema_version, experiment_id}`. Cancellation has no user-selected signal,
   command or reason text.
 - `status_response`, `cancel_response`: `{schema_version, experiment_id,
-  spec_hash, status, verdict, reason, usage}`. A cancel on queued/running moves
+  spec_hash, status, phase, verdict, reason, usage}`. A cancel on queued/running moves
   to cancelling; on terminal/cancelling returns current state. A terminal
   transition needs worker acknowledgement, not a closed browser connection.
 - `results_response`: `{schema_version, experiment_id, spec_hash, status,
-  verdict, reason, usage, evidence}`. Nonterminal returns `result_not_ready`.
+  phase, verdict, reason, usage, evidence}`. Nonterminal returns `result_not_ready`.
   `evidence` is null unless completed; completed requires the summary below.
   Artifact IDs resolve through a separately scoped export operation, never paths.
 
@@ -251,18 +302,84 @@ cannot certify provenance. Never use planner/model prose as measured evidence.
 
 `reason` is null outside terminal states and for completed. Failed/cancelled/
 interrupted require respectively one of `budget_exhausted`, `provider_error`,
-`evaluation_error`, `agent_incomplete`, `runtime_failure`; `user_cancelled`;
+`provider_rate_limited`, `provider_unavailable`, `evaluation_error`,
+`agent_incomplete`, `runtime_failure`; `user_cancelled`;
 `process_lost`. Detailed existing adapter stop codes stay in private evidence.
+Use the specific provider reasons only from trustworthy transport metadata:
+HTTP 429 -> `provider_rate_limited`; connection failure/timeout or HTTP 502/503/504
+-> `provider_unavailable`; otherwise `provider_error`. If the adapter's existing
+redacted evidence cannot establish the distinction, retain `provider_error`.
+These are terminal run reasons in successful status/results responses (HTTP 200),
+not service admission errors. Never replay provider inference or resume the run.
 
 `issues` entries are exactly `{code, field, message}`. Common error response:
-`{schema_version:1, error:{code,field,message}}`. Codes are `invalid_json`,
-`invalid_schema`, `unsupported_version`, `policy_violation`, `clarification_required`,
-`unsupported_goal`, `spec_conflict`, `state_conflict`, `idempotency_conflict`,
-`not_found`, `result_not_ready`, `not_authorized`, `unavailable`. Field is a
+`{schema_version:1,error:{code,field,message},retry:{action,after_seconds,max_attempts}}`.
+Every field is required, including explicit null `after_seconds` for no retry.
+`clarification_required`/`unsupported_goal` remain plan issues, not error envelopes.
+Field is a
 trusted schema path or `$`, never an unknown field name copied from input.
-Messages are fixed safe strings. Suggested transport mapping: validation 400,
-clarification/rejection 200 plan outcomes, authorization 403, scoped not-found
-404, conflict/not-ready 409, unavailable 503. No raw provider exceptions.
+Messages are fixed safe strings. No raw provider exceptions or forwarded upstream
+headers. This is a pre-release v1 schema clarification: update consumers together;
+do not silently omit the required `phase` or `retry` fields for older clients.
+
+### Mandatory HTTP errors and bounded retry
+
+`HTTP_STATUS` and `retry_guidance(code)` export these exact mappings. No service
+implementation or UI should infer retryability from a status number alone:
+
+- `invalid_json`, `invalid_schema`, `unsupported_version`, `policy_violation`:
+  HTTP **400**, no automatic retry; correct the request/review first.
+- `not_authorized`: **403**, no retry; restore authorization explicitly.
+- `not_found`: **404**, no retry; do not disclose cross-scope existence.
+- `spec_conflict`, `state_conflict`, `idempotency_conflict`: **409**, no retry;
+  inspect persisted state/review the specification. Never regenerate keys or
+  silently create a new experiment to bypass a conflict.
+- `result_not_ready`: **409**, `{action:"poll_status",after_seconds:2,max_attempts:3}`.
+  Poll the same scoped status request, not results/report/reveal; retrieve results
+  only after a terminal status. Nonterminal successful polls may continue under
+  the normal UI polling policy, but do not create another error retry loop.
+- `rate_limited`: **429**, `{action:"same_request",after_seconds:5,max_attempts:3}`.
+  This is the operator service's admission/request throttle, not an upstream
+  provider 429. It admits no new work for the rejected request.
+- `queue_full`: **503**, the same 5-second/3-retry guidance. Only start admission
+  can emit it, before creating a run/claim or reading a saved key. Existing scoped
+  idempotent start replays return their persisted run, even when the queue is full.
+- `worker_unavailable`: **503**, the same 5-second/3-retry guidance. Only start
+  admission can emit it when no compatible worker can accept new work; no run was
+  admitted. An already admitted worker's failure is a run status/reason instead.
+- `unavailable`: **503**, no automatic retry. Safe fallback when the service
+  cannot establish a more specific condition or whether admission committed;
+  display that state is unavailable and allow explicit status reconciliation.
+  Do not claim that no work started.
+- `internal_error`: **500**, no automatic retry; fail safely, preserve any
+  existing identity and permit explicit status reconciliation.
+
+No-retry metadata is exactly `{action:"none",after_seconds:null,max_attempts:0}`.
+`clarification_required`/`unsupported_goal` are HTTP **200** plan outcomes with
+no-retry metadata only when looked up via `retry_guidance`, not extra plan fields.
+All responses use `Cache-Control: no-store`. Emit `Retry-After: 5` (integer delta
+seconds) for the three retryable 429/503 codes, exactly matching the body; omit
+it for all others. Do not forward provider retry headers, dates or URLs.
+
+Guidance permits at most **three additional HTTP attempts** after the initial
+request. Wait base, 2*base, 4*base seconds (5/10/20, or 2/4/8 for status checks).
+The counter is shared across changing transient error codes for the same pending
+user action; code changes, page reloads and switching from results to status do
+not reset it. Preserve the counter or disable automatic retry after reload. Stop
+on success, no-retry error, loss of authorization, cancellation of the client
+action, or three retries. After exhaustion, show a manual Retry/Refresh control;
+never restart automatically. These timers schedule HTTP requests only; they
+provide no evidence of experiment progress or remote request completion.
+
+Same-request retries preserve every request field. A start retry must keep the
+same scoped idempotency key, draft ID and spec hash; it can only retrieve the
+same admission or make its first admission. Cancel retries target the same run;
+they do not acknowledge worker quiescence. Status/results retries never invoke
+the evaluator or a provider. A network timeout/disconnect or malformed/missing
+error envelope has unknown admission state and permits **no automatic mutation
+retry**; preserve the original start tuple and use explicit reconciliation.
+None of this authorizes inference retries, cross-provider/model fallback,
+refunds, resetting reservations, resuming an interrupted run, or fresh spend.
 
 ## Provider-contact matrix and integration
 
