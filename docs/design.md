@@ -1,7 +1,7 @@
 # What God's Eye is becoming
 
-The screenshot suggests a useful separation of responsibilities: a powerful
-coding agent reasons about a target network; a service holds that network,
+The product separates responsibilities: a powerful coding agent reasons about
+a target network; a service holds that network,
 applies explicit edits, and executes measurements. The target can be much
 smaller than its programmer. The agent in the current session can already use
 the CLI; no second model subscription or API key is needed for this experiment.

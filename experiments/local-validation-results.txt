@@ -1,0 +1,52 @@
+test_budget_persists_after_failure_and_reload (test_benchmark.RepairBenchmarkTests) ... ok
+test_case_ownership_and_immutable_lineage (test_benchmark.RepairBenchmarkTests) ... ok
+test_crash_reservation_is_not_refunded (test_benchmark.RepairBenchmarkTests) ... ok
+test_creation_rejects_existing_data_and_invalid_settings (test_benchmark.RepairBenchmarkTests) ... ok
+test_final_failure_still_freezes_and_reserves (test_benchmark.RepairBenchmarkTests) ... ok
+test_no_private_labels_or_seeds_before_report_and_control_integrity (test_benchmark.RepairBenchmarkTests) ... ok
+test_probe_count_limit_independent_of_forward_budget (test_benchmark.RepairBenchmarkTests) ... ok
+test_demo_refuses_existing_output (test_benchmark_cli.BenchmarkCLITests) ... ok
+test_persistent_agent_workflow_and_report_gate (test_benchmark_cli.BenchmarkCLITests) ... ok
+test_matching_replay_is_verified_before_compaction (test_client_validation.ClientEvidenceTests) ... ok
+test_missing_replay_cannot_count_as_verified (test_client_validation.ClientEvidenceTests) ... ok
+test_replay_difference_fails_despite_identical_episode_metadata (test_client_validation.ClientEvidenceTests) ... ok
+test_checkpoint_roundtrip_retains_lineage (test_core.WeightSpaceTests) ... ok
+test_evaluation_bounds (test_core.WeightSpaceTests) ... ok
+test_observation_contract_preserves_each_channel (test_core.WeightSpaceTests) ... ok
+test_paired_identical_checkpoints_match_every_episode (test_core.WeightSpaceTests) ... ok
+test_patch_is_transactional_and_restorable (test_core.WeightSpaceTests) ... ok
+test_patch_rejects_execution_nonfinite_and_empty_edits (test_core.WeightSpaceTests) ... ok
+test_released_fixture_contract (test_core.WeightSpaceTests) ... ok
+test_sparse_forward_matches_dense_equations (test_core.WeightSpaceTests) ... ok
+test_adapter_ceiling_does_not_silently_freeze (test_evaluator.EvaluatorTests) ... ok
+test_auth_private_artifacts_and_allowlist (test_evaluator.EvaluatorTests) ... ok
+test_bounded_reads_and_cross_experiment_ids (test_evaluator.EvaluatorTests) ... ok
+test_concurrent_probe_reservations_never_overspend (test_evaluator.EvaluatorTests) ... ok
+test_deferred_final_failure_is_retained_without_retry (test_evaluator.EvaluatorTests) ... ok
+test_failure_and_process_death_preserve_budgets (test_evaluator.EvaluatorTests) ... ok
+test_global_reveal_gate_and_multiple_instances (test_evaluator.EvaluatorTests) ... ok
+test_independent_processes_share_admission_lock (test_evaluator.EvaluatorTests) ... ok
+test_invalid_patches_and_immutable_lineage (test_evaluator.EvaluatorTests) ... ok
+test_provider_failure_is_recorded_without_credentials (test_evaluator.EvaluatorTests) ... ok
+test_scripted_agent_uses_real_http_and_retains_failed_attempts (test_evaluator.EvaluatorTests) ... ok
+test_compose_isolation_persistence_and_scripted_agent (test_evaluator_container.ContainerBoundaryTests) ... ok
+test_actual_evaluation_progress_idempotency_and_persistence (test_platform.PlatformTests) ... ok
+test_http_security_boundary (test_platform.PlatformTests) ... ok
+test_mixed_boolean_literals_rejected_without_writes (test_platform.PlatformTests) ... ok
+test_optional_token_and_demo_mode (test_platform.PlatformTests) ... ok
+test_preview_is_read_only_and_hash_guard_is_enforced (test_platform.PlatformTests) ... ok
+test_rejects_executable_malformed_and_nonfinite_edits (test_platform.PlatformTests) ... ok
+test_schema_and_packaged_preset (test_platform.PlatformTests) ... ok
+test_strict_inputs_budget_and_missing_artifacts (test_platform.PlatformTests) ... ok
+test_capacity_cancel_and_restart (test_platform.QueueTests) ... ok
+test_export_contains_only_bundled_public_data (test_platform.QueueTests) ... ok
+test_directory_symlink_rejected (test_provider_setup.ProviderSetupTests) ... ok
+test_host_origin_csrf_and_body_boundaries (test_provider_setup.ProviderSetupTests) ... ok
+test_invalid_inputs_are_not_saved_or_echoed (test_provider_setup.ProviderSetupTests) ... ok
+test_save_permissions_redaction_and_configuration (test_provider_setup.ProviderSetupTests) ... ok
+test_symlink_destinations_cannot_overwrite_unrelated_files (test_provider_setup.ProviderSetupTests) ... ok
+
+----------------------------------------------------------------------
+Ran 47 tests in 43.847s
+
+OK

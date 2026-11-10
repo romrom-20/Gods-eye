@@ -1,0 +1,9 @@
+**
+!requirements.txt
+!godseye/
+!godseye/*.py
+!godseye/data/
+!godseye/data/breakout/
+!godseye/data/breakout/**
+!isolation/
+!isolation/agent_adapter.py

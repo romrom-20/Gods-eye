@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Developers — God’s Eye</title>
+    <link rel="stylesheet" href="landing.css" />
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a class="wordmark" href="./">god’s eye<span class="orange">.</span></a
+      ><a href="lab.html">Open the lab ↗</a>
+    </nav>
+    <main class="api-page">
+      <div class="eyebrow">DEVELOPER GUIDE / API v1</div>
+      <h1>Program an experiment.</h1>
+      <p>
+        Start the local server with <code>godseye serve</code>. The Python
+        client and website use the same versioned HTTP API. The static demo only
+        supports inspection and recorded playback.
+      </p>
+      <h2>Branch, then measure</h2>
+      <pre><code>from godseye.client import Client
+
+lab = Client("http://127.0.0.1:8787")
+patch = "W3[0:8:2, 1] = 0"
+hypothesis = "Removing the left circuit reduces score."
+preview = lab.preview("paper", patch, hypothesis)
+branch = lab.patch("paper", patch, hypothesis,
+    expected_parent_sha256=preview["parent_sha256"])
+job = lab.evaluate("paper", branch["id"],
+    episodes=8, seed=1000, max_steps=3000,
+    idempotency_key="first-ablation")
+result = lab.wait(job["id"])
+print(result["paired_mean_delta"], result["paired_se"])</code></pre>
+      <p>
+        Waiting times out after 120 seconds by default; this does not cancel the
+        job. Call <code>lab.cancel(job["id"])</code> explicitly to stop it.
+        Reusing an idempotency key returns the original evaluation job;
+        different settings with that key return 409.
+      </p>
+      <h2>The HTTP surface</h2>
+      <ul>
+        <li>
+          <span class="endpoint">GET /api/v1/state</span> — capabilities,
+          checkpoints, mode, and limits.
+        </li>
+        <li>
+          <span class="endpoint">GET /api/v1/tensor?id=paper&amp;name=W3</span>
+          — values, summaries, and checkpoint hash.
+        </li>
+        <li>
+          <span class="endpoint">POST /api/v1/patches/preview</span> — validate
+          an edit and return its diff without saving.
+        </li>
+        <li>
+          <span class="endpoint">POST /api/v1/checkpoints</span> — create a
+          branch. Send <code>base_id</code>, <code>patch</code>,
+          <code>hypothesis</code>, and optionally
+          <code>expected_parent_sha256</code>.
+        </li>
+        <li>
+          <span class="endpoint">POST /api/v1/jobs</span> — evaluate
+          <code>base_id</code> and <code>candidate_id</code>. Returns 202 and a
+          job ID.
+        </li>
+        <li>
+          <span class="endpoint">GET /api/v1/jobs/{id}</span> — status, episode
+          progress, and resulting run ID.
+        </li>
+        <li>
+          <span class="endpoint">POST /api/v1/jobs/{id}/cancel</span> — cancel
+          queued or running work. Send <code>{}</code>.
+        </li>
+        <li>
+          <span class="endpoint">GET /api/v1/runs/{id}</span> — complete
+          evidence, including replay traces.
+        </li>
+      </ul>
+      <p>
+        The local server exposes the machine-readable schema at
+        <code>/api/v1/openapi.json</code>. HTTP failures return
+        <code>{"error": "…"}</code>; validation failures also include
+        field-level <code>issues</code>.
+      </p>
+      <h2>A small, bounded language</h2>
+      <pre><code>W3[0:8:2, 1] = 0
+b3[1] += 0.25
+W2[:, 4] *= 0.5</code></pre>
+      <p>
+        Only numeric assignments, slices, and <code>+= -= *=</code> are
+        accepted. Function calls, imports, arbitrary Python execution, nonfinite
+        values, shape changes, and no-op patches are rejected. Each patch
+        applies to a copy; its parent stays intact.
+      </p>
+      <h2>Security and execution boundaries</h2>
+      <ul>
+        <li>
+          The writable server binds to loopback only. Host and Origin checks
+          protect against ordinary cross-origin requests and DNS rebinding. No
+          CORS wildcard is enabled.
+        </li>
+        <li>
+          Optional <code>GODSEYE_API_TOKEN</code> protects every API route with
+          a bearer token. The lab’s connection settings accept it in memory; the
+          client takes <code>token=…</code>.
+        </li>
+        <li>
+          Requests are limited to 64 KiB, patches to 200 statements, and
+          evaluations to 250,000 maximum forward calls. One worker runs at a
+          time, with four admitted jobs total.
+        </li>
+        <li>
+          Job states persist; unfinished work is marked interrupted on restart.
+          Cancellation is cooperative at forward-pass boundaries. Result
+          publication wins a late cancellation race.
+        </li>
+        <li>
+          A 256 MiB workspace admission limit stops new writes; an admitted run
+          can exceed it. This is not an OS disk quota.
+        </li>
+        <li>
+          This is a single-user research tool. Python plugins are trusted local
+          code, not sandboxed. Multi-tenant authorization, hardened worker
+          isolation, and durable distributed scheduling are future work.
+        </li>
+      </ul>
+      <h2>Publish without a compute service</h2>
+      <pre><code>godseye export-demo --output dist/demo
+python -m http.server 8080 --directory dist/demo</code></pre>
+      <p>
+        Upload the contents of <code>dist/demo</code> to a static host. Export
+        includes only bundled public examples, never your local workspace. The
+        demo is clearly labeled as recorded, and cannot create checkpoints or
+        run jobs.
+      </p>
+      <h2>What this establishes</h2>
+      <p>
+        The included network and known ablation demonstrate inspection,
+        branching, and measurement. They do not establish general-purpose model
+        repair or reproduce the paper’s benchmark. Use disjoint development and
+        held-out seeds before making improvement claims.
+      </p>
+      <p>
+        <a
+          href="https://github.com/romrom-20/Gods-eye/blob/main/docs/roadmap.md"
+          >Continue with the implementation roadmap ↗</a
+        >
+      </p>
+    </main>
+    <footer class="site-footer">
+      <a href="./">← Back to God’s Eye</a
+      ><span>INSPECT → PREVIEW → BRANCH → EVALUATE</span>
+    </footer>
+  </body>
+</html>

@@ -7,6 +7,10 @@ const state = {
   run: null,
   timer: null,
   view: "overview",
+  mode: "local",
+  token: "",
+  job: null,
+  maxForwards: 250000,
 };
 const actions = ["no-op", "left", "up", "right", "down", "fire"];
 const fmt = (v, digits = 1) =>
@@ -75,21 +79,98 @@ for (const button of document.querySelectorAll("[data-nav], [data-go]"))
   };
 window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 
+let demoPayload;
 async function api(path, body) {
-  const response = await fetch(
-    path,
-    body === undefined
+  if (document.documentElement.dataset.staticDemo === "true") {
+    if (body !== undefined)
+      throw new Error(
+        "Recorded demo is read-only. Run the local lab to create experiments.",
+      );
+    if (!demoPayload)
+      demoPayload = fetch("demo.json").then((r) => {
+        if (!r.ok) throw new Error("Demo data unavailable");
+        return r.json();
+      });
+    const data = await demoPayload,
+      url = new URL(path, location.origin);
+    if (url.pathname === "/api/state") return data.state;
+    if (url.pathname === "/api/runs") return data.runs;
+    if (url.pathname === "/api/tensor")
+      return data.tensors[url.searchParams.get("id")][
+        url.searchParams.get("name")
+      ];
+    if (url.pathname.startsWith("/api/run/"))
+      return data.traces[url.pathname.split("/").pop()];
+    if (url.pathname === "/api/preset/ball-chaser") return data.preset;
+    if (url.pathname === "/api/v1/jobs") return [];
+    throw new Error("This operation requires the local server.");
+  }
+  const headers = { "Content-Type": "application/json" };
+  if (state.token) headers.Authorization = "Bearer " + state.token;
+  const response = await fetch(path, {
+    headers,
+    ...(body === undefined
       ? {}
-      : {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-  );
+      : { method: "POST", body: JSON.stringify(body) }),
+  });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Request failed");
+  if (!response.ok) {
+    if (response.status === 401) {
+      $("connection-panel").hidden = false;
+      $("connection-panel").open = true;
+    }
+    throw new Error(
+      (data.error || "Request failed") +
+        (data.issues
+          ? ": " + data.issues.map((i) => i.field + " " + i.message).join("; ")
+          : ""),
+    );
+  }
   return data;
 }
+function configureMode(data) {
+  state.mode = data.mode;
+  state.maxForwards = data.limits?.max_forwards || 250000;
+  const recorded = state.mode === "recorded-demo";
+  $("mode-banner").hidden = !recorded;
+  $("mode-banner").replaceChildren(
+    document.createTextNode(
+      "RECORDED DEMO · Real tensors and saved gameplay. New edits and evaluations require the local lab. ",
+    ),
+  );
+  const link = document.createElement("a");
+  link.href = "./#start";
+  link.textContent = "Run it locally →";
+  $("mode-banner").append(link);
+  $("environment-label").textContent = recorded
+    ? "Recorded demo"
+    : "Local CPU environment";
+  $("connection-label").textContent = recorded
+    ? "Recorded evidence"
+    : "Local connection";
+  $("execution-label").textContent = recorded
+    ? "Playback of recorded experiments"
+    : "Experiments run on your CPU";
+  for (const id of ["apply", "preview-patch", "evaluate"]) {
+    $(id).disabled = recorded;
+    $(id).title = recorded ? "Start the local lab to use this operation" : "";
+  }
+  document.querySelector(".eval-footer > span").textContent = recorded
+    ? "Recorded demo · execution disabled"
+    : "Ready for local execution";
+  updateBudget();
+}
+$("connection-settings").onclick = () => {
+  $("connection-panel").hidden = false;
+  $("connection-panel").open = true;
+  $("api-token").focus();
+};
+$("connect-token").onclick = async () => {
+  state.token = $("api-token").value;
+  $("api-token").value = "";
+  await initialize();
+};
+
 function message(id, text, error = false) {
   $(id).textContent = text;
   $(id).classList.toggle("error", error);
@@ -176,6 +257,7 @@ function sidebarCheckpoints() {
 async function refresh() {
   const data = await api("/api/state");
   state.checkpoints = data.checkpoints;
+  configureMode(data);
   for (const id of ["inspect-model", "patch-base", "base", "candidate"]) {
     const select = $(id),
       value = select.value;
@@ -307,11 +389,17 @@ function updateLineNumbers() {
     if (i < count) $("line-numbers").append(document.createElement("br"));
   }
 }
-$("patch").oninput = updateLineNumbers;
+$("patch").oninput = () => {
+  updateLineNumbers();
+  message("preview-result", "");
+};
+$("patch-base").addEventListener("change", () => message("preview-result", ""));
+$("hypothesis").addEventListener("input", () => message("preview-result", ""));
 $("patch").onscroll = () => {
   $("line-numbers").style.transform = `translateY(-${$("patch").scrollTop}px)`;
 };
 function activatePreset(id) {
+  message("preview-result", "");
   for (const p of document.querySelectorAll(".preset-button"))
     p.classList.toggle("selected", p.id === id);
   updateLineNumbers();
@@ -347,18 +435,44 @@ $("preset-write").onclick = async () => {
     message("patch-result", e.message, true);
   }
 };
+$("preview-patch").onclick = async () => {
+  $("preview-patch").disabled = true;
+  try {
+    const result = await api("/api/v1/patches/preview", {
+      base_id: $("patch-base").value,
+      patch: $("patch").value,
+      hypothesis: $("hypothesis").value,
+    });
+    message(
+      "preview-result",
+      `${result.changed} / ${result.parameters.toLocaleString()} weights would change.\n` +
+        result.diff
+          .map(
+            (d) =>
+              `${d.tensor}: ${d.changed} changed · maximum |Δ| ${d.max_delta}`,
+          )
+          .join("\n") +
+        "\nPreview only. No checkpoint saved.",
+    );
+  } catch (e) {
+    message("preview-result", e.message, true);
+  } finally {
+    $("preview-patch").disabled = state.mode === "recorded-demo";
+  }
+};
 $("apply").onclick = async () => {
   const button = $("apply");
   button.disabled = true;
   button.textContent = "Creating checkpoint…";
   try {
     const base = $("patch-base").value;
-    const report = await api("/api/patch", {
+    const report = await api("/api/v1/checkpoints", {
       base_id: base,
       patch: $("patch").value,
       hypothesis: $("hypothesis").value,
     });
     await refresh();
+    message("preview-result", "");
     $("inspect-model").value = report.id;
     $("patch-base").value = report.id;
     $("base").value = base;
@@ -519,7 +633,8 @@ function showRun(run) {
     run.base.forward_calls + run.candidate.forward_calls,
     0,
   );
-  $("elapsed").textContent = `${fmt(run.seconds, 2)}s local execution`;
+  $("elapsed").textContent =
+    `${fmt(run.seconds, 2)}s ${state.mode === "recorded-demo" ? "recorded" : "local"} execution`;
   $("frame").max =
     Math.max(run.base.trace.length, run.candidate.trace.length) - 1;
   $("frame").value = Math.min(12, Number($("frame").max));
@@ -644,45 +759,130 @@ async function loadHistory() {
   $("overview-empty").hidden = !!runs.length;
   return runs;
 }
-$("evaluate").onclick = async () => {
-  const button = $("evaluate");
-  button.disabled = true;
-  button.textContent = "Running episodes…";
-  stopReplay();
-  message(
-    "eval-status",
-    "Running MinAtar locally. Both checkpoints use the same episode seeds…",
-  );
+function updateBudget() {
+  const forwards =
+    2 * Number($("episodes").value) * Number($("max-steps").value);
+  $("eval-budget").textContent =
+    `At most ${forwards.toLocaleString()} forward calls · limit ${state.maxForwards.toLocaleString()} · 1 CPU worker · no provider charges`;
+  $("eval-budget").classList.toggle("error", forwards > state.maxForwards);
+}
+for (const id of ["episodes", "max-steps"])
+  $(id).addEventListener("input", updateBudget);
+let pollingJob = false;
+async function followJob(job) {
+  if (pollingJob) return;
+  pollingJob = true;
+  state.job = job.id;
+  $("evaluate").disabled = true;
+  $("job-progress-wrap").hidden = false;
+  $("cancel-job").disabled = false;
   try {
-    const run = await api("/api/compare", {
+    while (true) {
+      $("job-progress").max = job.total;
+      $("job-progress").value = job.completed;
+      message(
+        "eval-status",
+        `${job.status.toUpperCase()} · ${job.completed}/${job.total} episodes · job ${job.id.slice(0, 8)}`,
+      );
+      if (job.status === "succeeded") {
+        await loadHistory();
+        await openRun(job.run_id);
+        showView("overview");
+        message("eval-status", "Evaluation completed and saved.");
+        break;
+      }
+      if (["cancelled", "failed", "interrupted"].includes(job.status)) {
+        message(
+          "eval-status",
+          job.error || "Evaluation cancelled. No partial result was published.",
+          job.status !== "cancelled",
+        );
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      job = await api("/api/v1/jobs/" + job.id);
+    }
+  } catch (e) {
+    message(
+      "eval-status",
+      e.message + " Reopen Evaluations or reload to reconnect to the job.",
+      true,
+    );
+  } finally {
+    state.job = null;
+    pollingJob = false;
+    $("evaluate").disabled = state.mode === "recorded-demo";
+    $("job-progress-wrap").hidden = true;
+    await loadJobs();
+  }
+}
+async function loadJobs() {
+  try {
+    const jobs = await api("/api/v1/jobs");
+    $("recent-jobs").replaceChildren();
+    for (const job of jobs.slice(0, 5)) {
+      const row = document.createElement("div"),
+        text = document.createElement("span");
+      row.className = "job-row";
+      text.textContent = `${job.id.slice(0, 8)} · ${job.status} · ${job.completed}/${job.total} episodes`;
+      row.append(text);
+      if (["queued", "running", "cancelling"].includes(job.status)) {
+        const button = document.createElement("button");
+        button.className = "quiet";
+        button.textContent = "Follow";
+        button.disabled = pollingJob;
+        button.onclick = () => followJob(job);
+        row.append(button);
+      } else if (job.run_id) {
+        const button = document.createElement("button");
+        button.className = "quiet";
+        button.textContent = "View result";
+        button.onclick = () => openRun(job.run_id, true);
+        row.append(button);
+      }
+      $("recent-jobs").append(row);
+    }
+  } catch (e) {
+    message("eval-status", e.message, true);
+  }
+}
+$("cancel-job").onclick = async () => {
+  if (!state.job) return;
+  $("cancel-job").disabled = true;
+  try {
+    await api("/api/v1/jobs/" + state.job + "/cancel", {});
+  } catch (e) {
+    message("eval-status", e.message, true);
+    $("cancel-job").disabled = false;
+  }
+};
+$("evaluate").onclick = async () => {
+  for (const id of ["episodes", "seed", "max-steps"])
+    if (!$(id).reportValidity()) return;
+  $("evaluate").disabled = true;
+  stopReplay();
+  try {
+    const job = await api("/api/v1/jobs", {
       base_id: $("base").value,
       candidate_id: $("candidate").value,
       episodes: Number($("episodes").value),
       seed: Number($("seed").value),
       max_steps: Number($("max-steps").value),
     });
-    ++runRequest;
-    await loadHistory();
-    showRun(run);
-    showView("overview");
-    message(
-      "eval-status",
-      `Comparison ${run.id.slice(0, 8)} saved. Results are available in Overview and Run history.`,
-    );
-    $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+    await followJob(job);
   } catch (e) {
     message("eval-status", e.message, true);
   } finally {
-    button.disabled = false;
-    button.innerHTML = "Run comparison <span>→</span>";
+    $("evaluate").disabled = state.mode === "recorded-demo";
   }
 };
-(async () => {
+async function initialize() {
   drawArchitecture();
   updateLineNumbers();
   showView(location.hash.slice(1) || "overview");
   try {
     await refresh();
+    await loadJobs();
     await loadTensor();
     const runs = await loadHistory();
     const featured =
@@ -697,4 +897,5 @@ $("evaluate").onclick = async () => {
   } catch (e) {
     message("overview-status", e.message, true);
   }
-})();
+}
+initialize();

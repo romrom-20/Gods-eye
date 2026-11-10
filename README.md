@@ -1,6 +1,6 @@
 # God's Eye
 
-A local workbench for **direct weight-space programming**. Inspect an actual
+A website, local CPU lab, and API for **direct weight-space programming**. Inspect an actual
 neural network, edit its tensors, branch checkpoints, compare gameplay, and
 replay the decisions. No training loop, API key, or remote compute required.
 
@@ -11,7 +11,7 @@ licenses are in [fixtures/breakout/PROVENANCE.md](fixtures/breakout/PROVENANCE.m
 
 ## Run
 
-Python 3.9+:
+Python 3.9–3.12:
 
 ```sh
 python3 -m venv .venv
@@ -19,11 +19,13 @@ python3 -m venv .venv
 .venv/bin/python -m godseye serve
 ```
 
-Open **http://127.0.0.1:8787**. The Overview opens a recorded experiment with
-paired gameplay, action probabilities, and neuron activations. Use the sidebar
-to move between **Tensor lab**, **Evaluations**, and **Run history**.
+Open **http://127.0.0.1:8787** for the website or **http://127.0.0.1:8787/lab**
+for the lab. Existing experiments appear in Overview with paired gameplay,
+action probabilities, and neuron activations. A new workspace starts empty;
+create your first comparison in Evaluations. Use the sidebar to move between
+**Tensor lab**, **Evaluations**, and **Run history**.
 
-In **Tensor lab**, select **Ablate a circuit**, create a checkpoint, and use
+In **Tensor lab**, select **Ablate a circuit**, preview the changes, create a checkpoint, and use
 **Compare this checkpoint** to run an evaluation. Then select **Restore it**,
 branch from the ablated checkpoint, create a checkpoint, and compare again.
 The original checkpoint remains available for rollback.
@@ -38,6 +40,58 @@ authored for this project. Its first hidden unit computes the difference
 between ball and paddle columns; the next layers turn that into movement
 logits. It has no velocity prediction. Compare it with zero initialization
 and with the released policy, and inspect its much sparser tensors.
+
+## Share a demo without hosting compute
+
+```sh
+.venv/bin/python -m godseye export-demo --output dist/demo
+python3 -m http.server 8080 --directory dist/demo
+```
+
+Open **http://localhost:8080**. The export contains the product website, developer
+guide, real tensor data, and two bundled recorded comparisons. Visitors can
+inspect and replay; mutation and evaluation controls are disabled and labeled.
+Upload the directory contents to any static host. Relative links also work under
+a subdirectory. No Python server or GPU is needed on that host. The export never
+reads your private `.godseye/` workspace and refuses to overwrite a nonempty folder.
+
+Alternatively, `godseye serve --demo` serves the bundled data read-only through
+Python. The GitHub Actions workflow tests the project and builds a downloadable
+`godseye-static-demo` artifact; it does not deploy automatically.
+
+## Python API
+
+Install the package with `pip install -e '.[server]'`, then run `godseye serve`.
+
+```python
+from godseye.client import Client
+
+lab = Client()
+patch = "W3[0:8:2, 1] = 0"
+hypothesis = "Removing the left circuit reduces score."
+preview = lab.preview("paper", patch, hypothesis)
+branch = lab.patch("paper", patch, hypothesis,
+                   expected_parent_sha256=preview["parent_sha256"])
+job = lab.evaluate("paper", branch["id"], episodes=8, seed=1000,
+                   max_steps=3000, idempotency_key="first-ablation")
+result = lab.wait(job["id"])
+print(result["paired_mean_delta"], result["paired_se"])
+```
+
+The API returns a job immediately. Poll it, cancel with `lab.cancel(job["id"])`,
+or use `wait`. A wait timeout does not cancel the job. Jobs survive page reload;
+restart marks unfinished jobs interrupted. See `/api.html` for the developer
+guide and `/api/v1/openapi.json` for the typed schema. The former synchronous
+`POST /api/compare` route is replaced by `POST /api/v1/jobs`.
+
+One CPU worker executes at a time, with four admitted jobs and a 250,000 maximum
+forward-call budget per job. The CLI permits larger bounded local experiments.
+Artifacts use the current directory's `.godseye/`, or `GODSEYE_DATA_DIR`.
+
+The writable server is loopback-only. Optional `GODSEYE_API_TOKEN` protects the
+API; supply it through the lab's Connection settings or `Client(token=...)`.
+This is a single-user tool, not production multi-tenant hosting. Read the
+[security contract](docs/security.md) before changing the deployment boundary.
 
 ## Use from an agent or terminal
 
@@ -84,6 +138,7 @@ after policies choose different actions. There is no PPO checkpoint included.
 ## Validation
 
 ```sh
+.venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python -m experiments.reproduce
 ```
@@ -97,3 +152,42 @@ disjoint seed range, and writes a compact evidence record to
 [experiments/first-session-results.json](experiments/first-session-results.json).
 Full traces stay in `.godseye/`. The evidence includes the patches and hashes
 needed to reconstruct the three candidate checkpoints.
+
+## Continue building
+
+Start with the [implementation roadmap](docs/roadmap.md): validate a concealed
+repair task, add one small language-model backend, then add remote execution
+with tenant isolation and transactional spending limits. The static demo and
+local CPU lab are usable today. Autonomous LLM editing, remote workers,
+accounts, and billing are future milestones.
+
+## Agent repair benchmark
+
+A separate CPU benchmark now provides three fault families and an unchanged
+control, opaque case IDs, persistent probe budgets, frozen final selections,
+and delayed held-out reports. Run the deterministic baseline demonstration:
+
+```sh
+.venv/bin/python -m experiments.benchmark_demo --output /tmp/repair-demo.json
+```
+
+Choose a new output filename for each run. See [the benchmark protocol](docs/repair-benchmark.md)
+for coding-agent CLI commands and budget semantics. This is a local protocol,
+not an isolated blind evaluator; same-user access to private files and the
+reference fixture can reveal answers. The demo makes no autonomous repair claim.
+
+A separate [container evaluator and restricted coding-agent adapter](docs/isolated-evaluator.md)
+now provide scoped authenticated tools, bounded tensor slices, and an experiment-wide
+held-out gate. [Saved baseline-only observations](docs/evaluator-pilot-report.md)
+include three instances per fault family and controls. The real-agent experiment
+and container verification remain unexecuted on the implementation host; the
+report separates those limits from completed code and deterministic tests.
+
+## Add your model API key locally
+
+On macOS, double-click `scripts/Configure-OpenAI.command`, or run
+`.venv/bin/python -m godseye.provider_setup`. The setup page stores an OpenAI
+key outside the repo in `~/.godseye-secrets/`, with owner-only permissions.
+Model choice can wait. Saving performs no provider requests and starts no jobs.
+See [the launch guide](docs/isolated-evaluator.md#easy-local-openai-key-setup-macos)
+for loading the saved configuration into the isolated experiment.

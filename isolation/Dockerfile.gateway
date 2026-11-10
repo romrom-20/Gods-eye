@@ -1,0 +1,6 @@
+FROM python:3.11-slim
+WORKDIR /gateway
+COPY isolation/gateway.py /gateway/gateway.py
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+USER 65532:65532
+ENTRYPOINT ["python", "/gateway/gateway.py"]

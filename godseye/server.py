@@ -1,108 +1,269 @@
+"""Local API and read-only demo server. Not a multi-tenant hosting boundary."""
+from contextlib import asynccontextmanager
+import hmac
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import os
+import re
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+import threading
+from typing import Optional
+from urllib.parse import urlsplit
 
-from .core import Store, tensor_summary, digest
+from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
+
+from .backends import DATA_DIR
+from .core import Store, apply_patch, difference, digest, tensor_summary
+from .jobs import Conflict, JobQueue, QueueFull
 
 STATIC = Path(__file__).parent / 'static'
+MAX_BODY = 65536
+MAX_FORWARDS = 250000
 
 
-def serve(port=8787):
-    store = Store()
+class PatchRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    base_id: str = Field(min_length=1, max_length=16)
+    patch: str = Field(min_length=1, max_length=50000)
+    hypothesis: str = Field(min_length=1, max_length=4000)
+    expected_parent_sha256: Optional[str] = Field(default=None, pattern=r'^[a-f0-9]{64}$')
 
-    class Handler(BaseHTTPRequestHandler):
-        def json_response(self, value, status=200):
-            body = json.dumps(value, allow_nan=False).encode()
-            self.send_response(status)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Content-Length', str(len(body)))
-            self.send_header('Cache-Control', 'no-store')
-            self.end_headers()
-            self.wfile.write(body)
 
-        def do_GET(self):
-            try:
-                route = urlparse(self.path)
-                query = parse_qs(route.query)
-                if route.path == '/api/state':
-                    self.json_response({'checkpoints': store.checkpoints(), 'backend': 'local-numpy',
-                                        'parameters': 20486, 'architecture': '600 → 32 → 32 → 6 · tanh'})
-                elif route.path == '/api/tensor':
-                    weights = store.weights(query.get('id', ['paper'])[0])
-                    name = query.get('name', ['W1'])[0]
-                    if name not in weights:
-                        raise ValueError('Unknown tensor')
-                    self.json_response({'name': name, 'values': weights[name].tolist(),
-                                        'summary': tensor_summary(weights), 'sha256': digest(weights)})
-                elif route.path == '/api/runs':
-                    # Return metadata only; traces are loaded on demand.
-                    rows = []
-                    for path in sorted(store.path.glob('run-*.json'), key=lambda p: p.stat().st_mtime, reverse=True)[:30]:
-                        row = json.loads(path.read_text())
-                        for key in ('base', 'candidate'):
-                            row[key].pop('trace', None)
-                        rows.append(row)
-                    self.json_response(rows)
-                elif route.path == '/api/preset/ball-chaser':
-                    self.json_response({'patch': (STATIC.parent.parent / 'experiments/ball-chaser.edits').read_text()})
-                elif route.path.startswith('/api/run/'):
-                    run_id = route.path.rsplit('/', 1)[-1]
-                    if len(run_id) != 16 or any(c not in '0123456789abcdef' for c in run_id):
-                        raise ValueError('Invalid run id')
-                    self.json_response(json.loads((store.path / ('run-' + run_id + '.json')).read_text()))
-                else:
-                    files = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'),
-                             '/style.css': ('style.css', 'text/css')}
-                    if route.path not in files:
-                        self.json_response({'error': 'Not found'}, 404)
-                        return
-                    name, mime = files[route.path]
-                    body = (STATIC / name).read_bytes()
-                    self.send_response(200)
-                    self.send_header('Content-Type', mime + '; charset=utf-8')
-                    self.send_header('Content-Length', str(len(body)))
-                    self.send_header('Cache-Control', 'no-cache')
-                    self.send_header('X-Content-Type-Options', 'nosniff')
-                    self.end_headers()
-                    self.wfile.write(body)
-            except (ValueError, KeyError, FileNotFoundError) as error:
-                self.json_response({'error': str(error)}, 400)
+class EvaluationRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    base_id: str = Field(min_length=1, max_length=16)
+    candidate_id: str = Field(min_length=1, max_length=16)
+    episodes: StrictInt = Field(default=8, ge=1, le=64)
+    seed: StrictInt = Field(default=1000, ge=0, le=2**32 - 65)
+    max_steps: StrictInt = Field(default=3000, ge=1, le=10000)
 
-        def do_POST(self):
-            try:
-                # Same-origin JSON only. This service stays on the loopback interface.
-                origin = self.headers.get('Origin')
-                allowed = {f'http://127.0.0.1:{port}', f'http://localhost:{port}'}
-                if origin and origin not in allowed:
-                    self.json_response({'error': 'Origin rejected'}, 403)
+
+class Boundary:
+    """Validate Host/Origin and bound streamed bodies before JSON parsing."""
+    def __init__(self, app, hosts, token):
+        self.app, self.hosts, self.token = app, set(hosts), token
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http':
+            return await self.app(scope, receive, send)
+        headers = dict(scope['headers'])
+        host = headers.get(b'host', b'').decode('latin1')
+        hostname = urlsplit('http://' + host).hostname if re.fullmatch(
+            r'[a-zA-Z0-9.-]+(?::[0-9]{1,5})?', host) else None
+        error, status = None, 403
+        if hostname not in self.hosts:
+            error = 'Host rejected'
+        origin = headers.get(b'origin', b'').decode('latin1')
+        if origin and origin != scope.get('scheme', 'http') + '://' + host:
+            error = 'Origin rejected'
+        is_api = scope['path'].startswith('/api/')
+        if is_api and self.token and not hmac.compare_digest(
+                headers.get(b'authorization', b''), ('Bearer ' + self.token).encode()):
+            error, status = 'API token required', 401
+        if is_api and headers.get(b'sec-fetch-site') == b'cross-site':
+            error = 'Cross-site request rejected'
+        if scope['method'] in ('POST', 'PUT', 'PATCH'):
+            if headers.get(b'content-type', b'').split(b';')[0].strip() != b'application/json':
+                error, status = 'Use application/json', 415
+        body = b''
+        if not error:
+            while True:
+                message = await receive()
+                if message['type'] == 'http.disconnect':
                     return
-                if self.headers.get_content_type() != 'application/json':
-                    raise ValueError('Use application/json')
-                length = int(self.headers.get('Content-Length', '0'))
-                if not 0 < length <= 100000:
-                    raise ValueError('Invalid request size')
-                body = json.loads(self.rfile.read(length))
-                if not isinstance(body, dict):
-                    raise ValueError('Expected a JSON object')
-                if self.path == '/api/patch':
-                    result = store.patch(body['base_id'], body['patch'], body['hypothesis'])
-                elif self.path == '/api/compare':
-                    result = store.run(body['base_id'], body['candidate_id'],
-                                       episodes=body.get('episodes', 8), seed=body.get('seed', 1000),
-                                       max_steps=body.get('max_steps', 3000))
-                else:
-                    self.json_response({'error': 'Not found'}, 404)
-                    return
-                self.json_response(result)
-            except (ValueError, TypeError, KeyError, IndexError, SyntaxError, FileNotFoundError) as error:
-                self.json_response({'error': str(error)}, 400)
+                body += message.get('body', b'')
+                if len(body) > MAX_BODY:
+                    error, status = 'Request body exceeds 64 KiB', 413
+                    break
+                if not message.get('more_body', False):
+                    break
+        async def secured_send(message):
+            if message['type'] == 'http.response.start':
+                message['headers'] = list(message.get('headers', [])) + [
+                    (b'x-content-type-options', b'nosniff'),
+                    (b'x-frame-options', b'DENY'),
+                    (b'referrer-policy', b'no-referrer'),
+                    (b'cache-control', b'no-store' if is_api else b'no-cache'),
+                    (b'content-security-policy', b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"),
+                ]
+            await send(message)
+        if error:
+            return await JSONResponse({'error': error}, status_code=status)(scope, receive, secured_send)
+        consumed = False
+        async def replay():
+            nonlocal consumed
+            if consumed:
+                return await receive()
+            consumed = True
+            return {'type': 'http.request', 'body': body, 'more_body': False}
+        await self.app(scope, replay, secured_send)
 
-    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
-    print(f"God's Eye running at http://127.0.0.1:{port}", flush=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+
+def create_app(store=None, readonly=False, allowed_hosts=None, token=None):
+    store = store or Store(DATA_DIR / 'demo' if readonly else None)
+    jobs = None if readonly else JobQueue(store)
+    mutation_lock = threading.Lock()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        yield
+        if jobs:
+            jobs.close()
+
+    app = FastAPI(title="God's Eye weight-space API", version='0.3.0',
+                  description='Inspect → preview → branch → evaluate. Local CPU execution.',
+                  docs_url=None, redoc_url=None, openapi_url='/api/v1/openapi.json', lifespan=lifespan)
+    app.state.jobs = jobs
+    app.add_middleware(Boundary, hosts=allowed_hosts or ['127.0.0.1', 'localhost', 'testserver'], token=token)
+
+    @app.exception_handler(HTTPException)
+    async def http_error(request, error):
+        return JSONResponse({'error': error.detail}, status_code=error.status_code)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid(request, error):
+        issues = [{'field': '.'.join(map(str, e['loc'])), 'message': e['msg']} for e in error.errors()]
+        return JSONResponse({'error': 'Invalid request', 'issues': issues}, status_code=422)
+
+    async def bad_input(request, error):
+        return JSONResponse({'error': str(error)}, status_code=400)
+    for cls in (ValueError, TypeError, IndexError, SyntaxError, OverflowError):
+        app.add_exception_handler(cls, bad_input)
+
+    async def missing(request, error):
+        return JSONResponse({'error': 'Artifact not found'}, status_code=404)
+    for cls in (KeyError, FileNotFoundError):
+        app.add_exception_handler(cls, missing)
+
+    def writable():
+        if readonly:
+            raise HTTPException(403, 'Recorded demo is read-only. Run the local lab to create experiments.')
+        # Admission quota, not a transactional filesystem quota. A bounded run may cross it.
+        if sum(p.stat().st_size for p in store.path.iterdir() if p.is_file()) >= 256 * 1024**2:
+            raise HTTPException(507, 'Workspace reached its 256 MiB admission limit. Archive artifacts locally.')
+
+    @app.get('/api/state', include_in_schema=False)
+    @app.get('/api/v1/state')
+    def state():
+        return {'checkpoints': store.checkpoints(), 'backend': store.backend.id,
+                'parameters': sum(v.size for v in store.paper.values()),
+                'architecture': '600 → 32 → 32 → 6 · tanh',
+                'mode': 'recorded-demo' if readonly else 'local',
+                'limits': {'max_forwards': MAX_FORWARDS, 'queue_capacity': 4},
+                'capabilities': ['tensor_read', 'patch_preview'] + ([] if readonly else ['patch', 'evaluate', 'cancel'])}
+
+    @app.get('/api/tensor', include_in_schema=False)
+    @app.get('/api/v1/tensor')
+    def tensor(id: str = 'paper', name: str = 'W1'):
+        weights = store.weights(id)
+        if name not in weights:
+            raise HTTPException(404, 'Unknown tensor')
+        return {'name': name, 'values': weights[name].tolist(),
+                'summary': tensor_summary(weights), 'sha256': digest(weights)}
+
+    @app.get('/api/runs', include_in_schema=False)
+    @app.get('/api/v1/runs')
+    def runs():
+        return store.runs()
+
+    @app.get('/api/run/{run_id}', include_in_schema=False)
+    @app.get('/api/v1/runs/{run_id}')
+    def run(run_id: str):
+        return store.read_run(run_id)
+
+    @app.get('/api/preset/ball-chaser', include_in_schema=False)
+    @app.get('/api/v1/presets/ball-chaser')
+    def preset():
+        return {'patch': (DATA_DIR / 'presets/ball-chaser.edits').read_text()}
+
+    def preview(body):
+        if not body.hypothesis.strip():
+            raise ValueError('Write a hypothesis')
+        base = store.weights(body.base_id)
+        parent_hash = digest(base)
+        if body.expected_parent_sha256 and body.expected_parent_sha256 != parent_hash:
+            raise HTTPException(409, 'Parent hash mismatch. Inspect the checkpoint again.')
+        edited = apply_patch(base, body.patch)
+        diff = difference(base, edited)
+        return {'parent_sha256': parent_hash, 'sha256': digest(edited), 'diff': diff,
+                'changed': sum(d['changed'] for d in diff), 'parameters': sum(v.size for v in base.values())}
+
+    @app.post('/api/v1/patches/preview')
+    def preview_patch(body: PatchRequest):
+        return preview(body)
+
+    @app.post('/api/patch', include_in_schema=False, status_code=201)
+    @app.post('/api/v1/checkpoints', status_code=201)
+    def patch(body: PatchRequest):
+        with mutation_lock:
+            writable()
+            preview(body)
+            return store.patch(body.base_id, body.patch, body.hypothesis)
+
+    @app.post('/api/v1/jobs', status_code=202)
+    def submit(body: EvaluationRequest, idempotency_key: Optional[str] = Header(default=None)):
+        with mutation_lock:
+            writable()
+            if 2 * body.episodes * body.max_steps > MAX_FORWARDS:
+                raise HTTPException(422, 'Evaluation exceeds 250,000 maximum forward calls. Reduce episodes or steps.')
+            if idempotency_key and (len(idempotency_key) > 128 or not idempotency_key.isascii()):
+                raise HTTPException(400, 'Use an ASCII idempotency key of at most 128 characters')
+            store.weights(body.base_id)
+            store.weights(body.candidate_id)
+            try:
+                return jobs.submit(body.model_dump(), idempotency_key)
+            except QueueFull as error:
+                raise HTTPException(429, str(error))
+            except Conflict as error:
+                raise HTTPException(409, str(error))
+
+    @app.get('/api/v1/jobs')
+    def list_jobs():
+        return jobs.list() if jobs else []
+
+    @app.get('/api/v1/jobs/{job_id}')
+    def get_job(job_id: str):
+        if not jobs:
+            raise HTTPException(404, 'No live jobs in the recorded demo')
+        return jobs.get(job_id)
+
+    @app.post('/api/v1/jobs/{job_id}/cancel')
+    def cancel_job(job_id: str):
+        if not jobs:
+            raise HTTPException(403, 'Recorded demo is read-only')
+        return jobs.cancel(job_id)
+
+    @app.get('/healthz')
+    def health():
+        return {'status': 'ok', 'mode': 'recorded-demo' if readonly else 'local'}
+
+    @app.get('/', include_in_schema=False)
+    def home():
+        return FileResponse(STATIC / 'landing.html')
+
+    @app.get('/lab', include_in_schema=False)
+    @app.get('/lab.html', include_in_schema=False)
+    def lab():
+        return FileResponse(STATIC / 'index.html')
+
+    @app.get('/{asset}', include_in_schema=False)
+    def asset(asset: str):
+        if asset not in {'app.js', 'style.css', 'landing.css', 'landing.js', 'api.html'}:
+            raise HTTPException(404, 'Not found')
+        return FileResponse(STATIC / asset)
+
+    return app
+
+
+def serve(port=8787, demo=False, host='127.0.0.1'):
+    import uvicorn
+    if host not in ('127.0.0.1', 'localhost') and not demo:
+        raise ValueError('Writable server must bind to loopback. Use --demo for a read-only server.')
+    hosts = [h.strip() for h in os.environ.get(
+        'GODSEYE_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')]
+    app = create_app(readonly=demo, allowed_hosts=hosts, token=os.environ.get('GODSEYE_API_TOKEN'))
+    print(f"God's Eye at http://{host}:{port} · {'recorded demo' if demo else 'local CPU lab'}", flush=True)
+    uvicorn.run(app, host=host, port=port, workers=1, proxy_headers=False, limit_concurrency=32,
+                timeout_keep_alive=5, log_level='info')

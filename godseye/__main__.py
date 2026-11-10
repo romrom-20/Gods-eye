@@ -10,6 +10,10 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     web = sub.add_parser('serve')
     web.add_argument('--port', type=int, default=8787)
+    web.add_argument('--demo', action='store_true', help='Serve bundled evidence read-only')
+    web.add_argument('--host', default='127.0.0.1')
+    export = sub.add_parser('export-demo', help='Export the recorded demo as a static website')
+    export.add_argument('--output', type=Path, default=Path('dist/demo'))
     inspect = sub.add_parser('inspect')
     inspect.add_argument('checkpoint', nargs='?', default='paper')
     patch = sub.add_parser('patch')
@@ -25,7 +29,11 @@ def main():
     args = parser.parse_args()
     if args.command == 'serve':
         from .server import serve
-        serve(args.port)
+        serve(args.port, demo=args.demo, host=args.host)
+        return
+    if args.command == 'export-demo':
+        from .export import export_demo
+        print(export_demo(args.output))
         return
     store = Store()
     if args.command == 'inspect':

@@ -1,0 +1,1477 @@
+{
+  "schema_version": 1,
+  "scope": "Deterministic baseline comparison, not autonomous repair discovery.",
+  "selection_rule": "Use edited candidate only when probe mean strictly exceeds root.",
+  "limits": {
+    "episodes": 2,
+    "max_steps": 200,
+    "probes_per_case": 2,
+    "forward_budget_per_case": 800
+  },
+  "participants": [
+    {
+      "participant": "unchanged",
+      "decisions": [
+        {
+          "case_id": "0cde915f0e554b69b0ddca0a70322fd7",
+          "root_id": "7f29fb1ff3f444189789891c4921a9ca",
+          "selected_id": "7f29fb1ff3f444189789891c4921a9ca"
+        },
+        {
+          "case_id": "17d58cabe8924d1f9911986f3c2c3d4f",
+          "root_id": "a2d2b438a8a24dfe8d3cd07771d639e6",
+          "selected_id": "a2d2b438a8a24dfe8d3cd07771d639e6"
+        },
+        {
+          "case_id": "d7a62c2023674c81a78a4ba61458de8d",
+          "root_id": "4baacae48bef4b649ed8faec43912e30",
+          "selected_id": "4baacae48bef4b649ed8faec43912e30"
+        },
+        {
+          "case_id": "395fa6e55f824061b30c6533efb9199f",
+          "root_id": "963e7698aa1f4129a6e5c87a96b103b3",
+          "selected_id": "963e7698aa1f4129a6e5c87a96b103b3"
+        }
+      ],
+      "report": {
+        "schema_version": 1,
+        "generation_seed": 7,
+        "environment": "MinAtar 1.0.15 Breakout",
+        "numpy": "2.0.2",
+        "sampling": "softmax",
+        "sticky_actions": 0.1,
+        "episodes": 2,
+        "max_steps": 200,
+        "limitations": "Local protocol only: fixture and private state are readable by the same OS user. Capped Breakout episodes; no novel repair claim. Final evaluations have a separate fixed budget.",
+        "cases": [
+          {
+            "id": "0cde915f0e554b69b0ddca0a70322fd7",
+            "family": "channel_ablation",
+            "root_id": "7f29fb1ff3f444189789891c4921a9ca",
+            "candidates": [
+              {
+                "id": "7f29fb1ff3f444189789891c4921a9ca",
+                "parent": null
+              }
+            ],
+            "probes": [],
+            "forward_reserved": 0,
+            "final": {
+              "candidate_id": "7f29fb1ff3f444189789891c4921a9ca",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 112149808,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 112149809,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 112149808,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 112149809,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "selected": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 112149808,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 112149809,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": -18.0,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  -18.0,
+                  -18.0
+                ],
+                "mean": -18.0,
+                "se": 0.0
+              }
+            }
+          },
+          {
+            "id": "17d58cabe8924d1f9911986f3c2c3d4f",
+            "family": "sign_flip",
+            "root_id": "a2d2b438a8a24dfe8d3cd07771d639e6",
+            "candidates": [
+              {
+                "id": "a2d2b438a8a24dfe8d3cd07771d639e6",
+                "parent": null
+              }
+            ],
+            "probes": [],
+            "forward_reserved": 0,
+            "final": {
+              "candidate_id": "a2d2b438a8a24dfe8d3cd07771d639e6",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 105257584,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 105257585,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 105257584,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 105257585,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "selected": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 105257584,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 105257585,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": -18.0,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  -18.0,
+                  -18.0
+                ],
+                "mean": -18.0,
+                "se": 0.0
+              }
+            }
+          },
+          {
+            "id": "d7a62c2023674c81a78a4ba61458de8d",
+            "family": "control",
+            "root_id": "4baacae48bef4b649ed8faec43912e30",
+            "candidates": [
+              {
+                "id": "4baacae48bef4b649ed8faec43912e30",
+                "parent": null
+              }
+            ],
+            "probes": [],
+            "forward_reserved": 0,
+            "final": {
+              "candidate_id": "4baacae48bef4b649ed8faec43912e30",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 114177728,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 114177729,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 114177728,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 114177729,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "selected": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 114177728,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 114177729,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": 0.0,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              }
+            }
+          },
+          {
+            "id": "395fa6e55f824061b30c6533efb9199f",
+            "family": "bias_shift",
+            "root_id": "963e7698aa1f4129a6e5c87a96b103b3",
+            "candidates": [
+              {
+                "id": "963e7698aa1f4129a6e5c87a96b103b3",
+                "parent": null
+              }
+            ],
+            "probes": [],
+            "forward_reserved": 0,
+            "final": {
+              "candidate_id": "963e7698aa1f4129a6e5c87a96b103b3",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 111393248,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 111393249,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 0.5,
+                "scores": [
+                  1.0,
+                  0.0
+                ],
+                "se": 0.5,
+                "episodes": [
+                  {
+                    "seed": 111393248,
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 111393249,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 22,
+                "truncated": 0
+              },
+              "selected": {
+                "mean_score": 0.5,
+                "scores": [
+                  1.0,
+                  0.0
+                ],
+                "se": 0.5,
+                "episodes": [
+                  {
+                    "seed": 111393248,
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 111393249,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 22,
+                "truncated": 0
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": -17.5,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  -17.0,
+                  -18.0
+                ],
+                "mean": -17.5,
+                "se": 0.5
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "participant": "zero-output-bias",
+      "decisions": [
+        {
+          "case_id": "578a03394d2b4d70aa8b9f62aa5cfc59",
+          "root_id": "6f24c0ed3e8940bcb47c67138f89df91",
+          "probes": [
+            {
+              "candidate_id": "6f24c0ed3e8940bcb47c67138f89df91",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              }
+            },
+            {
+              "candidate_id": "d25165a9ffc54444a0748333615b32ea",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 0.5,
+                "scores": [
+                  1.0,
+                  0.0
+                ],
+                "se": 0.5,
+                "episodes": [
+                  {
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 22,
+                "truncated": 0
+              }
+            }
+          ],
+          "selected_id": "d25165a9ffc54444a0748333615b32ea"
+        },
+        {
+          "case_id": "b90c7e7bfcfd46e7879d0af09a320c5c",
+          "root_id": "67cd63885c4b493b8cd791b7f312380c",
+          "probes": [
+            {
+              "candidate_id": "67cd63885c4b493b8cd791b7f312380c",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              }
+            },
+            {
+              "candidate_id": "5f352693a66047c3af78c8d8a913714a",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              }
+            }
+          ],
+          "selected_id": "67cd63885c4b493b8cd791b7f312380c"
+        },
+        {
+          "case_id": "9f9c62e73c7b4af3a64478ff3f5e694d",
+          "root_id": "95f19156eb3748b6bbed920d5db79dc5",
+          "probes": [
+            {
+              "candidate_id": "95f19156eb3748b6bbed920d5db79dc5",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              }
+            },
+            {
+              "candidate_id": "967a58cc90c24a50acc7ef41300632ef",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              }
+            }
+          ],
+          "selected_id": "95f19156eb3748b6bbed920d5db79dc5"
+        },
+        {
+          "case_id": "190fa5c0ef01408b9f45e1045b2aa5c8",
+          "root_id": "c0481b3ff1a540229518fd69f29c7f18",
+          "probes": [
+            {
+              "candidate_id": "c0481b3ff1a540229518fd69f29c7f18",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 1.0,
+                "scores": [
+                  1.0,
+                  1.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 32,
+                "truncated": 0
+              }
+            },
+            {
+              "candidate_id": "f80ac36dd6684bce8f9bafc62c75c8c3",
+              "status": "completed",
+              "reserved": 400,
+              "result": {
+                "mean_score": 1.0,
+                "scores": [
+                  1.0,
+                  1.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 32,
+                "truncated": 0
+              }
+            }
+          ],
+          "selected_id": "c0481b3ff1a540229518fd69f29c7f18"
+        }
+      ],
+      "report": {
+        "schema_version": 1,
+        "generation_seed": 7,
+        "environment": "MinAtar 1.0.15 Breakout",
+        "numpy": "2.0.2",
+        "sampling": "softmax",
+        "sticky_actions": 0.1,
+        "episodes": 2,
+        "max_steps": 200,
+        "limitations": "Local protocol only: fixture and private state are readable by the same OS user. Capped Breakout episodes; no novel repair claim. Final evaluations have a separate fixed budget.",
+        "cases": [
+          {
+            "id": "578a03394d2b4d70aa8b9f62aa5cfc59",
+            "family": "channel_ablation",
+            "root_id": "6f24c0ed3e8940bcb47c67138f89df91",
+            "candidates": [
+              {
+                "id": "6f24c0ed3e8940bcb47c67138f89df91",
+                "parent": null
+              },
+              {
+                "id": "d25165a9ffc54444a0748333615b32ea",
+                "parent": "6f24c0ed3e8940bcb47c67138f89df91",
+                "hypothesis": "Generic hypothesis: remove output-action bias.",
+                "patch": "b3[:] = 0",
+                "sha256": "9c81be9c08f663c49a25c581db44b6b7104d53f5ddce5b6971d5d2a035ffa919",
+                "parent_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+                "diff": [
+                  {
+                    "tensor": "b3",
+                    "changed": 5,
+                    "total": 6,
+                    "max_delta": 100.0
+                  }
+                ]
+              }
+            ],
+            "probes": [
+              {
+                "candidate_id": "6f24c0ed3e8940bcb47c67138f89df91",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 0.0,
+                  "scores": [
+                    0.0,
+                    0.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 8560480,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 8560481,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 12,
+                  "truncated": 0
+                }
+              },
+              {
+                "candidate_id": "d25165a9ffc54444a0748333615b32ea",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 0.5,
+                  "scores": [
+                    1.0,
+                    0.0
+                  ],
+                  "se": 0.5,
+                  "episodes": [
+                    {
+                      "seed": 8560480,
+                      "score": 1.0,
+                      "steps": 16,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 8560481,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 22,
+                  "truncated": 0
+                }
+              }
+            ],
+            "forward_reserved": 800,
+            "final": {
+              "candidate_id": "d25165a9ffc54444a0748333615b32ea",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 112149808,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 112149809,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 112149808,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 112149809,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "selected": {
+                "mean_score": 0.5,
+                "scores": [
+                  1.0,
+                  0.0
+                ],
+                "se": 0.5,
+                "episodes": [
+                  {
+                    "seed": 112149808,
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 112149809,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 22,
+                "truncated": 0
+              },
+              "delta_from_corrupted": 0.5,
+              "delta_from_reference": -17.5,
+              "paired_corrupted": {
+                "differences": [
+                  1.0,
+                  0.0
+                ],
+                "mean": 0.5,
+                "se": 0.5
+              },
+              "paired_reference": {
+                "differences": [
+                  -17.0,
+                  -18.0
+                ],
+                "mean": -17.5,
+                "se": 0.5
+              }
+            }
+          },
+          {
+            "id": "b90c7e7bfcfd46e7879d0af09a320c5c",
+            "family": "sign_flip",
+            "root_id": "67cd63885c4b493b8cd791b7f312380c",
+            "candidates": [
+              {
+                "id": "67cd63885c4b493b8cd791b7f312380c",
+                "parent": null
+              },
+              {
+                "id": "5f352693a66047c3af78c8d8a913714a",
+                "parent": "67cd63885c4b493b8cd791b7f312380c",
+                "hypothesis": "Generic hypothesis: remove output-action bias.",
+                "patch": "b3[:] = 0",
+                "sha256": "c77fee20cc977100f537126f78038d7574b3d32803b22a8804abd89e825f55f0",
+                "parent_sha256": "e57b457b03b6aa1a117b26e3be69a3a3dde424fd97e81c33625db75a9140bb9e",
+                "diff": [
+                  {
+                    "tensor": "b3",
+                    "changed": 5,
+                    "total": 6,
+                    "max_delta": 100.0
+                  }
+                ]
+              }
+            ],
+            "probes": [
+              {
+                "candidate_id": "67cd63885c4b493b8cd791b7f312380c",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 0.0,
+                  "scores": [
+                    0.0,
+                    0.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 13438256,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 13438257,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 12,
+                  "truncated": 0
+                }
+              },
+              {
+                "candidate_id": "5f352693a66047c3af78c8d8a913714a",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 0.0,
+                  "scores": [
+                    0.0,
+                    0.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 13438256,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 13438257,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 12,
+                  "truncated": 0
+                }
+              }
+            ],
+            "forward_reserved": 800,
+            "final": {
+              "candidate_id": "67cd63885c4b493b8cd791b7f312380c",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 105257584,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 105257585,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 105257584,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 105257585,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "selected": {
+                "mean_score": 0.0,
+                "scores": [
+                  0.0,
+                  0.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 105257584,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 105257585,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 12,
+                "truncated": 0
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": -18.0,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  -18.0,
+                  -18.0
+                ],
+                "mean": -18.0,
+                "se": 0.0
+              }
+            }
+          },
+          {
+            "id": "9f9c62e73c7b4af3a64478ff3f5e694d",
+            "family": "control",
+            "root_id": "95f19156eb3748b6bbed920d5db79dc5",
+            "candidates": [
+              {
+                "id": "95f19156eb3748b6bbed920d5db79dc5",
+                "parent": null
+              },
+              {
+                "id": "967a58cc90c24a50acc7ef41300632ef",
+                "parent": "95f19156eb3748b6bbed920d5db79dc5",
+                "hypothesis": "Generic hypothesis: remove output-action bias.",
+                "patch": "b3[:] = 0",
+                "sha256": "9c3bd75ff051ef077c55270f32562d67d0f89b42cc71692b757e576e30950306",
+                "parent_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+                "diff": [
+                  {
+                    "tensor": "b3",
+                    "changed": 5,
+                    "total": 6,
+                    "max_delta": 100.0
+                  }
+                ]
+              }
+            ],
+            "probes": [
+              {
+                "candidate_id": "95f19156eb3748b6bbed920d5db79dc5",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 18.0,
+                  "scores": [
+                    18.0,
+                    18.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 1271408,
+                      "score": 18.0,
+                      "steps": 200,
+                      "truncated": true
+                    },
+                    {
+                      "seed": 1271409,
+                      "score": 18.0,
+                      "steps": 200,
+                      "truncated": true
+                    }
+                  ],
+                  "forward_calls": 400,
+                  "truncated": 2
+                }
+              },
+              {
+                "candidate_id": "967a58cc90c24a50acc7ef41300632ef",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 0.0,
+                  "scores": [
+                    0.0,
+                    0.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 1271408,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 1271409,
+                      "score": 0.0,
+                      "steps": 6,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 12,
+                  "truncated": 0
+                }
+              }
+            ],
+            "forward_reserved": 800,
+            "final": {
+              "candidate_id": "95f19156eb3748b6bbed920d5db79dc5",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 114177728,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 114177729,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 114177728,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 114177729,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "selected": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 114177728,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 114177729,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": 0.0,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              }
+            }
+          },
+          {
+            "id": "190fa5c0ef01408b9f45e1045b2aa5c8",
+            "family": "bias_shift",
+            "root_id": "c0481b3ff1a540229518fd69f29c7f18",
+            "candidates": [
+              {
+                "id": "c0481b3ff1a540229518fd69f29c7f18",
+                "parent": null
+              },
+              {
+                "id": "f80ac36dd6684bce8f9bafc62c75c8c3",
+                "parent": "c0481b3ff1a540229518fd69f29c7f18",
+                "hypothesis": "Generic hypothesis: remove output-action bias.",
+                "patch": "b3[:] = 0",
+                "sha256": "9c3bd75ff051ef077c55270f32562d67d0f89b42cc71692b757e576e30950306",
+                "parent_sha256": "dfb215745a330b264c42d8c6ff479317108b57210b530b868d55e609e0c7a429",
+                "diff": [
+                  {
+                    "tensor": "b3",
+                    "changed": 6,
+                    "total": 6,
+                    "max_delta": 240.0
+                  }
+                ]
+              }
+            ],
+            "probes": [
+              {
+                "candidate_id": "c0481b3ff1a540229518fd69f29c7f18",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 1.0,
+                  "scores": [
+                    1.0,
+                    1.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 10406800,
+                      "score": 1.0,
+                      "steps": 16,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 10406801,
+                      "score": 1.0,
+                      "steps": 16,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 32,
+                  "truncated": 0
+                }
+              },
+              {
+                "candidate_id": "f80ac36dd6684bce8f9bafc62c75c8c3",
+                "status": "completed",
+                "reserved": 400,
+                "result": {
+                  "mean_score": 1.0,
+                  "scores": [
+                    1.0,
+                    1.0
+                  ],
+                  "se": 0.0,
+                  "episodes": [
+                    {
+                      "seed": 10406800,
+                      "score": 1.0,
+                      "steps": 16,
+                      "truncated": false
+                    },
+                    {
+                      "seed": 10406801,
+                      "score": 1.0,
+                      "steps": 16,
+                      "truncated": false
+                    }
+                  ],
+                  "forward_calls": 32,
+                  "truncated": 0
+                }
+              }
+            ],
+            "forward_reserved": 800,
+            "final": {
+              "candidate_id": "c0481b3ff1a540229518fd69f29c7f18",
+              "status": "completed",
+              "forward_reserved": 1200,
+              "reference": {
+                "mean_score": 18.0,
+                "scores": [
+                  18.0,
+                  18.0
+                ],
+                "se": 0.0,
+                "episodes": [
+                  {
+                    "seed": 111393248,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  },
+                  {
+                    "seed": 111393249,
+                    "score": 18.0,
+                    "steps": 200,
+                    "truncated": true
+                  }
+                ],
+                "forward_calls": 400,
+                "truncated": 2
+              },
+              "corrupted": {
+                "mean_score": 0.5,
+                "scores": [
+                  1.0,
+                  0.0
+                ],
+                "se": 0.5,
+                "episodes": [
+                  {
+                    "seed": 111393248,
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 111393249,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 22,
+                "truncated": 0
+              },
+              "selected": {
+                "mean_score": 0.5,
+                "scores": [
+                  1.0,
+                  0.0
+                ],
+                "se": 0.5,
+                "episodes": [
+                  {
+                    "seed": 111393248,
+                    "score": 1.0,
+                    "steps": 16,
+                    "truncated": false
+                  },
+                  {
+                    "seed": 111393249,
+                    "score": 0.0,
+                    "steps": 6,
+                    "truncated": false
+                  }
+                ],
+                "forward_calls": 22,
+                "truncated": 0
+              },
+              "delta_from_corrupted": 0.0,
+              "delta_from_reference": -17.5,
+              "paired_corrupted": {
+                "differences": [
+                  0.0,
+                  0.0
+                ],
+                "mean": 0.0,
+                "se": 0.0
+              },
+              "paired_reference": {
+                "differences": [
+                  -17.0,
+                  -18.0
+                ],
+                "mean": -17.5,
+                "se": 0.5
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

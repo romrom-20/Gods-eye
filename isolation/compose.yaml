@@ -1,0 +1,64 @@
+services:
+  evaluator:
+    build:
+      context: ..
+      dockerfile: isolation/Dockerfile
+    command: []
+    user: "${EVALUATOR_UID:-65532}:${EVALUATOR_GID:-65532}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 512m
+    cpus: 1
+    volumes:
+      - "${EVALUATOR_PRIVATE_DIR:?Set an absolute private directory}:/private"
+    tmpfs: ["/tmp:size=16m,noexec,nosuid"]
+    networks: [evaluation]
+  gateway:
+    build:
+      context: ..
+      dockerfile: isolation/Dockerfile.gateway
+    user: "${EVALUATOR_UID:-65532}:${EVALUATOR_GID:-65532}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 16
+    mem_limit: 64m
+    cpus: 1
+    ports: ["127.0.0.1:8790:8790"]
+    tmpfs: ["/tmp:size=8m,noexec,nosuid"]
+    networks: [evaluation, operator]
+  agent:
+    profiles: [agent]
+    build:
+      context: ..
+      dockerfile: isolation/Dockerfile.agent
+    user: "${EVALUATOR_UID:-65532}:${EVALUATOR_GID:-65532}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 16
+    mem_limit: 128m
+    cpus: 1
+    environment:
+      REPAIR_AGENT_KEY_FILE: /run/secrets/agent_api_key
+      REPAIR_AGENT_PROVIDER: "${REPAIR_AGENT_PROVIDER:-openai}"
+      REPAIR_AGENT_ROUTING: "${REPAIR_AGENT_ROUTING:-price}"
+      REPAIR_AGENT_MODEL: "${REPAIR_AGENT_MODEL:-}"
+    command: [--url, "http://evaluator:8790", --token-file, /run/secrets/agent_token, --evidence, /evidence/agent.jsonl, --participant, agent]
+    volumes:
+      - "${REPAIR_EVIDENCE_DIR:-/tmp/godseye-agent-evidence}:/evidence"
+    secrets: [agent_token, agent_api_key]
+    tmpfs: ["/tmp:size=8m,noexec,nosuid"]
+    networks: [evaluation, provider]
+networks:
+  evaluation:
+    internal: true
+  provider: {}
+  operator: {}
+secrets:
+  agent_token:
+    file: "${EVALUATOR_PRIVATE_DIR:?Set an absolute private directory}/agent.token"
+  agent_api_key:
+    file: "${REPAIR_AGENT_KEY_FILE:-/dev/null}"

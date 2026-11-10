@@ -3,3 +3,18 @@ __pycache__/
 *.pyc
 .godseye/
 .DS_Store
+dist/
+build/
+*.egg-info/
+
+# Local credentials and private experiment workspaces
+.env
+.env.*
+!.env.example
+*.token
+.godseye-secrets/
+private-state.json
+provider.env
+provider.json
+*-api-key
+experiments/provider-connection-test.json

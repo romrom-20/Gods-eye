@@ -1,14 +1,18 @@
 """Tensor edits and actual MinAtar rollouts. No training or optimizer code."""
 import ast
 import hashlib
+import io
 import json
 import math
+import os
 from pathlib import Path
 import time
 import uuid
 
 import numpy as np
 from minatar import Environment
+
+from .storage import atomic_write, write_json
 
 ROOT = Path(__file__).resolve().parent.parent
 NAMES = {
@@ -22,23 +26,27 @@ NAMES = {
 ACTIONS = ['no-op', 'left', 'up', 'right', 'down', 'fire']
 
 
-def load_weights(path):
+def load_weights(path, layout=None):
+    layout = NAMES if layout is None else layout
     with np.load(path, allow_pickle=False) as source:
         result = {name: np.array(source[key], dtype=np.float32)
-                  for name, (key, _) in NAMES.items()}
-    for name, (_, shape) in NAMES.items():
+                  for name, (key, _) in layout.items()}
+    for name, (_, shape) in layout.items():
         if result[name].shape != shape or not np.isfinite(result[name]).all():
             raise ValueError('Invalid tensor: ' + name)
     return result
 
 
-def save_weights(path, weights):
-    np.savez_compressed(path, **{NAMES[n][0]: v for n, v in weights.items()})
+def save_weights(path, weights, layout=None):
+    layout = NAMES if layout is None else layout
+    buffer = io.BytesIO()
+    np.savez_compressed(buffer, **{layout[n][0]: v for n, v in weights.items()})
+    atomic_write(path, buffer.getvalue())
 
 
 def digest(weights):
     h = hashlib.sha256()
-    for name in NAMES:
+    for name in weights:
         h.update(name.encode())
         h.update(weights[name].astype('<f4').tobytes())
     return h.hexdigest()
@@ -52,9 +60,13 @@ def tensor_summary(weights):
 
 
 def difference(before, after):
+    if before.keys() != after.keys():
+        raise ValueError('A patch cannot change the tensor schema')
     result = []
-    for name in NAMES:
+    for name in before:
         a, b = before[name], after[name]
+        if a.shape != b.shape:
+            raise ValueError('A patch cannot change tensor shapes')
         changed = int(np.count_nonzero(a != b))
         if changed:
             result.append({'tensor': name, 'changed': changed,
@@ -101,6 +113,11 @@ def apply_patch(weights, code):
             raise ValueError('Unknown tensor: ' + name)
         index = _index(target.slice)
         raw = ast.literal_eval(statement.value)
+        # NumPy coerces mixed boolean/numeric lists to a numeric dtype. Reject
+        # booleans before conversion, including those nested in matrix literals.
+        if any(isinstance(n, ast.Constant) and type(n.value) is bool
+               for n in ast.walk(statement.value)):
+            raise ValueError('Values must be numeric, not boolean')
         values = np.asarray(raw)
         if values.dtype.kind not in 'iuf':
             raise ValueError('Values must be numeric')
@@ -145,7 +162,7 @@ def forward(weights, x):
     return p / p.sum(), h1, h2
 
 
-def episode(weights, seed, max_steps, record=False):
+def episode(weights, seed, max_steps, record=False, check_cancel=None):
     env = Environment('breakout', sticky_action_prob=0.1)
     env.seed(seed)
     env.reset()
@@ -153,6 +170,8 @@ def episode(weights, seed, max_steps, record=False):
     rng = np.random.RandomState(seed ^ 0x5EED)
     score, trace, done = 0, [], False
     for step in range(max_steps):
+        if check_cancel:
+            check_cancel()
         state = env.state()
         p, h1, _ = forward(weights, observation(state))
         action = int(rng.choice(6, p=p))
@@ -169,7 +188,8 @@ def episode(weights, seed, max_steps, record=False):
             'truncated': not bool(done), 'trace': trace}
 
 
-def compare(base, candidate, episodes=8, seed=1000, max_steps=3000):
+def compare(base, candidate, episodes=8, seed=1000, max_steps=3000,
+            check_cancel=None, progress=None):
     if type(episodes) is not int or not 1 <= episodes <= 64:
         raise ValueError('Episodes must be an integer from 1 to 64')
     if type(seed) is not int or not 0 <= seed <= 2**32 - 65:
@@ -179,7 +199,12 @@ def compare(base, candidate, episodes=8, seed=1000, max_steps=3000):
     start = time.monotonic()
     models = []
     for weights in (base, candidate):
-        rows = [episode(weights, seed + i, max_steps, record=(i == 0)) for i in range(episodes)]
+        rows = []
+        for i in range(episodes):
+            rows.append(episode(weights, seed + i, max_steps, record=(i == 0),
+                                check_cancel=check_cancel))
+            if progress:
+                progress(len(models) * episodes + i + 1, 2 * episodes)
         scores = np.array([r['score'] for r in rows])
         models.append({'mean': float(scores.mean()),
                        'se': float(scores.std(ddof=1) / math.sqrt(episodes)) if episodes > 1 else None,
@@ -195,22 +220,38 @@ def compare(base, candidate, episodes=8, seed=1000, max_steps=3000):
 
 
 class Store:
-    def __init__(self, path=None):
-        self.path = Path(path or ROOT / '.godseye')
+    def __init__(self, path=None, backend=None):
+        from .backends import BreakoutBackend
+        self.backend = backend or BreakoutBackend()
+        self.path = Path(path or os.environ.get('GODSEYE_DATA_DIR') or Path.cwd() / '.godseye')
         self.path.mkdir(parents=True, exist_ok=True)
-        self.paper = load_weights(ROOT / 'fixtures/breakout/paper.npz')
+        self.paper = self.backend.initial_weights()
+        # One workspace belongs to one backend. Historical workspaces had no marker.
+        marker = self.path / 'workspace.json'
+        if marker.exists():
+            if json.loads(marker.read_text())['backend'] != self.backend.id:
+                raise ValueError('This workspace belongs to a different backend')
+        elif self.backend.id != 'minatar-breakout-v1' and any(self.path.iterdir()):
+            raise ValueError('Use an empty workspace for a custom backend')
+        # Read-only demo data already includes its marker; ordinary empty/local
+        # workspaces receive one only on their first write.
+
+    def _mark_workspace(self):
+        marker = self.path / 'workspace.json'
+        if not marker.exists():
+            write_json(marker, {'schema_version': 1, 'backend': self.backend.id})
 
     def weights(self, model_id):
-        if model_id == 'paper':
+        if model_id == self.backend.initial_id:
             return {n: v.copy() for n, v in self.paper.items()}
         if model_id == 'zero':
             return {n: np.zeros_like(v) for n, v in self.paper.items()}
-        if len(model_id) != 16 or any(c not in '0123456789abcdef' for c in model_id):
+        if not isinstance(model_id, str) or len(model_id) != 16 or any(c not in '0123456789abcdef' for c in model_id):
             raise ValueError('Invalid checkpoint id')
-        return load_weights(self.path / (model_id + '.npz'))
+        return load_weights(self.path / (model_id + '.npz'), self.backend.layout)
 
     def checkpoints(self):
-        rows = [{'id': 'paper', 'name': 'Paper · authored network', 'parent': None},
+        rows = [{'id': self.backend.initial_id, 'name': self.backend.initial_name, 'parent': None},
                 {'id': 'zero', 'name': 'Zero initialization', 'parent': None}]
         rows += sorted([json.loads(p.read_text()) for p in self.path.glob('checkpoint-*.json')],
                        key=lambda r: r['created'])
@@ -222,18 +263,38 @@ class Store:
         base = self.weights(base_id)
         edited = apply_patch(base, code)
         model_id = uuid.uuid4().hex[:16]
-        report = {'id': model_id, 'name': hypothesis[:70], 'parent': base_id,
+        report = {'schema_version': 1, 'backend': self.backend.id,
+                  'id': model_id, 'name': hypothesis[:70], 'parent': base_id,
                   'hypothesis': hypothesis, 'patch': code, 'diff': difference(base, edited),
                   'sha256': digest(edited), 'parent_sha256': digest(base), 'created': time.time()}
-        save_weights(self.path / (model_id + '.npz'), edited)
-        (self.path / ('checkpoint-' + model_id + '.json')).write_text(json.dumps(report, indent=2))
+        self._mark_workspace()
+        save_weights(self.path / (model_id + '.npz'), edited, self.backend.layout)
+        # Publish metadata last: list operations cannot discover half a checkpoint.
+        write_json(self.path / ('checkpoint-' + model_id + '.json'), report)
         return report
 
     def run(self, base_id, candidate_id, **kwargs):
         base, candidate = self.weights(base_id), self.weights(candidate_id)
-        result = compare(base, candidate, **kwargs)
-        result.update({'id': uuid.uuid4().hex[:16], 'base_id': base_id,
+        result = self.backend.compare(base, candidate, **kwargs)
+        result.update({'schema_version': 1, 'backend': self.backend.id,
+                       'id': uuid.uuid4().hex[:16], 'base_id': base_id,
                        'candidate_id': candidate_id, 'base_sha256': digest(base),
                        'candidate_sha256': digest(candidate), 'created': time.time()})
-        (self.path / ('run-' + result['id'] + '.json')).write_text(json.dumps(result))
+        self._mark_workspace()
+        write_json(self.path / ('run-' + result['id'] + '.json'), result)
         return result
+
+    def runs(self, limit=30):
+        rows = []
+        for path in sorted(self.path.glob('run-*.json'), key=lambda p: p.stat().st_mtime,
+                           reverse=True)[:limit]:
+            row = json.loads(path.read_text())
+            for key in ('base', 'candidate'):
+                row[key].pop('trace', None)
+            rows.append(row)
+        return rows
+
+    def read_run(self, run_id):
+        if not isinstance(run_id, str) or len(run_id) != 16 or any(c not in '0123456789abcdef' for c in run_id):
+            raise ValueError('Invalid run id')
+        return json.loads((self.path / ('run-' + run_id + '.json')).read_text())

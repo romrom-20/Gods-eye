@@ -1,0 +1,862 @@
+{
+  "started_utc": "2026-11-09T14:57:30.655194+00:00",
+  "url": "http://127.0.0.1:55002",
+  "python": "3.9.6 (default, Apr  7 2026, 02:38:40) \n[Clang 21.0.0 (clang-2100.0.123.102)]",
+  "scope": "Known-circuit mechanics test; not discovery of a novel repair.",
+  "state": {
+    "checkpoints": [
+      {
+        "id": "paper",
+        "name": "Paper \u00b7 authored network",
+        "parent": null
+      },
+      {
+        "id": "zero",
+        "name": "Zero initialization",
+        "parent": null
+      }
+    ],
+    "backend": "minatar-breakout-v1",
+    "parameters": 20486,
+    "architecture": "600 \u2192 32 \u2192 32 \u2192 6 \u00b7 tanh",
+    "mode": "local",
+    "limits": {
+      "max_forwards": 250000,
+      "queue_capacity": 4
+    },
+    "capabilities": [
+      "tensor_read",
+      "patch_preview",
+      "patch",
+      "evaluate",
+      "cancel"
+    ]
+  },
+  "inspection": {
+    "sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+    "W3_left_rows_0_2_4_6": [
+      30.0,
+      30.0,
+      30.0,
+      30.0
+    ],
+    "summary": [
+      {
+        "name": "W1",
+        "shape": [
+          600,
+          32
+        ],
+        "parameters": 19200,
+        "nonzero": 769,
+        "min": -180.0,
+        "max": 170.0,
+        "norm": 1673.6203304812132
+      },
+      {
+        "name": "b1",
+        "shape": [
+          32
+        ],
+        "parameters": 32,
+        "nonzero": 1,
+        "min": 0.0,
+        "max": 5.0,
+        "norm": 5.0
+      },
+      {
+        "name": "W2",
+        "shape": [
+          32,
+          32
+        ],
+        "parameters": 1024,
+        "nonzero": 24,
+        "min": -1000.0,
+        "max": 1000.0,
+        "norm": 2939.3876913398135
+      },
+      {
+        "name": "b2",
+        "shape": [
+          32
+        ],
+        "parameters": 32,
+        "nonzero": 8,
+        "min": -415.0,
+        "max": 0.0,
+        "norm": 1173.7972567696688
+      },
+      {
+        "name": "W3",
+        "shape": [
+          32,
+          6
+        ],
+        "parameters": 192,
+        "nonzero": 8,
+        "min": 0.0,
+        "max": 30.0,
+        "norm": 84.8528137423857
+      },
+      {
+        "name": "b3",
+        "shape": [
+          6
+        ],
+        "parameters": 6,
+        "nonzero": 5,
+        "min": -100.0,
+        "max": 90.0,
+        "norm": 214.94185260204677
+      }
+    ]
+  },
+  "preview": {
+    "parent_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+    "sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+    "diff": [
+      {
+        "tensor": "W3",
+        "changed": 4,
+        "total": 192,
+        "max_delta": 30.0
+      }
+    ],
+    "changed": 4,
+    "parameters": 20486
+  },
+  "stale_parent": {
+    "status": 409,
+    "response": {
+      "error": "Parent hash mismatch. Inspect the checkpoint again."
+    }
+  },
+  "checkpoints": {
+    "ablated": {
+      "schema_version": 1,
+      "backend": "minatar-breakout-v1",
+      "id": "b74f4b9070774e2a",
+      "name": "Removing the four known left-action connections reduces score.",
+      "parent": "paper",
+      "hypothesis": "Removing the four known left-action connections reduces score.",
+      "patch": "W3[0:8:2, 1] = 0",
+      "diff": [
+        {
+          "tensor": "W3",
+          "changed": 4,
+          "total": 192,
+          "max_delta": 30.0
+        }
+      ],
+      "sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+      "parent_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "created": 1794236250.674935
+    },
+    "restored": {
+      "schema_version": 1,
+      "backend": "minatar-breakout-v1",
+      "id": "bd33c0e2badf4e38",
+      "name": "Restore the inspected original four values.",
+      "parent": "b74f4b9070774e2a",
+      "hypothesis": "Restore the inspected original four values.",
+      "patch": "W3[0:8:2, 1] = [30.0, 30.0, 30.0, 30.0]",
+      "diff": [
+        {
+          "tensor": "W3",
+          "changed": 4,
+          "total": 192,
+          "max_delta": 30.0
+        }
+      ],
+      "sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+      "parent_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+      "created": 1794236251.349349
+    }
+  },
+  "runs": [
+    {
+      "name": "ablation",
+      "job": {
+        "id": "abcb455774634019",
+        "status": "succeeded",
+        "created": 1794236250.682817,
+        "completed": 16,
+        "total": 16,
+        "settings": {
+          "base_id": "paper",
+          "candidate_id": "b74f4b9070774e2a",
+          "episodes": 8,
+          "seed": 1000,
+          "max_steps": 3000
+        },
+        "fingerprint": "622ae02a8469a07c9697430bbf4e7f4d8672bde02172242ad94cfa42be35bc89",
+        "idempotency_key": "ablation",
+        "run_id": "9736cafdb9ca4ddc",
+        "started": 1794236250.683093,
+        "finished": 1794236251.155369
+      },
+      "run": {
+        "base": {
+          "mean": 186.375,
+          "se": 26.22630733497515,
+          "episodes": [
+            {
+              "seed": 1000,
+              "score": 176.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 1001,
+              "score": 236.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 1002,
+              "score": 225.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 1003,
+              "score": 10.0,
+              "steps": 114,
+              "truncated": false
+            },
+            {
+              "seed": 1004,
+              "score": 207.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 1005,
+              "score": 236.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 1006,
+              "score": 206.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 1007,
+              "score": 195.0,
+              "steps": 3000,
+              "truncated": true
+            }
+          ],
+          "forward_calls": 21114
+        },
+        "candidate": {
+          "mean": 0.0,
+          "se": 0.0,
+          "episodes": [
+            {
+              "seed": 1000,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1001,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1002,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1003,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1004,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1005,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1006,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 1007,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            }
+          ],
+          "forward_calls": 48
+        },
+        "paired_mean_delta": -186.375,
+        "paired_se": 26.22630733497515,
+        "episodes": 8,
+        "seed": 1000,
+        "max_steps": 3000,
+        "sticky_actions": 0.1,
+        "sampling": "softmax",
+        "seconds": 0.3790529170000001,
+        "environment": "MinAtar 1.0.15 Breakout",
+        "numpy": "2.0.2",
+        "schema_version": 1,
+        "backend": "minatar-breakout-v1",
+        "id": "9736cafdb9ca4ddc",
+        "base_id": "paper",
+        "candidate_id": "b74f4b9070774e2a",
+        "base_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+        "candidate_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+        "created": 1794236251.0634692
+      },
+      "verified_summary": {
+        "paired_differences": [
+          -176.0,
+          -236.0,
+          -225.0,
+          -10.0,
+          -207.0,
+          -236.0,
+          -206.0,
+          -195.0
+        ],
+        "paired_mean_delta": -186.375,
+        "paired_se": 26.22630733497515,
+        "caps": {
+          "base": 7,
+          "candidate": 0
+        }
+      }
+    },
+    {
+      "name": "restoration-held-out-parent",
+      "job": {
+        "id": "35c62036bf054918",
+        "status": "succeeded",
+        "created": 1794236251.354134,
+        "completed": 16,
+        "total": 16,
+        "settings": {
+          "base_id": "b74f4b9070774e2a",
+          "candidate_id": "bd33c0e2badf4e38",
+          "episodes": 8,
+          "seed": 10000,
+          "max_steps": 3000
+        },
+        "fingerprint": "eaa65eda4d5222660c0e2b69e13e2ab5587ed1599d8bb50ffda43c2faf69028f",
+        "idempotency_key": "restoration-held-out-parent",
+        "run_id": "517098adeb054b5c",
+        "started": 1794236251.354419,
+        "finished": 1794236251.6268249
+      },
+      "run": {
+        "base": {
+          "mean": 0.0,
+          "se": 0.0,
+          "episodes": [
+            {
+              "seed": 10000,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10001,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10002,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10003,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10004,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10005,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10006,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            },
+            {
+              "seed": 10007,
+              "score": 0.0,
+              "steps": 6,
+              "truncated": false
+            }
+          ],
+          "forward_calls": 48
+        },
+        "candidate": {
+          "mean": 137.875,
+          "se": 30.987576715746677,
+          "episodes": [
+            {
+              "seed": 10000,
+              "score": 7.0,
+              "steps": 80,
+              "truncated": false
+            },
+            {
+              "seed": 10001,
+              "score": 231.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10002,
+              "score": 198.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10003,
+              "score": 178.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10004,
+              "score": 37.0,
+              "steps": 440,
+              "truncated": false
+            },
+            {
+              "seed": 10005,
+              "score": 207.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10006,
+              "score": 62.0,
+              "steps": 1056,
+              "truncated": false
+            },
+            {
+              "seed": 10007,
+              "score": 183.0,
+              "steps": 3000,
+              "truncated": true
+            }
+          ],
+          "forward_calls": 16576
+        },
+        "paired_mean_delta": 137.875,
+        "paired_se": 30.987576715746677,
+        "episodes": 8,
+        "seed": 10000,
+        "max_steps": 3000,
+        "sticky_actions": 0.1,
+        "sampling": "softmax",
+        "seconds": 0.266143,
+        "environment": "MinAtar 1.0.15 Breakout",
+        "numpy": "2.0.2",
+        "schema_version": 1,
+        "backend": "minatar-breakout-v1",
+        "id": "517098adeb054b5c",
+        "base_id": "b74f4b9070774e2a",
+        "candidate_id": "bd33c0e2badf4e38",
+        "base_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+        "candidate_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+        "created": 1794236251.622466
+      },
+      "verified_summary": {
+        "paired_differences": [
+          7.0,
+          231.0,
+          198.0,
+          178.0,
+          37.0,
+          207.0,
+          62.0,
+          183.0
+        ],
+        "paired_mean_delta": 137.875,
+        "paired_se": 30.987576715746677,
+        "caps": {
+          "base": 0,
+          "candidate": 5
+        }
+      }
+    },
+    {
+      "name": "restoration-held-out-paper",
+      "job": {
+        "id": "e5f79b8029eb4d8c",
+        "status": "succeeded",
+        "created": 1794236251.653524,
+        "completed": 16,
+        "total": 16,
+        "settings": {
+          "base_id": "paper",
+          "candidate_id": "bd33c0e2badf4e38",
+          "episodes": 8,
+          "seed": 10000,
+          "max_steps": 3000
+        },
+        "fingerprint": "f80513fc69b070699da4ca4c5e4e7a59e0c998ff5422d1de7353e9f5b4b50eff",
+        "idempotency_key": "restoration-held-out-paper",
+        "run_id": "2d69c48c143e48ca",
+        "started": 1794236251.6538188,
+        "finished": 1794236252.1837912
+      },
+      "run": {
+        "base": {
+          "mean": 137.875,
+          "se": 30.987576715746677,
+          "episodes": [
+            {
+              "seed": 10000,
+              "score": 7.0,
+              "steps": 80,
+              "truncated": false
+            },
+            {
+              "seed": 10001,
+              "score": 231.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10002,
+              "score": 198.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10003,
+              "score": 178.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10004,
+              "score": 37.0,
+              "steps": 440,
+              "truncated": false
+            },
+            {
+              "seed": 10005,
+              "score": 207.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10006,
+              "score": 62.0,
+              "steps": 1056,
+              "truncated": false
+            },
+            {
+              "seed": 10007,
+              "score": 183.0,
+              "steps": 3000,
+              "truncated": true
+            }
+          ],
+          "forward_calls": 16576
+        },
+        "candidate": {
+          "mean": 137.875,
+          "se": 30.987576715746677,
+          "episodes": [
+            {
+              "seed": 10000,
+              "score": 7.0,
+              "steps": 80,
+              "truncated": false
+            },
+            {
+              "seed": 10001,
+              "score": 231.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10002,
+              "score": 198.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10003,
+              "score": 178.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10004,
+              "score": 37.0,
+              "steps": 440,
+              "truncated": false
+            },
+            {
+              "seed": 10005,
+              "score": 207.0,
+              "steps": 3000,
+              "truncated": true
+            },
+            {
+              "seed": 10006,
+              "score": 62.0,
+              "steps": 1056,
+              "truncated": false
+            },
+            {
+              "seed": 10007,
+              "score": 183.0,
+              "steps": 3000,
+              "truncated": true
+            }
+          ],
+          "forward_calls": 16576
+        },
+        "paired_mean_delta": 0.0,
+        "paired_se": 0.0,
+        "episodes": 8,
+        "seed": 10000,
+        "max_steps": 3000,
+        "sticky_actions": 0.1,
+        "sampling": "softmax",
+        "seconds": 0.520828125,
+        "environment": "MinAtar 1.0.15 Breakout",
+        "numpy": "2.0.2",
+        "schema_version": 1,
+        "backend": "minatar-breakout-v1",
+        "id": "2d69c48c143e48ca",
+        "base_id": "paper",
+        "candidate_id": "bd33c0e2badf4e38",
+        "base_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+        "candidate_sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+        "created": 1794236252.175935
+      },
+      "verified_summary": {
+        "paired_differences": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "paired_mean_delta": 0.0,
+        "paired_se": 0.0,
+        "caps": {
+          "base": 5,
+          "candidate": 5
+        }
+      }
+    }
+  ],
+  "restored_hash_equals_original": true,
+  "restoration_preview": {
+    "parent_sha256": "658cfaf36d8c280cc2b5eaf76004e7a4b6bf9d5e924fcd6a9e845dde3245b2c7",
+    "sha256": "38c50a4f4d7185697176687792834d50970e239f452b764ccd1ec6d8439db128",
+    "diff": [
+      {
+        "tensor": "W3",
+        "changed": 4,
+        "total": 192,
+        "max_delta": 30.0
+      }
+    ],
+    "changed": 4,
+    "parameters": 20486
+  },
+  "rejections": [
+    {
+      "operation": "preview",
+      "patch": "__import__('pathlib').Path('/var/folders/y9/3pb_xvz104sg0xg_17gw31600000gn/T/godseye-client-validation-3sgrigy2/executed').touch()",
+      "status": 400,
+      "response": {
+        "error": "Only assignments and +=, -=, *= are supported"
+      }
+    },
+    {
+      "operation": "patch",
+      "patch": "__import__('pathlib').Path('/var/folders/y9/3pb_xvz104sg0xg_17gw31600000gn/T/godseye-client-validation-3sgrigy2/executed').touch()",
+      "status": 400,
+      "response": {
+        "error": "Only assignments and +=, -=, *= are supported"
+      }
+    },
+    {
+      "operation": "preview",
+      "patch": "b3[0] = 1\n__import__('os').getcwd()",
+      "status": 400,
+      "response": {
+        "error": "Only assignments and +=, -=, *= are supported"
+      }
+    },
+    {
+      "operation": "patch",
+      "patch": "b3[0] = 1\n__import__('os').getcwd()",
+      "status": 400,
+      "response": {
+        "error": "Only assignments and +=, -=, *= are supported"
+      }
+    },
+    {
+      "operation": "preview",
+      "patch": "b3[0:2] = [True, 2]",
+      "status": 400,
+      "response": {
+        "error": "Values must be numeric, not boolean"
+      }
+    },
+    {
+      "operation": "patch",
+      "patch": "b3[0:2] = [True, 2]",
+      "status": 400,
+      "response": {
+        "error": "Values must be numeric, not boolean"
+      }
+    },
+    {
+      "operation": "preview",
+      "patch": "W1[0, 0] = 1\nb3[9] = 1",
+      "status": 400,
+      "response": {
+        "error": "index 9 is out of bounds for axis 0 with size 6"
+      }
+    },
+    {
+      "operation": "patch",
+      "patch": "W1[0, 0] = 1\nb3[9] = 1",
+      "status": 400,
+      "response": {
+        "error": "index 9 is out of bounds for axis 0 with size 6"
+      }
+    }
+  ],
+  "budget_rejection": {
+    "status": 422,
+    "response": {
+      "error": "Evaluation exceeds 250,000 maximum forward calls. Reduce episodes or steps."
+    }
+  },
+  "cancellation": {
+    "live": {
+      "id": "a04fca60a254450a",
+      "status": "running",
+      "created": 1794236252.2360718,
+      "completed": 1,
+      "total": 24,
+      "settings": {
+        "base_id": "paper",
+        "candidate_id": "paper",
+        "episodes": 12,
+        "seed": 30000,
+        "max_steps": 10000
+      },
+      "fingerprint": "97325cdd68abf2af5d1b0debcdaa639a06fcecc14bd8382caaba89e597ee76cc",
+      "idempotency_key": null,
+      "run_id": null,
+      "started": 1794236252.236385
+    },
+    "acknowledgement": {
+      "id": "a04fca60a254450a",
+      "status": "cancelling",
+      "created": 1794236252.2360718,
+      "completed": 1,
+      "total": 24,
+      "settings": {
+        "base_id": "paper",
+        "candidate_id": "paper",
+        "episodes": 12,
+        "seed": 30000,
+        "max_steps": 10000
+      },
+      "fingerprint": "97325cdd68abf2af5d1b0debcdaa639a06fcecc14bd8382caaba89e597ee76cc",
+      "idempotency_key": null,
+      "run_id": null,
+      "started": 1794236252.236385
+    },
+    "terminal": {
+      "id": "a04fca60a254450a",
+      "status": "cancelled",
+      "created": 1794236252.2360718,
+      "completed": 1,
+      "total": 24,
+      "settings": {
+        "base_id": "paper",
+        "candidate_id": "paper",
+        "episodes": 12,
+        "seed": 30000,
+        "max_steps": 10000
+      },
+      "fingerprint": "97325cdd68abf2af5d1b0debcdaa639a06fcecc14bd8382caaba89e597ee76cc",
+      "idempotency_key": null,
+      "run_id": null,
+      "started": 1794236252.236385,
+      "finished": 1794236252.594839
+    },
+    "seconds_to_terminal": 0.0053960829999999405,
+    "followup_job": {
+      "id": "43f0f5ca05184c34",
+      "status": "succeeded",
+      "created": 1794236252.5963368,
+      "completed": 2,
+      "total": 2,
+      "settings": {
+        "base_id": "paper",
+        "candidate_id": "paper",
+        "episodes": 1,
+        "seed": 40000,
+        "max_steps": 10
+      },
+      "fingerprint": "b089cdb95e71454772b7d715d3095375bb47eef8a93d0066b008775428b9fd5d",
+      "idempotency_key": null,
+      "run_id": "65429c9936aa45e2",
+      "started": 1794236252.5965528,
+      "finished": 1794236252.600259
+    },
+    "no_cancelled_run_saved": true,
+    "terminal_stable": true
+  },
+  "server": {
+    "pid": 47523,
+    "exit_code": -15,
+    "stopped": true,
+    "port": 55002
+  },
+  "temporary_workspace_removed": true
+}

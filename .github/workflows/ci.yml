@@ -1,0 +1,40 @@
+name: Validate lab and static demo
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev]'
+      - run: python -m unittest discover -s tests -v
+      - run: ruff check godseye tests experiments/validate_client.py experiments/benchmark_demo.py
+      - name: Real HTTP client acceptance
+        run: |
+          evidence_root="$(mktemp -d "$RUNNER_TEMP/godseye-client-evidence.XXXXXX")"
+          echo "CLIENT_EVIDENCE=$evidence_root/run" >> "$GITHUB_ENV"
+          python -m experiments.validate_client --output "$evidence_root/run"
+      - name: Upload client acceptance evidence and server log
+        uses: actions/upload-artifact@v4
+        if: always() && env.CLIENT_EVIDENCE != ''
+        with:
+          name: godseye-client-evidence-python-${{ matrix.python }}
+          path: ${{ env.CLIENT_EVIDENCE }}/
+          include-hidden-files: true
+      - name: CPU repair benchmark smoke test
+        run: python -m experiments.benchmark_demo --output "$RUNNER_TEMP/repair-demo.json"
+      - run: python -m build
+      - run: godseye export-demo --output dist/demo
+      - uses: actions/upload-artifact@v4
+        if: matrix.python == '3.12'
+        with:
+          name: godseye-static-demo
+          path: dist/demo/
+          include-hidden-files: true
