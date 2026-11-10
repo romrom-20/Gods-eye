@@ -6,7 +6,7 @@ const state = {
   values: [],
   run: null,
   timer: null,
-  view: "overview",
+  view: "goal",
   mode: "local",
   token: "",
   job: null,
@@ -19,6 +19,7 @@ const fmt = (v, digits = 1) =>
     : Number(v).toLocaleString(undefined, { maximumFractionDigits: digits });
 const label = (id) => state.checkpoints.find((c) => c.id === id)?.name || id;
 const viewInfo = {
+  goal: ["Describe a goal", "Describe the change. Review the evidence", "One supported goal, a reversible edit, and an honest result."],
   overview: [
     "Start here",
     "Change a few numbers. See what happens",
@@ -68,7 +69,7 @@ function showView(name) {
   $("page-title").append(dot);
   $("page-description").textContent = viewInfo[name][2];
   document.querySelector(".page-heading > .primary").hidden =
-    name === "workbench";
+    name === "workbench" || name === "goal";
   if (location.hash !== `#${name}`)
     window.history.replaceState(null, "", `#${name}`);
 }
@@ -924,7 +925,7 @@ $("quick-experiment").onclick = async () => {
 async function initialize() {
   drawArchitecture();
   updateLineNumbers();
-  showView(location.hash.slice(1) || "overview");
+  showView(location.hash.slice(1) || "goal");
   try {
     await refresh();
     await loadJobs();
@@ -940,7 +941,199 @@ async function initialize() {
       ) || runs[0];
     if (featured) await openRun(featured.id);
   } catch (e) {
-    message("overview-status", e.message, true);
+    $("environment-label").textContent = "Local lab unavailable";
+    $("connection-label").textContent = "Disconnected";
+    $("execution-label").textContent = "Local engine unavailable · mock goal flow available";
+    message("overview-status", "Cannot reach the local lab. Check the server and connection settings, then reload. The mock goal workflow remains available.", true);
   }
 }
+// Goal workflow: mock-only boundary. No api(), fetch(), provider profiles, or keys.
+(() => {
+  const sampleGoal = "Improve Breakout score without control regressions.";
+  const storageKey = "godseye.goal-draft.v1";
+  const limitFields = ["requests", "tokens", "output", "seconds", "rounds", "calls", "reply"];
+  const controls = ["goal-draft", "goal-provider", "goal-model", "goal-routing", ...limitFields.map(key => "goal-" + key), "goal-scenario"];
+  let plan = null;
+  let phase = -1;
+  let active = false;
+  let disconnected = false;
+  function status(text) {
+    $("goal-status").textContent = text;
+  }
+  function step(number) {
+    for (let i = 1; i <= 4; i++) {
+      if (i === number) $("goal-step-" + i).setAttribute("aria-current", "step");
+      else $("goal-step-" + i).removeAttribute("aria-current");
+    }
+  }
+  function saveDraft() {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        draft: $("goal-draft").value,
+        provider: $("goal-provider").value, model: $("goal-model").value, routing: $("goal-routing").value,
+        ...Object.fromEntries(limitFields.map(key => [key, $("goal-" + key).value])),
+        active,
+      }));
+    } catch {
+      $("goal-storage").textContent = "Tab storage unavailable. Your draft stays on this page; copy it before reloading.";
+    }
+  }
+  function lock(locked) {
+    for (const id of [...controls, "goal-example", "goal-plan"]) $(id).disabled = locked;
+  }
+  function invalidate() {
+    plan = null;
+    $("goal-consent").checked = false;
+    $("goal-start").disabled = true;
+    $("goal-review").hidden = true;
+    $("goal-result").hidden = true;
+    $("goal-comparison").hidden = true;
+    step(1);
+    status("Draft changed. Review the goal and limits again before starting.");
+    saveDraft();
+  }
+  function finish(title, text) {
+    active = false;
+    disconnected = false;
+    lock(false);
+    $("goal-progress").hidden = true;
+    $("goal-result").hidden = false;
+    $("goal-result-title").textContent = title;
+    $("goal-result-text").textContent = text + " This is a sample response. No experiment ran and the original is preserved.";
+    $("goal-comparison").hidden = true;
+    $("goal-compare").disabled = false;
+    step(4);
+    status(title + " · Mock only. Your draft is preserved.");
+    saveDraft();
+  }
+  for (const id of controls) $(id).addEventListener(id === "goal-scenario" ? "change" : "input", invalidate);
+  $("goal-example").onclick = () => {
+    $("goal-draft").value = sampleGoal;
+    invalidate();
+    $("goal-draft").focus();
+  };
+  $("goal-form").onsubmit = (event) => {
+    event.preventDefault();
+    if (active || !$("goal-form").reportValidity()) return;
+    invalidate();
+    const draft = $("goal-draft").value.trim();
+    const scenario = $("goal-scenario").value;
+    if (!draft) {
+      status("Describe a measurable goal first. Your draft is preserved.");
+      return;
+    }
+    const normalized = draft.toLowerCase().replace(/\s+/g, " ").replace(/\.$/, "");
+    const recognized = ["improve breakout score", "improve the breakout score", "improve breakout score without control regressions"].includes(normalized);
+    if (scenario === "unsupported" || !/breakout/i.test(draft)) {
+      status("Unsupported sample request. Only the bundled Breakout policy is an editable target here. A programmer provider does not make its own model weights editable. Your draft is preserved; use the sample goal to explore the workflow.");
+      return;
+    }
+    if (scenario === "ambiguous" || !recognized) {
+      status("Clarification needed. This mock cannot interpret arbitrary goals. Name the target, measurable change, and behavior to preserve; or use the sample goal to review the fixed Breakout plan. Your draft is preserved.");
+      return;
+    }
+    if (scenario === "rate") {
+      status("Sample planning service rate limit. No plan created or experiment started. Wait for the service’s retry guidance, then review again. Your draft is preserved.");
+      return;
+    }
+    if ($("goal-model").value.includes("://") || ($("goal-provider").value !== "openrouter" && $("goal-routing").value !== "price")) {
+      status("Review the programmer selection. Model IDs cannot be URLs; latency and throughput routing apply only to OpenRouter. Your draft is preserved.");
+      return;
+    }
+    plan = Object.freeze({ draft, scenario, provider: $("goal-provider").value, model: $("goal-model").value, routing: $("goal-routing").value,
+      ...Object.fromEntries(limitFields.map(key => [key, Number($("goal-" + key).value)])) });
+    $("goal-programmer").textContent = `${plan.provider} / ${plan.model} · routing: ${plan.routing}. Dummy selection; availability, tool compatibility, usage, and charges are unknown. No provider contact or saved-key access.`;
+    $("goal-request").textContent = "Your request: “" + plan.draft + "”";
+    $("goal-limits").textContent = `${plan.requests} programmer requests, ${plan.tokens.toLocaleString()} reported input tokens, ${plan.output.toLocaleString()} reported output tokens, ${plan.seconds} seconds, ${plan.rounds} rounds, ${plan.calls} tool calls, ${plan.reply} output tokens per response maximum. Illustrative only; no real usage authorized. No automatic retries or provider fallback.`;
+    $("goal-review").hidden = false;
+    step(2);
+    status("Sample plan ready for review. Planning has not started an experiment.");
+    $("goal-status").focus();
+  };
+  $("goal-consent").onchange = () => {
+    $("goal-start").disabled = !plan || !$("goal-consent").checked || active;
+  };
+  $("goal-edit").onclick = () => {
+    invalidate();
+    $("goal-draft").focus();
+  };
+  $("goal-start").onclick = () => {
+    if (!plan || active || !$("goal-consent").checked) return;
+    active = true;
+    phase = 0;
+    lock(true);
+    $("goal-start").disabled = true;
+    $("goal-consent").checked = false;
+    $("goal-review").hidden = true;
+    $("goal-result").hidden = true;
+    $("goal-progress").hidden = false;
+    $("goal-next").hidden = false;
+    $("goal-reconnect").hidden = true;
+    $("goal-phase").textContent = "Sample step 1 of 3: Checking the original policy.";
+    step(3);
+    status("Mock walkthrough started explicitly. No execution or provider request has started.");
+    saveDraft();
+  };
+  $("goal-next").onclick = () => {
+    if (!active || disconnected) return;
+    if (plan.scenario === "budget") {
+      finish("Sample budget stop", "The illustrated limit was reached. No further attempt is allowed without reviewing a new plan and limits. No improvement demonstrated.");
+    } else if (plan.scenario === "unavailable") {
+      finish("Sample programmer unavailable", "The illustrated worker could not use the selected programmer. No automatic retry or provider fallback occurred. No improvement was demonstrated; review availability and a new plan before trying again.");
+    } else if (plan.scenario === "failure") {
+      finish("Sample execution failure", "The illustrated worker failed. There is no verified edited artifact or result. Review the failure before starting a new attempt.");
+    } else if (plan.scenario === "disconnect") {
+      disconnected = true;
+      $("goal-next").hidden = true;
+      $("goal-reconnect").hidden = false;
+      $("goal-phase").textContent = "Sample connection lost. Execution status would be unknown; a lost connection does not prove a worker stopped or charges ended.";
+      status("Mock disconnect. Reconnect to status without launching a duplicate experiment, or cancel this mock walkthrough.");
+    } else {
+      phase++;
+      if (phase === 1) $("goal-phase").textContent = "Sample step 2 of 3: Trying an edit on a separate checkpoint.";
+      else if (phase === 2) $("goal-phase").textContent = "Sample step 3 of 3: Testing the result and checking regressions.";
+      else finish("Sample execution completed · improvement unproven", "The sample says execution completed. Completion is not evidence of improvement. There are no measured scores, regression checks, or edited artifacts in this walkthrough.");
+    }
+  };
+  $("goal-reconnect").onclick = () => {
+    if (!active || !disconnected) return;
+    finish("Sample interrupted execution", "The illustrated status lookup reports interruption. No automatic relaunch was attempted. Review a new plan to try again.");
+  };
+  $("goal-cancel").onclick = () => {
+    if (!active) return;
+    finish("Mock walkthrough cancelled", "Only this walkthrough stopped. In a real experiment, cancellation needs a worker acknowledgment before execution can be called stopped.");
+  };
+  $("goal-compare").onclick = () => {
+    $("goal-comparison").hidden = false;
+    $("goal-compare").disabled = true;
+  };
+  $("goal-keep").onclick = () => {
+    status("Original kept. No model was changed by this mock. Your draft is preserved.");
+  };
+  $("goal-again").onclick = () => {
+    invalidate();
+    $("goal-draft").focus();
+  };
+  $("goal-guided").onclick = () => {
+    showView("overview");
+    $("first-title").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("quick-experiment").focus();
+  };
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+    if (saved && typeof saved.draft === "string") {
+      $("goal-draft").value = saved.draft.slice(0, 2000);
+      for (const key of limitFields) {
+        if (Number.isFinite(Number(saved[key]))) $("goal-" + key).value = saved[key];
+      }
+      if (["openai", "openrouter", "huggingface"].includes(saved.provider)) $("goal-provider").value = saved.provider;
+      if (typeof saved.model === "string") $("goal-model").value = saved.model.slice(0, 128);
+      if (["price", "latency", "throughput"].includes(saved.routing)) $("goal-routing").value = saved.routing;
+      if (saved.active) status("Previous mock walkthrough interrupted by reload. Your draft is restored. Nothing was resumed or relaunched; review again to start a new mock.");
+    }
+  } catch {
+    $("goal-storage").textContent = "Draft recovery unavailable. Your draft stays on this page; copy it before reloading.";
+  }
+})();
+// End goal workflow.
 initialize();
