@@ -79,7 +79,8 @@ limits: {max_requests, max_input_tokens, max_total_output_tokens, max_seconds,
 
 Opaque IDs match `[A-Za-z0-9][A-Za-z0-9_-]{0,63}`. Model IDs use the existing
 provider-discovery pattern `[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}` and cannot contain
-`://`. They identify a model at a fixed provider endpoint, never a URL or local
+`//`, `.`/`..` path segments or a Windows drive prefix. They identify a model
+at a fixed provider endpoint, never a URL or local
 model path. For OpenAI/Hugging Face require `routing:"price"` as the canonical
 placeholder; only OpenRouter uses this preference. Availability/tool support is
 not inferred from a name or catalog. Connection checking remains the separate,
@@ -126,6 +127,11 @@ enter planner/provider/browser messages. Hidden control labels remain trusted.
 Do not reveal held-out feedback to repair tools or permit another selection.
 Persist reservations before work; failures/interruption consume them. Preserve
 all attempts, errors, freezes and baseline arms, including unchanged/heuristic.
+The current adapter prompt requests root evaluation but does not independently
+enforce ordering. The operator must audit the development records and fail the
+experiment with `evaluation_error` if a changed selection lacks its earlier root
+comparison. This is a result-admission requirement for the service owner, not a
+claim that the pure spec validator or current evaluator enforces tool sequencing.
 
 For a complete final report, pool paired episode score differences from each
 agent-selected candidate versus its case root, with equal episodes per case.
@@ -179,6 +185,18 @@ Concurrent starts for a draft return its existing run only for that same tuple,
 otherwise `state_conflict`. Repeated cancellation/status/results are reads of
 persisted state and never relaunch or re-reveal. A stale hash is `spec_conflict`.
 The pure module validates transitions; it does not implement these transactions.
+
+Integration entry points are `loads_message(raw)`, `validate_message(kind, value)`,
+`plan(request, policy, draft_id=...)`, `validate_spec(value, policy)`,
+`confirm_start(request, stored_spec, policy, draft_id=..., status=...)`,
+`transition(current, following)` and `evidence_verdict(trusted_summary)`.
+`plan` returns a candidate response only: persist its ready draft before returning
+it to the client. `confirm_start` handles the first ready-to-queued admission;
+look up scoped idempotent replays transactionally before calling it, since it
+intentionally rejects a draft that is already queued. Revalidate the stored spec
+against current trusted policy at worker admission too. `ExperimentSpec.to_dict()`
+returns a copy; `.sha256` is the review/confirmation binding. Structural response
+validation does not replace stored-spec, authorization or provenance checks.
 
 ## Exact operation messages
 
@@ -293,3 +311,14 @@ freeze gate holds; missing usage remains unknown; result reads never rerun work;
 no hidden data or provider errors reach browser/model; baseline and artifacts
 remain exportable and reversible. Module tests do not establish these service
 properties.
+
+Implementation validation: 14 dedicated experiment-spec tests pass on Python
+3.9 and 3.12; the complete Python 3.12 suite runs 97 tests successfully with one
+Docker-only test skipped. Ruff checks for the two new Python files and
+`git diff --check` pass. Reproduce using the project's declared dev dependencies:
+
+```sh
+python -m unittest discover -s tests -p test_experiment_spec.py -v
+python -m unittest discover -s tests -v
+ruff check godseye/experiment_spec.py tests/test_experiment_spec.py
+```
