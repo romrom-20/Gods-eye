@@ -84,7 +84,8 @@ at a fixed provider endpoint, never a URL or local
 model path. For OpenAI/Hugging Face require `routing:"price"` as the canonical
 placeholder; only OpenRouter uses this preference. Availability/tool support is
 not inferred from a name or catalog. Connection checking remains the separate,
-explicitly confirmed provider-discovery action. There is no fallback/retry.
+explicitly confirmed provider-discovery action. There is no provider fallback or
+inference retry. Bounded control-plane HTTP retries are defined separately below.
 
 All fields are required, all objects reject additional properties, booleans are
 not integers, and NaN/infinity, coercion, duplicate JSON keys and unknown enum
@@ -180,7 +181,8 @@ stopped. Preserve `request_in_flight` and usage uncertainty.
 Status, cancellation and results responses require `phase:{name,event_sequence}`.
 `name` is `unknown`, `checking_original`, `trying_edit`, or `testing`.
 `event_sequence` is a positive integer identifying the last consumed trusted
-event, or null when there is no usable event. A known phase requires a non-null
+event, or null when none has been consumed. Preserve this sequence fence when
+observation is lost, even though the name becomes unknown. A known phase requires a non-null
 sequence and execution status `running` or `cancelling`. All other statuses
 require `unknown`. The UI labels are “Checking the original”, “Trying an edit”,
 and “Testing the result”; unknown displays “Activity unavailable” alongside the
@@ -212,6 +214,8 @@ authenticated trusted worker/evaluator observations, bound to the admitted run:
   After each admitted tool operation finishes, journal its finish/failure before
   another provider request; do not leave a known phase stuck during model thought.
 
+V1 follows the serial harness: at most one observed operation per experiment.
+Overlapping or uncorrelated activity yields `activity_unknown`, not a guessed phase.
 Missing events, sequence gaps and loss of observation yield unknown. Reject
 wrong-run/wrong-spec events; ignore duplicate/older sequences without regressing
 the phase. A gap consumes its sequence as unknown; a later contiguous trusted
@@ -240,7 +244,9 @@ The pure module validates transitions; it does not implement these transactions.
 Integration entry points are `loads_message(raw)`, `validate_message(kind, value)`,
 `plan(request, policy, draft_id=...)`, `validate_spec(value, policy)`,
 `confirm_start(request, stored_spec, policy, draft_id=..., status=...)`,
-`transition(current, following)` and `evidence_verdict(trusted_summary)`.
+`transition(current, following)`, `phase_from_event(event, experiment_id=...,
+spec_hash=..., status=..., previous=...)`, `retry_guidance(code)` and
+`evidence_verdict(trusted_summary)`.
 `plan` returns a candidate response only: persist its ready draft before returning
 it to the client. `confirm_start` handles the first ready-to-queued admission;
 look up scoped idempotent replays transactionally before calling it, since it
@@ -415,11 +421,25 @@ URL-shaped model ID, stale spec hash, or any changed baseline/evaluation rule.
 Recognized text with missing provider/model/limits is a schema error, not an
 invitation to choose defaults. Unrecognized text never gets a ready plan.
 
+A service throttle returns HTTP 429 with `Retry-After: 5`, and exactly:
+
+```json
+{"schema_version":1,"error":{"code":"rate_limited","field":"$","message":"Too many requests. Wait before retrying the same action."},"retry":{"action":"same_request","after_seconds":5,"max_attempts":3}}
+```
+
+An observed original probe gives `phase:{"name":"checking_original",
+"event_sequence":1}`. Its completion at sequence 2 gives
+`phase:{"name":"unknown","event_sequence":2}` until another trusted activity
+starts. Missing `phase`/`retry`, a known phase without a sequence, a known phase
+on a terminal status, retrying `unavailable` automatically, and retry counts above
+three are contract errors.
+
 Dedicated offline acceptance tests must cover strict nested validation,
 malformed/duplicate JSON, finite bounds and booleans, conservative interpretation,
 policy binding and immutable serialization, hash changes, exact confirmation,
-every allowed/forbidden lifecycle transition, verdict/status separation, and
-result evidence requirements. All tests use synthetic policy/IDs and no saved
+every allowed/forbidden lifecycle transition, verdict/status separation,
+trusted-event phase projection (including gaps/replay/loss), exact HTTP mappings,
+bounded retry metadata, and result evidence requirements. All tests use synthetic policy/IDs and no saved
 keys, live providers, Docker, evaluator changes or UI changes.
 Future integration acceptance (service owner's responsibility): duplicate and
 concurrent starts launch once; stale review fails before secrets; policy/root
@@ -429,8 +449,8 @@ no hidden data or provider errors reach browser/model; baseline and artifacts
 remain exportable and reversible. Module tests do not establish these service
 properties.
 
-Implementation validation: 14 dedicated experiment-spec tests pass on Python
-3.9 and 3.12; the complete Python 3.12 suite runs 97 tests successfully with one
+Implementation validation: 18 dedicated experiment-spec tests pass on Python
+3.9 and 3.12; the complete Python 3.12 suite runs 101 tests successfully with one
 Docker-only test skipped. Ruff checks for the two new Python files and
 `git diff --check` pass. Reproduce using the project's declared dev dependencies:
 

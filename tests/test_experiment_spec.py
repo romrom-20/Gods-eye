@@ -35,7 +35,8 @@ def evidence(**changes):
 
 def result(status='completed', verdict='improved', reason=None):
     return dict(schema_version=1, experiment_id='run_1', spec_hash=planned()['spec_hash'],
-                status=status, verdict=verdict, reason=reason, usage=usage(),
+                status=status, phase=dict(name='unknown', event_sequence=None),
+                verdict=verdict, reason=reason, usage=usage(),
                 evidence=evidence() if status == 'completed' else None)
 
 
@@ -297,6 +298,128 @@ class ExperimentContractTests(unittest.TestCase):
         bad = c.ContractError('invalid_schema').response()
         bad['error']['field'] = '$.unknown_SECRET'
         self.assert_code('invalid_schema', c.validate_message, 'error_response', bad)
+
+    def test_error_http_mapping_and_fixed_retry_metadata(self):
+        expected = dict(
+            invalid_json=400, invalid_schema=400, unsupported_version=400, policy_violation=400,
+            clarification_required=200, unsupported_goal=200, spec_conflict=409, state_conflict=409,
+            idempotency_conflict=409, not_found=404, result_not_ready=409, not_authorized=403,
+            unavailable=503, rate_limited=429, queue_full=503, worker_unavailable=503,
+            internal_error=500)
+        self.assertEqual(expected, c.HTTP_STATUS)
+        self.assertEqual(set(c.MESSAGES), set(c.HTTP_STATUS))
+        for code in expected:
+            with self.subTest(code=code):
+                value = c.ContractError(code).response()
+                if code in ('clarification_required', 'unsupported_goal'):
+                    self.assert_code('invalid_schema', c.validate_message, 'error_response', value)
+                    continue
+                self.assertEqual(value, c.validate_message('error_response', value))
+                retry = value['retry']
+                if code in ('rate_limited', 'queue_full', 'worker_unavailable'):
+                    self.assertEqual(dict(action='same_request', after_seconds=5, max_attempts=3),
+                                     retry)
+                elif code == 'result_not_ready':
+                    self.assertEqual(dict(action='poll_status', after_seconds=2, max_attempts=3),
+                                     retry)
+                else:
+                    self.assertEqual(dict(action='none', after_seconds=None, max_attempts=0), retry)
+        for key, bad_value in (('max_attempts', 4), ('max_attempts', True),
+                               ('after_seconds', 0), ('after_seconds', 120),
+                               ('after_seconds', '5'), ('action', 'retry_provider')):
+            bad = c.ContractError('rate_limited').response()
+            bad['retry'][key] = bad_value
+            self.assert_code('invalid_schema', c.validate_message, 'error_response', bad)
+        for code, retry in (('unavailable', c.retry_guidance('rate_limited')),
+                            ('rate_limited', c.retry_guidance('not_authorized')),
+                            ('result_not_ready', c.retry_guidance('queue_full'))):
+            bad = c.ContractError(code).response()
+            bad['retry'] = retry
+            self.assert_code('invalid_schema', c.validate_message, 'error_response', bad)
+        bad = c.ContractError('rate_limited').response()
+        del bad['retry']
+        self.assert_code('invalid_schema', c.validate_message, 'error_response', bad)
+        copy = c.retry_guidance('rate_limited')
+        copy['max_attempts'] = 100
+        self.assertEqual(3, c.retry_guidance('rate_limited')['max_attempts'])
+
+    def test_phase_schema_requires_observation_and_compatible_execution_status(self):
+        for status in c.STATUSES:
+            value = result(status, 'not_evaluated' if status != 'completed' else 'improved',
+                           {'failed': 'provider_error', 'cancelled': 'user_cancelled',
+                            'interrupted': 'process_lost'}.get(status))
+            del value['evidence']
+            c.validate_message('status_response', value)
+            for phase in ('checking_original', 'trying_edit', 'testing'):
+                value['phase'] = dict(name=phase, event_sequence=1)
+                if status in ('running', 'cancelling'):
+                    c.validate_message('status_response', value)
+                else:
+                    self.assert_code('invalid_schema', c.validate_message, 'status_response', value)
+        value = result('running', 'not_evaluated')
+        del value['evidence']
+        for phase in (dict(name='testing', event_sequence=None),
+                      dict(name='testing', event_sequence=True),
+                      dict(name='testing', event_sequence=0),
+                      dict(name='estimated', event_sequence=1),
+                      dict(name='testing', event_sequence=1, percent=80)):
+            self.assert_code('invalid_schema', c.validate_message, 'status_response',
+                             {**value, 'phase': phase})
+        del value['phase']
+        self.assert_code('invalid_schema', c.validate_message, 'status_response', value)
+
+    def test_phase_projection_uses_only_ordered_scoped_trusted_events(self):
+        context = dict(experiment_id='run_1', spec_hash='a' * 64, status='running')
+
+        def event(kind, sequence=1):
+            return dict(schema_version=1, experiment_id='run_1', spec_hash='a' * 64,
+                        sequence=sequence, kind=kind)
+
+        mapping = dict(root_probe_reserved='checking_original', edit_started='trying_edit',
+                       candidate_probe_reserved='trying_edit', held_out_reserved='testing',
+                       activity_finished='unknown', activity_failed='unknown',
+                       activity_unknown='unknown')
+        for kind, phase in mapping.items():
+            self.assertEqual(dict(name=phase, event_sequence=1),
+                             c.phase_from_event(event(kind), **context))
+        prior = c.phase_from_event(event('root_probe_reserved'), **context)
+        for kind in ('held_out_reserved', 'edit_started'):
+            self.assertEqual(prior, c.phase_from_event(event(kind), previous=prior, **context))
+        gap = c.phase_from_event(event('held_out_reserved', 3), previous=prior, **context)
+        self.assertEqual(dict(name='unknown', event_sequence=3), gap)
+        resumed = c.phase_from_event(event('candidate_probe_reserved', 4), previous=gap, **context)
+        self.assertEqual(dict(name='trying_edit', event_sequence=4), resumed)
+        self.assertEqual(resumed, c.phase_from_event(event('root_probe_reserved', 2),
+                                                   previous=resumed, **context))
+        lost = c.phase_from_event(None, previous=resumed, **context)
+        self.assertEqual(dict(name='unknown', event_sequence=4), lost)
+        self.assertEqual(lost, c.phase_from_event(event('root_probe_reserved'),
+                                                previous=lost, **context))
+        self.assertEqual(dict(name='unknown', event_sequence=None),
+                         c.phase_from_event(None, **context))
+        for status in c.STATUSES:
+            phase = c.phase_from_event(event('root_probe_reserved'),
+                                       **{**context, 'status': status})
+            self.assertEqual('checking_original' if status in ('running', 'cancelling')
+                             else 'unknown', phase['name'])
+        terminal = c.phase_from_event(event('root_probe_reserved'), previous=resumed,
+                                      **{**context, 'status': 'interrupted'})
+        self.assertEqual(dict(name='unknown', event_sequence=4), terminal)
+        self.assert_code('not_found', c.phase_from_event,
+                         {**event('edit_started'), 'experiment_id': 'another'}, **context)
+        self.assert_code('spec_conflict', c.phase_from_event,
+                         {**event('edit_started'), 'spec_hash': 'b' * 64}, **context)
+        for bad in ({**event('edit_started'), 'kind': 'model_says_testing'},
+                    {**event('edit_started'), 'elapsed_seconds': 20}):
+            self.assert_code('invalid_schema', c.phase_from_event, bad, **context)
+
+    def test_provider_failures_are_terminal_reasons_not_retryable_service_errors(self):
+        for reason in ('provider_error', 'provider_rate_limited', 'provider_unavailable'):
+            value = result('failed', 'not_evaluated', reason)
+            c.validate_message('results_response', value)
+            self.assertNotIn(reason, c.HTTP_STATUS)
+            with self.assertRaises(ValueError):
+                c.retry_guidance(reason)
 
 
 if __name__ == '__main__':

@@ -19,6 +19,11 @@ STATUSES = ('draft', 'ready', 'queued', 'running', 'cancelling', 'completed',
             'failed', 'cancelled', 'interrupted')
 TERMINAL = ('completed', 'failed', 'cancelled', 'interrupted')
 VERDICTS = ('not_evaluated', 'improved', 'no_improvement', 'inconclusive')
+PHASES = ('unknown', 'checking_original', 'trying_edit', 'testing')
+PHASE_EVENTS = MappingProxyType(dict(
+    root_probe_reserved='checking_original', edit_started='trying_edit',
+    candidate_probe_reserved='trying_edit', held_out_reserved='testing',
+    activity_finished='unknown', activity_failed='unknown', activity_unknown='unknown'))
 TRANSITIONS = {
     'draft': ('ready', 'cancelled'), 'ready': ('queued', 'cancelled'),
     'queued': ('running', 'cancelling', 'failed', 'interrupted'),
@@ -44,7 +49,28 @@ MESSAGES = {
     'result_not_ready': 'The experiment has no terminal result yet.',
     'not_authorized': 'Operation is not authorized.',
     'unavailable': 'Experiment service is unavailable.',
+    'rate_limited': 'Too many requests. Wait before retrying the same action.',
+    'queue_full': 'Experiment queue is full. No new experiment was admitted.',
+    'worker_unavailable': 'No compatible worker is available. No new experiment was admitted.',
+    'internal_error': 'Experiment service failed. Admission state may be unknown.',
 }
+HTTP_STATUS = MappingProxyType(dict(
+    invalid_json=400, invalid_schema=400, unsupported_version=400, policy_violation=400,
+    clarification_required=200, unsupported_goal=200, spec_conflict=409, state_conflict=409,
+    idempotency_conflict=409, not_found=404, result_not_ready=409, not_authorized=403,
+    unavailable=503, rate_limited=429, queue_full=503, worker_unavailable=503,
+    internal_error=500))
+
+
+def retry_guidance(code):
+    """Fixed HTTP-only guidance; never retries transport or provider calls itself."""
+    if code not in HTTP_STATUS:
+        raise ValueError('Unknown contract error code')
+    if code in ('rate_limited', 'queue_full', 'worker_unavailable'):
+        return dict(action='same_request', after_seconds=5, max_attempts=3)
+    if code == 'result_not_ready':
+        return dict(action='poll_status', after_seconds=2, max_attempts=3)
+    return dict(action='none', after_seconds=None, max_attempts=0)
 
 
 class ContractError(ValueError):
@@ -58,7 +84,7 @@ class ContractError(ValueError):
         return dict(code=self.code, field=self.field, message=MESSAGES[self.code])
 
     def response(self):
-        return dict(schema_version=VERSION, error=self.issue())
+        return dict(schema_version=VERSION, error=self.issue(), retry=retry_guidance(self.code))
 
 
 def _object(**properties):
@@ -110,6 +136,11 @@ _SPEC = _object(
     success=_enum('positive_paired_mean_2se_and_no_control_regression'),
     editing=_enum('numeric_tensor_assignments_v1'), provider=_PROVIDER, limits=_LIMITS)
 _ISSUE = _object(code=_enum(*MESSAGES), field=_text(1, 200), message=_text(1, 500))
+_ERROR = _object(**{**_ISSUE['properties'], 'code': _enum(
+    *(code for code in MESSAGES if code not in ('clarification_required', 'unsupported_goal')))})
+_RETRY = _object(action=_enum('none', 'same_request', 'poll_status'),
+                 after_seconds=_nullable(_integer(1, 5)), max_attempts=_integer(0, 3))
+_PHASE = _object(name=_enum(*PHASES), event_sequence=_nullable(_integer(1)))
 _USAGE = _object(requests=_integer(), input_tokens=_integer(), output_tokens=_integer(),
                  tool_calls=_integer(), elapsed_seconds=_NONNEGATIVE,
                  usage_complete={'type': 'boolean'}, request_in_flight={'type': 'boolean'})
@@ -118,10 +149,11 @@ _EVIDENCE = _object(
     paired_samples=_integer(2), mean_delta=_NUMBER, paired_se=_NONNEGATIVE,
     min_control_delta=_NUMBER, limitations=_array(_text(), 1, 10))
 _REASONS = _nullable(_enum('budget_exhausted', 'provider_error', 'evaluation_error',
-                          'agent_incomplete', 'runtime_failure', 'user_cancelled', 'process_lost'))
+                          'provider_rate_limited', 'provider_unavailable', 'agent_incomplete',
+                          'runtime_failure', 'user_cancelled', 'process_lost'))
 _QUERY = _object(schema_version=_enum(VERSION), experiment_id=_ID)
 _STATUS = _object(schema_version=_enum(VERSION), experiment_id=_ID, spec_hash=_HASH,
-                  status=_enum(*STATUSES), verdict=_enum(*VERDICTS), reason=_REASONS,
+                  status=_enum(*STATUSES), phase=_PHASE, verdict=_enum(*VERDICTS), reason=_REASONS,
                   usage=_USAGE)
 SCHEMAS = {
     'spec': _SPEC,
@@ -138,7 +170,10 @@ SCHEMAS = {
     'status_request': _QUERY, 'cancel_request': _QUERY, 'results_request': _QUERY,
     'status_response': _STATUS, 'cancel_response': _STATUS,
     'results_response': _object(**_STATUS['properties'], evidence=_nullable(_EVIDENCE)),
-    'error_response': _object(schema_version=_enum(VERSION), error=_ISSUE),
+    'error_response': _object(schema_version=_enum(VERSION), error=_ERROR, retry=_RETRY),
+    # Internal trusted journal input only, never a public request operation.
+    'phase_event': _object(schema_version=_enum(VERSION), experiment_id=_ID, spec_hash=_HASH,
+                           sequence=_integer(1), kind=_enum(*PHASE_EVENTS)),
 }
 
 
@@ -302,9 +337,14 @@ def validate_message(kind, value):
                 raise ContractError('invalid_schema', '$.issues')
     if kind.endswith('_response') and 'verdict' in value:
         status, verdict, reason = value['status'], value['verdict'], value['reason']
+        phase = value['phase']
+        if phase['name'] != 'unknown' and (status not in ('running', 'cancelling')
+                                           or phase['event_sequence'] is None):
+            raise ContractError('invalid_schema', '$.phase')
         expected = {'cancelled': ('user_cancelled',), 'interrupted': ('process_lost',),
-                    'failed': ('budget_exhausted', 'provider_error', 'evaluation_error',
-                               'agent_incomplete', 'runtime_failure')}.get(status, (None,))
+                    'failed': ('budget_exhausted', 'provider_error', 'provider_rate_limited',
+                               'provider_unavailable', 'evaluation_error', 'agent_incomplete',
+                               'runtime_failure')}.get(status, (None,))
         if reason not in expected:
             raise ContractError('invalid_schema', '$.reason')
         if (status == 'completed') != (verdict != 'not_evaluated'):
@@ -323,7 +363,40 @@ def validate_message(kind, value):
             if (issue['message'] != MESSAGES[issue['code']]
                     or issue['field'] not in _SAFE_PATHS):
                 raise ContractError('invalid_schema', '$')
+    if kind == 'error_response' and value['retry'] != retry_guidance(value['error']['code']):
+        raise ContractError('invalid_schema', '$.retry')
     return json.loads(canonical_json(value))
+
+
+def phase_from_event(event, *, experiment_id, spec_hash, status, previous=None):
+    """Project an authenticated, ordered journal observation; no clocks or I/O.
+
+    The caller authenticates events and persists this result with status. A missing
+    observation resets to unknown; wrong-scope observations are rejected.
+    """
+    _check(experiment_id, _ID)
+    _check(spec_hash, _HASH)
+    _check(status, _enum(*STATUSES))
+    prior = dict(name='unknown', event_sequence=None) if previous is None else previous
+    _json_shape(prior)
+    _check(prior, _PHASE)
+    if prior['name'] != 'unknown' and prior['event_sequence'] is None:
+        raise ContractError('invalid_schema', '$.phase')
+    if event is None:
+        return dict(name='unknown', event_sequence=prior['event_sequence'])
+    event = validate_message('phase_event', event)
+    if event['experiment_id'] != experiment_id:
+        raise ContractError('not_found')
+    if event['spec_hash'] != spec_hash:
+        raise ContractError('spec_conflict')
+    sequence, old_sequence = event['sequence'], prior['event_sequence']
+    if old_sequence is not None and sequence <= old_sequence:
+        return dict(name=prior['name'] if status in ('running', 'cancelling') else 'unknown',
+                    event_sequence=old_sequence)
+    contiguous = sequence == (old_sequence or 0) + 1
+    name = PHASE_EVENTS[event['kind']] if contiguous else 'unknown'
+    return dict(name=name if status in ('running', 'cancelling') else 'unknown',
+                event_sequence=sequence)
 
 
 @dataclass(frozen=True)
