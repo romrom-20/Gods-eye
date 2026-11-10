@@ -9,6 +9,16 @@ The starting network is the released Breakout policy from
 It is a 600 → 32 → 32 → 6 tanh MLP with 20,486 parameters. Attribution and
 licenses are in [fixtures/breakout/PROVENANCE.md](fixtures/breakout/PROVENANCE.md).
 
+## Where we’re going
+
+Describe a supported improvement in natural language, review the experiment limits,
+and receive a tested, reversible model change—or a clear report that it did not
+improve. The current release is a local Breakout workbench with a separate agent
+harness; the natural-language workflow and editable language-model backend are
+next. Better quality or lower cost must be demonstrated, not assumed.
+
+See the [prioritized roadmap and release criteria](docs/roadmap.md).
+
 ## Run
 
 Python 3.9–3.12:

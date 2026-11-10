@@ -1,9 +1,136 @@
 # Build God's Eye from here
 
-The wedge is a trustworthy experiment loop for direct weight edits: inspect,
-preview, branch, evaluate, retain evidence. A generic inference wrapper cannot
-provide this because it does not own the model tensors. The first customer is a
-researcher or coding agent investigating a small, accessible model.
+## Product aim
+
+Build an excellent open-source workbench that turns a supported natural-language
+improvement request into a reversible model change and trustworthy evidence.
+
+**Promise to work toward:** Describe one supported improvement. Get a tested model
+change—or an honest explanation that no improvement was found.
+
+The initial audience is researchers and developers working with small, accessible
+models. Start with one complete Breakout workflow, then one small language model.
+Do not imply arbitrary model support or guaranteed improvement. The programmer
+model and the target model are separate roles: selecting Qwen as a provider does
+not give the application access to Qwen's weights or make Qwen an editable target.
+
+Our quality bar is ease of use, reproducibility, useful results, and sound
+engineering. “Best” is an ambition to earn through independent use and evidence,
+not a claim supported by a polished demo or a single benchmark.
+
+## Release order and immediate priorities
+
+### Next release: a goal-driven Breakout experiment
+
+1. **Establish the real-agent baseline.** Choose an explicit compatible programmer
+   model and user-approved request/token/time limits. Run the existing isolated
+   experiment against unchanged and heuristic baselines. Preserve every attempt,
+   stop, control regression, and failed repair. Use held-out evaluation only after
+   freezing selections. Publish a redacted report with limitations, never secrets
+   or unrevealed future test cases. A negative result is valid evidence.
+2. **Define the goal contract.** Introduce a versioned experiment specification:
+   supported target, requested improvement, measurable success criteria,
+   regression checks, permitted edits, development/test split, and limits.
+   Translate a natural-language request into this constrained specification;
+   reject unsupported goals clearly rather than promising arbitrary execution.
+   The UI must distinguish an AI suggestion from a measured result.
+3. **Connect the browser to the isolated harness.** Add a trusted operator service
+   for launch, status, cancellation, and result retrieval. The browser must never
+   receive provider keys, evaluator admin tokens, or hidden evaluation data.
+   Persist run identity and decisions. Integrate cancellation without weakening
+   reservations, freeze gates, or the current refusal to resume agent runs.
+4. **Ship the complete user journey.** Request → review interpreted goal and
+   limits → start → visible progress → result → compare/export/keep original.
+   Show “checking the original,” “trying an edit,” and “testing the result,” with
+   advanced detail expandable. Keep the no-key guided example as onboarding.
+5. **Return a useful result.** Include original and edited versions, exact delta,
+   interpretation of the measurements, sample counts and uncertainty, regression
+   results, known limitations, recorded usage, and export/rollback instructions.
+   Distinguish improvement, inconclusive/no improvement, budget stop,
+   cancellation, and execution failure. Never label an untested edit a success.
+
+Release acceptance:
+
+- A new user can complete the supported journey without a terminal or tensor
+  syntax, understand which model was changed, and find the original version.
+- A small first usability study: at least four of five new participants complete
+  the journey without coaching; record time, confusion, and failure points.
+  This is an initial product check, not statistical proof of broad usability.
+- At least one bounded real-provider experiment is reported transparently;
+  reliable improvement remains a research gate, not a required fabricated outcome.
+- Tests cover launch authorization, duplicate submissions, cancellation, provider
+  errors, missing usage, reload/restart behavior, and hidden-data separation.
+- The local/no-key path stays usable. Public writable hosting stays disabled.
+
+### Following release: one editable small language model
+
+Select one fixed, licensed model revision after measuring local memory and runtime.
+Qwen is a candidate, not a committed compatibility promise. Implement the backend
+and regression evaluation described below. Support one narrow goal with examples
+and a held-out test set. Preserve original weights, tokenizer/model revisions,
+patches, and sampling settings. Export a usable model or delta with a verified
+reload path; a text explanation alone is not the model artifact.
+
+Acceptance: a targeted change can be inspected, applied, reversed, reloaded, and
+compared on both target and unrelated capabilities within documented resources.
+Do not promise laptop execution until that exact model/configuration is measured.
+
+### Then: demonstrate value before expanding infrastructure
+
+Compare against the unchanged model, improved prompting, and an appropriate
+conventional adaptation baseline. Evaluate quality, regressions, latency, memory,
+and total cost under the same task definition. Include editing, evaluation,
+deployment, and recurring inference costs; report assumptions and any break-even
+volume. Sparse edits alone do not imply smaller models or faster inference.
+Unknown charges remain unknown rather than being recorded as zero.
+
+Only then prioritize rented/customer-owned workers, deployment, collaboration,
+and managed services. Larger model support is not a substitute for a useful,
+reproducible workflow on one model.
+
+## How we operate
+
+- Maintain one prioritized release backlog. Every item has an owner, user
+  outcome, dependencies, acceptance checks, and an evidence/demo link when done.
+- Work in small reviewable branches. Use two implementation agents in parallel
+  for independent areas and one coordinating reviewer. Agree shared interfaces
+  first; assign file ownership and reconcile integration tests before merging.
+- A practical next split: one agent owns the experiment specification and API
+  contract; another owns the guided UI using that agreed contract and mock data.
+  The coordinator owns harness integration and end-to-end verification. Do not
+  advertise a mocked UI as a live agent experiment.
+- Review actual user behavior and a working demo each iteration. Change the plan
+  when evidence shows confusion, poor repair quality, or unfavorable economics.
+- Ask the user at milestone, model/spend, deployment, and material scope decisions.
+  Continue routine implementation and test fixes autonomously within authorization.
+  No paid experiment starts merely because a credential has been saved.
+- Definition of done: reviewed implementation, meaningful tests, combined CI,
+  documented limitations, usable error states, and a reproducible demonstration.
+  Do not close a task just because its unit tests pass or its agent reports done.
+- Measure time to first result, unassisted completion, reproducibility, held-out
+  improvement and regressions, failure rates, latency, and cost per successful
+  improvement. Do not optimize stars or signups instead of usefulness.
+
+## Open-source release quality
+
+Add a contributor guide, issue templates with acceptance criteria, a security
+reporting policy, changelog, and versioned releases. Keep installation and a
+no-secret smoke test reproducible. Document stable interfaces and migration notes
+when contracts change. Supply small datasets/examples with provenance and licenses.
+Use release evidence and independent reproduction to support scientific claims.
+
+Contributions must not contain credentials, private user data, provider error
+bodies, or concealed evaluation fixtures. Add automated secret/dependency checks
+and pin release dependencies/images with a documented update process. Keep
+telemetry opt-in, explain its contents, and provide local artifact deletion.
+
+## Adjacent directions to validate later
+
+Small classifiers, document extraction/routing models, and simulation/game policies
+may be useful extensions. Each needs an explicit task, evaluator, regression suite,
+license review, and actual user demand before implementation. Keep direct weight
+editing, adapter training, activation interventions, and prompt optimization
+clearly distinguished. None is a universal replacement for the others.
 
 ## What exists in this repo
 
@@ -21,9 +148,15 @@ researcher or coding agent investigating a small, accessible model.
 - Automated core, API, security-boundary, queue, and export tests. CI builds
   a wheel and a static website artifact. It does not publish the site.
 
-There is no autonomous LLM programmer, remote GPU worker, user account system,
-paid service, or production multi-tenant isolation. Those are not implied by
-having an API or a bearer token.
+Also implemented: a separate restricted tool-calling programmer harness; validated
+Docker evaluator isolation; provider profiles, model discovery, and confirmed
+connection checks; cumulative request/reported-token limits and no-resume claims.
+The simplified local UI includes a guided fixed four-weight experiment.
+
+There is no browser natural-language-to-agent workflow, editable Qwen backend,
+remote GPU worker, account system, paid service, or production multi-tenant
+isolation. Real-agent repair quality and cost savings remain unproven. Docker
+boundary tests with a scripted provider do not establish intelligent repair.
 
 ## A practical first week
 
@@ -46,8 +179,8 @@ Do not use signups or a dramatic single replay as the only signal.
 
 The first local harness is implemented: see [repair-benchmark.md](repair-benchmark.md).
 It includes three fault families, controls, persistent reservations, frozen
-selections, and deterministic baseline participants. Genuine evaluator isolation
-and evidence from external repair agents are still outstanding.
+selections, and deterministic baseline participants. The separate Docker evaluator
+boundary has passed integration tests. Real-provider repair evidence remains outstanding.
 
 Continue expanding the corruption harness with concealed faults, separate development and test
 seeds, and explicit probe budgets. Include several fault families, untouched
@@ -176,9 +309,10 @@ claims. References checked November 9, 2026.
 The separate container evaluator, restricted tool-calling model adapter,
 experiment-wide freeze gate, and deterministic HTTP/failure tests are implemented.
 See [launch instructions](isolated-evaluator.md) and the
-[baseline-only report](evaluator-pilot-report.md). Actual container validation and
-the real-agent comparison are still pending on a host with Docker and an existing
-provider credential. Neither baseline nor scripted-agent tests establish discovery.
+[baseline-only report](evaluator-pilot-report.md). Container validation and
+the real-agent comparison have different statuses: container validation passed
+with dummy credentials and a scripted provider; the real-agent comparison remains
+unexecuted. Neither baseline nor scripted-agent tests establish discovery.
 
 
 ## Provider platform follow-up
