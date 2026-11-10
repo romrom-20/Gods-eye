@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#f5f4ef" />
-    <title>God’s Eye — A window into the weights</title>
+    <title>God’s Eye — Describe an experiment</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -29,7 +29,8 @@
         <span class="project-chevron">⌄</span>
       </div>
       <nav aria-label="Workspace navigation">
-        <button class="nav-link active" data-nav="overview">
+        <button class="nav-link active" data-nav="goal">Describe a goal</button>
+        <button class="nav-link" data-nav="overview">
           <svg viewBox="0 0 20 20">
             <rect x="3" y="3" width="5" height="5" rx="1" />
             <rect x="12" y="3" width="5" height="5" rx="1" />
@@ -117,7 +118,7 @@
         <div class="page-heading">
           <div>
             <div class="eyebrow">
-              <span class="orange-dot"></span> EXPERIMENT 001
+              <span class="orange-dot"></span> WORKSPACE
               <span class="slash">/</span> MINATAR BREAKOUT
             </div>
             <h1 id="page-title">A window into the weights<span>.</span></h1>
@@ -130,7 +131,86 @@
           </button>
         </div>
 
-        <section data-view="overview" class="view">
+        <section data-view="goal" class="view goal-experience" aria-label="Goal experiment">
+          <div class="goal-notice"><strong>Mock workflow · no AI requests or experiments run here.</strong>
+            Review the proposed journey using sample responses. The no-key local example below uses real CPU evaluation.</div>
+          <ol class="goal-steps" aria-label="Experiment steps">
+            <li id="goal-step-1" aria-current="step">1. Describe</li><li id="goal-step-2">2. Review</li>
+            <li id="goal-step-3">3. Start &amp; follow</li><li id="goal-step-4">4. Compare &amp; decide</li>
+          </ol>
+          <div class="goal-columns">
+            <section class="panel goal-card">
+              <span class="overline">YOUR EXPERIMENT</span><h2>What would you like to improve?</h2>
+              <p>Request a score improvement for the supported Breakout repair task.</p>
+              <form id="goal-form">
+                <label for="goal-draft">Describe your goal</label>
+                <textarea id="goal-draft" rows="4" maxlength="2000" required placeholder="Improve Breakout score without control regressions."></textarea>
+                <p id="goal-storage" class="hint">Your draft stays in this tab for recovery. Do not include secrets.</p>
+                <button type="button" class="text-button" id="goal-example">Use the sample goal</button>
+                <details id="goal-advanced"><summary>Advanced options &amp; mock scenarios</summary>
+                  <p>Illustrative limits for review only. No money limit is enforced by this mock. Actual provider charges are unknown.</p>
+                  <label for="goal-provider">AI programmer provider (mock selection)</label><select id="goal-provider"><option value="openai">OpenAI</option><option value="openrouter">OpenRouter</option><option value="huggingface">Hugging Face</option></select>
+                  <label for="goal-model">AI programmer model ID (mock, not checked)</label><input id="goal-model" value="explicit-tool-model" maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9._:/\-]{0,127}" required />
+                  <label for="goal-routing">Programmer routing preference</label><select id="goal-routing"><option value="price">Price</option><option value="latency">Latency (OpenRouter only)</option><option value="throughput">Throughput (OpenRouter only)</option></select>
+                  <label for="goal-requests">Maximum programmer requests</label><input id="goal-requests" type="number" min="1" max="80" value="4" required />
+                  <label for="goal-tokens">Maximum reported input tokens</label><input id="goal-tokens" type="number" min="1" max="200000" value="8000" required />
+                  <label for="goal-output">Maximum total reported output tokens</label><input id="goal-output" type="number" min="1" max="20000" value="2000" required />
+                  <label for="goal-rounds">Maximum programmer rounds</label><input id="goal-rounds" type="number" min="1" max="80" value="4" required />
+                  <label for="goal-calls">Maximum tool calls</label><input id="goal-calls" type="number" min="1" max="160" value="8" required />
+                  <label for="goal-reply">Maximum output tokens per response</label><input id="goal-reply" type="number" min="1" max="2000" value="1000" required />
+                  <label for="goal-seconds">Maximum elapsed seconds</label><input id="goal-seconds" type="number" min="1" max="900" value="120" required />
+                  <label for="goal-scenario">Sample response to explore</label><select id="goal-scenario">
+                    <option value="complete">Completed, evidence inconclusive</option><option value="unsupported">Unsupported request</option>
+                    <option value="ambiguous">Goal needs clarification</option><option value="unavailable">Programmer unavailable</option>
+                    <option value="rate">Rate limited</option><option value="budget">Budget exhausted</option>
+                    <option value="disconnect">Connection lost</option><option value="failure">Execution failed</option>
+                  </select>
+                </details>
+                <button class="primary" type="submit" id="goal-plan">Review sample interpretation</button>
+              </form>
+            </section>
+            <aside class="panel goal-card goal-context">
+              <span class="overline">TWO DIFFERENT MODELS</span><h2>What changes, and who proposes it?</h2>
+              <dl><dt>Model being edited</dt><dd>MinAtar Breakout policy (600 → 32 → 32 → 6). The repair experiment compares selected edits with registered, unchanged case roots. The no-key example separately uses the released “paper” checkpoint.</dd>
+                <dt>AI programmer</dt><dd>The mock provider and model are shown under Advanced options and again at review. No connection is checked. This programmer proposes edits; its own weights are not the editable target.</dd></dl>
+              <p>A planning request interprets a goal. It does not authorize execution. Completion alone does not demonstrate improvement.</p>
+              <details><summary>Try the no-key guided example</summary>
+                <p>Use a known four-weight edit, then compare gameplay. This is a mechanics example, not an AI-discovered improvement.</p>
+                <ol><li>Open the preset and preview its four changed weights.</li><li>Apply it as a new checkpoint.</li><li>Open Evaluations, compare the original “paper” checkpoint with your new checkpoint, and explicitly run the comparison.</li><li>Inspect scores, uncertainty, and replay. The original remains available.</li></ol>
+                <button class="secondary" id="goal-guided">Open four-weight preset</button>
+                <p>Requires the local server for edits and CPU evaluation. Static visitors can inspect recorded runs in Overview. No provider key is needed.</p>
+              </details>
+            </aside>
+          </div>
+          <p id="goal-status" class="goal-status" role="status" aria-live="polite" tabindex="-1">Describe a goal, then review it before starting anything.</p>
+          <section id="goal-review" class="panel goal-card" hidden aria-labelledby="goal-review-title">
+            <span class="overline">MOCK PLAN · NOT AN EXECUTION</span><h2 id="goal-review-title">Review the interpretation</h2>
+            <p id="goal-request"></p><dl>
+              <dt>Sample interpretation</dt><dd>Try to improve held-out Breakout score relative to each registered case root, without regressions on untouched controls. The offline planner recognizes a small set of phrases; it does not interpret arbitrary text.</dd>
+              <dt>Success criteria &amp; checks</dt><dd>Use development episodes to select edits, freeze every selection, then evaluate held-out episodes once. Improvement requires positive mean paired score change, mean minus two standard errors above zero, and no control regression. Report sample count, uncertainty, and limitations; this rule is descriptive evidence, not a significance guarantee.</dd>
+              <dt>Permitted changes</dt><dd>Bounded numeric weight edits on a new checkpoint. No executable code or edits to the original.</dd>
+              <dt>AI programmer (mock, unverified)</dt><dd id="goal-programmer"></dd>
+              <dt>Limits to review</dt><dd id="goal-limits"></dd>
+            </dl><p>This is not a runnable specification. The operator must register baseline identity, suite revision, episode and step counts, probe and forward budgets, and enforceable limits before live launch is enabled. Private seeds and labels never belong in browser messages.</p>
+            <label class="goal-consent"><input type="checkbox" id="goal-consent" /> I reviewed this sample goal and limits. Start only the mock walkthrough.</label>
+            <div class="goal-actions"><button class="primary" id="goal-start" disabled>Start mock walkthrough</button><button class="secondary" id="goal-edit">Edit goal</button></div>
+          </section>
+          <section id="goal-progress" class="panel goal-card" hidden aria-labelledby="goal-progress-title">
+            <span class="overline">MOCK PROGRESS · MANUALLY STEPPED</span><h2 id="goal-progress-title">Walk through the experiment</h2>
+            <p id="goal-phase"></p><p>No work is running. Each next step displays another sample response.</p>
+            <div class="goal-actions"><button class="primary" id="goal-next">Show next sample step</button><button class="secondary" id="goal-cancel">Cancel mock walkthrough</button><button class="secondary" id="goal-reconnect" hidden>Reconnect to mock status</button></div>
+          </section>
+          <section id="goal-result" class="panel goal-card" hidden aria-labelledby="goal-result-title">
+            <span class="overline">MOCK OUTCOME · NO MEASURED RESULT</span><h2 id="goal-result-title"></h2><p id="goal-result-text"></p>
+            <div class="goal-actions"><button class="secondary" id="goal-compare">Compare sample evidence</button><button class="primary" id="goal-keep">Keep original</button><button class="secondary" id="goal-again">Return to draft</button></div>
+            <div id="goal-comparison" hidden><h3>Evidence is required before choosing an edit</h3><dl>
+              <dt>Original</dt><dd>Unchanged case roots must be preserved by a live experiment. No registered baseline or new measurement in this walkthrough; the local example’s “paper” checkpoint is separate.</dd>
+              <dt>Proposed edit</dt><dd>No checkpoint or patch produced.</dd><dt>Measurements &amp; regressions</dt><dd>Not measured. No scores, sample counts, uncertainty, or regression evidence available.</dd>
+              <dt>Usage</dt><dd>No programmer requests sent by this mock. Real provider charges unknown.</dd></dl><p>No edited model is available to adopt or export. Use the guided example for a real local comparison.</p></div>
+          </section>
+        </section>
+
+        <section data-view="overview" class="view" hidden>
           <div class="overview-grid">
             <section class="network-panel panel">
               <div class="panel-heading">

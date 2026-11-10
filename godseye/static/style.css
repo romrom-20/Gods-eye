@@ -2757,3 +2757,39 @@ footer {
     transition: none !important;
   }
 }
+
+/* Goal journey: readable, keyboard accessible, and visibly distinct from execution. */
+.goal-experience { max-width: 1120px; }
+.goal-experience p, .goal-experience dd, .goal-experience li { font-size: 14px; line-height: 1.65; }
+.goal-notice { background: #fbece4; border-left: 4px solid #b9471c; padding: 16px 20px; color: #6b321e; }
+.goal-notice strong { display: block; }
+.goal-steps { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 18px 0; list-style: none; color: #596354; }
+.goal-steps [aria-current] { color: #943c1b; font-weight: 700; border-bottom: 2px solid currentColor; }
+.goal-columns { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; }
+.goal-card { padding: 26px; margin-bottom: 22px; }
+.goal-card h2 { font-size: 23px; line-height: 1.3; margin: 8px 0 16px; }
+.goal-card h3 { font-size: 18px; }
+.goal-card label { display: block; margin: 16px 0 8px; font-size: 14px; text-transform: none; letter-spacing: 0; }
+.goal-card textarea, .goal-card input, .goal-card select { width: 100%; font-size: 16px; }
+.goal-card textarea { resize: vertical; min-height: 128px; }
+.goal-card button { font-size: 14px; min-height: 44px; }
+.goal-card details { border-top: 1px solid var(--line); padding-top: 16px; margin: 18px 0; }
+.goal-card summary { cursor: pointer; font-size: 14px; padding: 6px 0; }
+.goal-card dt { font-size: 14px; font-weight: 700; margin-top: 16px; }
+.goal-card dd { margin: 4px 0 16px; color: #50594c; }
+.goal-status { padding: 16px 20px; border: 1px solid #b9c6b0; background: #edf0e7; font-size: 15px; overflow-wrap: anywhere; }
+.goal-card .goal-consent { display: flex; gap: 12px; align-items: flex-start; }
+.goal-consent input { width: 20px; height: 20px; flex-shrink: 0; margin-top: 3px; }
+.goal-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+#goal-request { overflow-wrap: anywhere; white-space: pre-wrap; }
+#goal-comparison { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 12px; }
+.goal-experience button:disabled { cursor: default; }
+@media (max-width: 900px) { .goal-columns { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 720px) {
+  .sidebar nav { flex-wrap: wrap; }
+  .sidebar nav .nav-link { flex: 1 1 28%; min-height: 40px; }
+  .goal-card { padding: 20px; }
+  .goal-steps { gap: 12px; }
+  .goal-steps li { font-size: 12px; }
+  .goal-actions > button { width: 100%; justify-content: center; }
+}
