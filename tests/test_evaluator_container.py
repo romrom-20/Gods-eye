@@ -224,10 +224,10 @@ def scripted_post(url, token, body):
         cases = [c for c in state['cases'] if not c['finalized']]
         index = len(outputs) - 1
         if index >= len(cases):
-            return {'output': []}
+            return {'output': [], 'usage': {'input_tokens': 1, 'output_tokens': 1}}
         case = cases[index]
         name, args = 'freeze', dict(case_id=case['id'], candidate_id=case['root_id'])
-    return {'output': [dict(type='function_call', name=name, arguments=json.dumps(args),
+    return {'usage': {'input_tokens': 1, 'output_tokens': 1}, 'output': [dict(type='function_call', name=name, arguments=json.dumps(args),
                            call_id=str(len(calls)))]}
 adapter.post = scripted_post
 sys.argv = ['agent_adapter.py'] + CONFIGURED_COMMAND

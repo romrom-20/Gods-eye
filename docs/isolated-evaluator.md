@@ -191,9 +191,10 @@ Double-click `scripts/Configure-OpenAI.command` in Finder, or run:
 A loopback-only page opens with a masked key field and optional model ID. It
 stores the key at `~/.godseye-secrets/openai-api-key` (mode 600), in a directory
 with mode 700, outside the repository. This is a plaintext local secret protected
-by OS permissions, not encryption or Keychain. The page never reads the saved
-key back, uses no browser storage, and makes no external API requests. Saving
-does not validate credentials or authorize an experiment. Setup exits after
+by OS permissions, not encryption or Keychain. The page never returns a saved key to the browser and uses no browser storage.
+Opening or saving makes no external API requests. Explicit model loading and
+confirmed connection checks read the selected key server-side to contact that
+provider. Saving does not validate credentials or authorize an experiment. Setup exits after
 30 minutes or Ctrl+C; reopen the launcher to edit configuration again.
 
 Before using the launch commands above, load the generated configuration:
@@ -235,12 +236,16 @@ No adapter retries or cross-provider/model fallback are performed.
 
 Evidence records the selected endpoint/policy and returned model/provider when
 available, alongside usage. Missing upstream identity is not inferred. Existing
-round, tool, time, output-token and evaluator budgets remain in force. They do
-not constitute a cumulative input-token or dollar ceiling.
+round, tool, time, output-token and evaluator budgets remain in force. Cumulative request and reported-token limits now also apply; see
+[agent budgets](agent-budgets.md) for configuration, overshoot, and restart rules.
+These controls are not a dollar spending cap.
 
 Validation uses dummy transports and credentials. Live provider compatibility,
 including provider-specific reasoning models, must be tested separately with an
-explicitly bounded run. No real requests are made by setup or unit tests.
+explicitly bounded run. Opening setup and saving settings make no provider requests. Explicit catalog
+loading contacts the selected provider; a separately confirmed connection test
+makes one potentially billable request. See [provider discovery](provider-discovery.md).
+Unit tests use dummy credentials and mocked providers.
 
 References: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling),
 [OpenRouter routing](https://openrouter.ai/docs/guides/routing/provider-selection),

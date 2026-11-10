@@ -187,9 +187,11 @@ Implemented: local provider profiles for OpenAI/OpenRouter/Hugging Face, explici
 model IDs, fixed-endpoint adapters, OpenRouter preference/privacy controls,
 no automatic fallback, usage and returned route metadata, offline contract tests.
 
-Next: an opt-in one-request tool-capability probe; a dated model catalog with
-capability filtering; cumulative token admission limits and provider-reported
-cost reconciliation; immutable run manifests including resolved route and code
+Integrated: explicit model catalog loading with conservative capability labels,
+a confirmed one-request tool probe, cumulative request/reported-token admission
+limits, and refusal to resume an existing agent evidence directory.
+
+Next: dated catalog snapshots and provider-reported cost reconciliation; immutable run manifests including resolved route and code
 version; latency/usage comparison on identical development cases; encrypted OS
 keychain integration and key deletion. Only introduce fallback with explicit
 allowed destinations, independent budgets, and visible experiment lineage.

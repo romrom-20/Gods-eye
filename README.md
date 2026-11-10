@@ -186,8 +186,21 @@ report separates those limits from completed code and deterministic tests.
 ## Add your model API key locally
 
 On macOS, double-click `scripts/Configure-OpenAI.command`, or run
-`.venv/bin/python -m godseye.provider_setup`. The setup page stores an OpenAI
-key outside the repo in `~/.godseye-secrets/`, with owner-only permissions.
+`.venv/bin/python -m godseye.provider_setup`. The setup page stores separate provider
+keys outside the repo in `~/.godseye-secrets/`, with owner-only permissions.
 Model choice can wait. Saving performs no provider requests and starts no jobs.
 See [the launch guide](docs/isolated-evaluator.md#easy-local-openai-key-setup-macos)
 for loading the saved configuration into the isolated experiment.
+
+
+### Choose a provider and bound an agent run
+
+The local setup page supports OpenAI, OpenRouter, and Hugging Face. Load a
+searchable model catalog, keep a manual model ID, or explicitly confirm a
+one-request tool-calling check. Saving settings never starts a request or experiment.
+See [provider discovery](docs/provider-discovery.md).
+
+The isolated agent enforces request, reported-token, elapsed-time, and tool limits.
+Missing usage stops the run, and resuming an existing agent evidence directory is
+refused. Configure limits before launch; these are not dollar spending caps.
+See [agent budgets](docs/agent-budgets.md).

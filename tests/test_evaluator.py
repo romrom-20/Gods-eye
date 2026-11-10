@@ -203,14 +203,14 @@ b.probe(sys.argv[2],sys.argv[3])
             self.assertFalse(any(t['type'] != 'function' for t in body['tools']))
             self.assertNotIn(self.token, json.dumps(body))
             if not calls:
-                return {'output': [], 'status': 'completed'}
+                return {'output': [], 'status': 'completed', 'usage': {'input_tokens': 1, 'output_tokens': 1}}
             name, args = calls.pop(0)
             if args.get('candidate_id') == '$candidate':
                 candidate = next(json.loads(m['output'])['id'] for m in reversed(body['input'])
                                  if m.get('type') == 'function_call_output'
                                  and 'diff' in json.loads(m['output']))
                 args = dict(args, candidate_id=candidate)
-            return {'output': [dict(type='function_call', name=name,
+            return {'usage': {'input_tokens': 1, 'output_tokens': 1}, 'output': [dict(type='function_call', name=name,
                                     arguments=json.dumps(args), call_id=str(len(calls)))]}
         evidence = Evidence(self.path / 'evidence.jsonl')
         try:
