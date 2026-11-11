@@ -124,6 +124,8 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orche
     app = FastAPI(title="God's Eye weight-space API", version='0.3.0',
                   description='Inspect → preview → branch → evaluate. Local CPU execution.',
                   docs_url=None, redoc_url=None, openapi_url='/api/v1/openapi.json', lifespan=lifespan)
+    from .activity_api import activity_router
+    app.include_router(activity_router(orchestration, readonly=readonly))
     app.state.jobs = jobs
     app.state.orchestration = orchestration
     app.add_middleware(Boundary, hosts=allowed_hosts or ['127.0.0.1', 'localhost', 'testserver'], token=token)

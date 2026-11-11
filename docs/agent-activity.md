@@ -7,8 +7,7 @@ and its browser validator unchanged. The new independent schemas live in
 
 ## Server attachment
 
-The coordinator owns `server.py`. Import `activity_router` from
-`godseye.activity_api`, then attach after `create_app` constructs the app:
+`create_app` in `server.py` installs the router automatically:
 
 ```python
 app.include_router(activity_router(orchestration, readonly=readonly))
@@ -97,8 +96,8 @@ existing authorization header and one POST to `/api/v1/experiments/export` with
 `{schema_version:1, experiment_id, artifact_id:candidate_manifest_id}`. Duplicate
 in-flight clicks are disabled; failures retain the result and ask for an explicit
 retry. The browser saves the JSON attachment without interpreting numeric data.
-The export owner implements checkpoint validation/reload; this branch does not
-claim that an arbitrary successful attachment is a verified model.
+The exporter validates the artifact before returning it; the independent reload
+path checks numeric data, delta preconditions and hashes. See [checkpoint export](checkpoint-export.md).
 
 Recorded demo and mock controllers return before installing activity or download
 handlers; their controls remain hidden/disabled. They make no added API calls.
@@ -124,25 +123,24 @@ boundary checks and old-run compatibility. The existing process-loss acceptance
 also executes the service's restart/no-resume path with this instrumentation.
 Temporary credentials only; outbound provider transport throws.
 
-The browser fixture runs the real static app, service and journal, verifies real
-history, pagination, terminal reset, reload without another worker/key read,
-durable row loss, explicit download errors and successful attachment transport.
-Its successful download is an **inert test attachment**, not a checkpoint; actual
-export/reload correctness belongs to the separate export integration tests.
-Fixture-only routes are never installed in production. No provider requests,
-operator-key reads, Docker image builds, deployment or real repair result is
-claimed. Existing operator-built evaluator images must already contain this
-instrumentation to report known live phases: older images produce only observed
-worker lifecycle and unknown evaluator activity. Actual Docker behavior with the
-new journal remains unverified here; rebuild/run only through an operator-approved
-controlled setup.
+The browser fixture runs the real static app, service, journal and export route.
+It checks history, pagination, terminal reset, reload without another worker/key
+read, durable row loss, and explicit download errors caused by controlled fixture
+manifest corruption. After restoration, it downloads four real checkpoint pairs
+and independently reloads them, matching original and selected hashes against
+both the artifact and fixture weights. Fixture-only routes never ship in production.
+The browser fixture selects unchanged roots; changed selections are covered by
+separate export tests. Neither demonstrates intelligent repair quality.
 
-Executed validation in the temporary Python 3.12 dev environment on 2026-11-11:
-full Python discovery ran 184 tests successfully (17 existing opt-in skips), all
-10 focused activity tests passed, the separate v1 browser-schema test passed,
-and all 48 Node UI tests passed. Ruff, Python 3.9 compilation and `git diff
---check` passed. The ego-browser flow completed successfully (space 31): one real
-scripted worker, observed reservation/freeze history, same worker/key-read counts
-after reload, gap unavailable behavior, and explicit error/success download
-transport. The browser CLI reported an available Ego Lite update; no upgrade was
-performed. Temporary browser server and fixture download were cleaned up.
+Integration validation on 2026-11-11: full Python discovery ran 193 tests with
+17 opt-in skips; all 11 activity tests, 8 export tests and 48 Node UI tests passed.
+The opt-in scripted DockerWorker suite ran separately: all 14 tests passed with
+no skips, including scoped durable activity, private journal permissions,
+reservation/freeze ordering, replay and terminal fences. Ruff, Python 3.9
+compilation and whitespace checks passed. No saved operator keys or paid provider
+calls were used. Test images were rebuilt through the controlled Docker setup.
+
+Existing installations must rebuild evaluator images to obtain evaluator activity;
+older images can show only observed worker lifecycle and unknown evaluator phases.
+Real-provider compatibility and repair quality remain unverified. Temporary browser
+servers and downloaded fixtures were cleaned up. No public deployment occurred.

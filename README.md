@@ -48,9 +48,11 @@ the mechanics; it is not an AI-discovered improvement or a new research result.
 
 The current planner recognizes a small set of Breakout phrases, including
 “Improve Breakout score.” It does not understand arbitrary requests or edit Qwen.
-Goal-generated checkpoint downloads, detailed live activity phases, and hosted
-multi-user access remain unfinished. No quality improvement or inference-cost
-saving is promised.
+Completed trusted runs support [checkpoint download and verified reload](docs/checkpoint-export.md),
+with rollback to the original. [Observed activity](docs/agent-activity.md) records
+actual operations and reports unknown phases when evidence is unavailable.
+Hosted multi-user access remains unfinished. No quality improvement or
+inference-cost saving is promised.
 
 ## Run an AI-guided experiment
 
@@ -79,9 +81,10 @@ a 600 → 32 → 32 → 6 tanh MLP with 20,486 parameters. See
 [provenance and licenses](fixtures/breakout/PROVENANCE.md).
 
 Our goal is to turn a supported request into a tested, reversible model change—or
-an honest report that no improvement was found. Next: usable checkpoint export,
-clearer setup, trustworthy activity observations, and an invite-only hosted beta
-with user isolation and spending controls. See the [roadmap](docs/roadmap.md).
+an honest report that no improvement was found. Next: a bounded real-provider
+baseline, clearer setup, and independent user testing. An invite-only hosted beta
+with user isolation and spending controls follows evidence of value. See the
+[roadmap](docs/roadmap.md).
 
 ## Share a demo without hosting compute
 

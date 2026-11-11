@@ -20,6 +20,12 @@ not a claim supported by a polished demo or a single benchmark.
 
 ## Release order and immediate priorities
 
+Integrated on 2026-11-11: completed-run checkpoint export with independent reload
+and rollback, and trusted activity history with explicit unknown/gap states.
+Combined browser download and scripted Docker journal checks passed. This closes
+those implementation gaps; real-provider compatibility and repair quality still
+need the bounded baseline below.
+
 ### Next release: a goal-driven Breakout experiment
 
 1. **Establish the real-agent baseline.** Choose an explicit compatible programmer
