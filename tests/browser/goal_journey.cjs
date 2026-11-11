@@ -2,7 +2,8 @@
 // First run goal_backend.py in a separate terminal. No real provider is contacted.
 const assert = (condition, message) => { if (!condition) throw Error(message); };
 const base = 'http://127.0.0.1:8879';
-const task = await taskSpace('Goal API browser integration');
+const task = await taskSpace('Bounded first-use browser journey');
+console.log({spaceId:task.spaceId});
 const page = task.page('p1');
 const config = async body => {
   const r = await fetch(base+'/__fixture/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -23,25 +24,51 @@ async function review() {
   for (const [id,value] of Object.entries({requests:40,rounds:40,calls:80,seconds:30,reply:100,tokens:10000})) await page.fill('#goal-'+id,String(value));
   await page.click('#goal-plan');
   await page.waitForSelector('#goal-review',{state:'visible'});
+  assert(await page.evaluate(() => document.getElementById('goal-request-layout').hidden),'request did not yield to review');
 }
 async function start() { await page.click('#goal-consent'); await page.click('#goal-start'); }
 async function reset() { await page.click('#goal-again'); }
 async function finishRun() { await waitText('goal-result-title','completed'); }
 
 await config({}); await open();
-const before = await stats(); await review();
+const before = await stats();
+assert(await page.evaluate(() => !document.getElementById('goal-model').closest('details')),'required programmer hidden');
+await page.cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),'mobile horizontal overflow');
+await page.screenshot({path:'/tmp/godseye-first-use-mobile.png'});
+await page.cdp('Emulation.clearDeviceMetricsOverride');
+await page.fill('#goal-model','scripted-acceptance');
+await page.fill('#goal-draft','Edit Qwen weights');
+await page.click('#goal-plan'); await waitText('goal-status','Unsupported goal');
+assert((await stats()).workers === before.workers,'unsupported request started work');
+await page.fill('#goal-draft','Improve Breakout score');
+await page.evaluate(() => {const input=document.getElementById('goal-requests');input.value='0';document.getElementById('goal-advanced').open=false;});
+await page.click('#goal-plan');
+assert(await page.evaluate(() => document.getElementById('goal-advanced').open && document.activeElement.id==='goal-requests'),'invalid advanced field not revealed and focused');
+await page.fill('#goal-requests','4');
+await page.focus('#goal-model'); await page.press('#goal-model','Tab');
+assert(await page.evaluate(() => document.activeElement.tagName==='SUMMARY'),'keyboard cannot reach advanced controls');
+await review();
 assert((await stats()).workers === before.workers,'review started work');
 assert((await text('goal-canonical')).includes('browser-suite'),'registered evaluation missing');
+assert((await text('goal-evaluation')).includes('browser-suite'),'plain-language evaluation missing');
+assert(await page.evaluate(() => document.querySelectorAll('#goal-limits li').length === 7),'seven reviewed limits missing');
+assert(await page.evaluate(() => document.activeElement.id === 'goal-review-title' && document.getElementById('goal-step-2').getAttribute('aria-current') === 'step'),'review focus or progression missing');
+await page.screenshot({path:'/tmp/godseye-first-use-review.png'});
 await page.goto(base+'/lab?browser-test=reload-review');
 assert(await page.evaluate(() => !document.getElementById('goal-consent').checked && document.getElementById('goal-review').hidden),'reload retained confirmation');
 await review();
+await page.click('#goal-edit');
 await page.fill('#goal-requests','39');
 assert(await page.evaluate(() => document.getElementById('goal-review').hidden && document.getElementById('goal-start').disabled),'edit did not invalidate');
 await review(); await start();
 // Dispatch duplicate handler calls in the actual browser, including disabled controls.
 await page.evaluate(() => { document.getElementById('goal-start').onclick(); document.getElementById('goal-start').onclick(); });
 await finishRun();
-assert((await text('goal-result-title')).includes('no_improvement'),'negative measured outcome missing');
+assert((await text('goal-result-title')).startsWith('No measured improvement'),'negative measured outcome missing');
+assert(await page.evaluate(() => document.getElementById('goal-step-4').getAttribute('aria-current') === 'step'),'result progression missing');
+assert((await text('goal-result-text')).includes('original is preserved'),'original preservation missing');
+await page.screenshot({path:'/tmp/godseye-first-use-result.png'});
 assert((await text('goal-result-text')).includes('Mean score change: 0'),'actual root selection measurement missing');
 assert((await stats()).workers === before.workers+1,'duplicate start admitted twice');
 assert(await page.evaluate(() => !document.querySelector('#goal-result a[download]')),'unavailable download exposed');

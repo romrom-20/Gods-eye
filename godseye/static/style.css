@@ -2823,3 +2823,13 @@ footer {
 .goal-activity ol { max-height: 20rem; overflow: auto; padding-left: 1.6rem; }
 .goal-activity li { padding: .45rem .2rem; border-bottom: 1px solid var(--line, #d7dfdc); overflow-wrap: anywhere; }
 .goal-activity [role="status"] { color: var(--muted, #60736b); font-size: .9rem; }
+
+/* First-use decisions and evidence remain readable at narrow widths. */
+.goal-onboarding {display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px 26px;margin:0 0 22px;border:2px solid #8c9c7c}
+.goal-onboarding h2 {font-size:22px;margin:8px 0}.goal-onboarding p {max-width:650px;margin:0}
+.goal-onboarding button {flex-shrink:0;min-height:44px}
+.goal-limit-list {display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;padding-left:20px}
+.goal-card pre {font-size:12px;line-height:1.6;max-height:360px;overflow:auto}
+.goal-experience :focus-visible {outline:3px solid #9c411e;outline-offset:4px}
+#goal-download {min-height:44px;background:var(--accent);color:white;padding:12px 18px;border:0;border-radius:4px}
+@media(max-width:720px){.goal-onboarding{display:block;padding:20px}.goal-onboarding button{width:100%;margin-top:16px}.goal-limit-list{grid-template-columns:1fr}.goal-card dd{overflow-wrap:anywhere}}
