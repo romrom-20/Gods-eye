@@ -21,7 +21,7 @@ from godseye.evaluator import Evaluator
 from godseye.experiment_spec import ContractError, DEFAULT_CEILINGS, validate_message
 from godseye.orchestration import (
     AdmissionLimits, DockerWorker, Orchestrator, Stopped, WorkerFailure,
-    audit_selections, read_accounting,
+    assemble_result, audit_selections, read_accounting,
 )
 from godseye.provider_setup import ProviderSettings
 from godseye.server import create_app
@@ -47,8 +47,6 @@ class FakeWorker:
         self.active, self.peak = 0, 0
         self.lock = threading.Lock()
         self.after_freeze = None
-        self.cleanup_block = None
-        self.cleanup_entered = threading.Event()
 
     def available(self):
         return True
@@ -66,9 +64,6 @@ class FakeWorker:
         finally:
             with self.lock:
                 self.active -= 1
-            if self.cleanup_block:
-                self.cleanup_entered.set()
-                self.cleanup_block.wait(3)
 
     def _execute(self, row, registration, directory, settings, check, accounting):
         credential = settings.credential(row['spec']['provider']['name'])
@@ -528,15 +523,35 @@ class OrchestrationTests(unittest.TestCase):
             self.assertEqual(len(self.worker.calls), 1)
 
     def test_cancellation_wins_before_terminal_publication(self):
-        cleanup = threading.Event()
-        self.addCleanup(cleanup.set)
-        self.worker.cleanup_block = cleanup
-        run = self.service.start(self.start_request())
-        self.assertTrue(self.worker.cleanup_entered.wait(2))
-        self.assertEqual(self.service.cancel(query(run))['status'], 'cancelling')
-        cleanup.set()
-        done = self.wait(run)
+        assembled = threading.Event()
+        publish = threading.Event()
+
+        def before_publication(*args):
+            result = assemble_result(*args)
+            assembled.set()
+            # The test owns this gate: slow evaluation or scheduling cannot release
+            # it before cancel commits. The finally below releases it on failure too.
+            publish.wait()
+            return result
+
+        with patch('godseye.orchestration.assemble_result', side_effect=before_publication) as build:
+            try:
+                run = self.service.start(self.start_request())
+                if not assembled.wait(30):
+                    self.fail('Result assembly did not reach the publication gate; '
+                              f'last status: {self.service.status(query(run))}')
+                # All real evaluator work and the last cooperative check have
+                # finished. Cancellation must still win in the final transaction.
+                build.assert_called_once()
+                self.assertEqual(self.worker.active, 0)
+                self.assertEqual(self.service.status(query(run))['status'], 'running')
+                self.assertEqual(self.service.cancel(query(run))['status'], 'cancelling')
+                self.error('result_not_ready', self.service.results, query(run))
+            finally:
+                publish.set()
+            done = self.wait(run)
         self.assertEqual(done['status'], 'cancelled')
+        self.assertEqual(done['reason'], 'user_cancelled')
         self.assertEqual(done['verdict'], 'not_evaluated')
         self.assertIsNone(done['evidence'])
 
