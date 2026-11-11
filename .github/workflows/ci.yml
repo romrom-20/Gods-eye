@@ -22,7 +22,7 @@ jobs:
       - name: Goal experience checks
         run: |
           node --check godseye/static/app.js
-          node --test tests/ui/goal_experience.test.cjs
+          node --test tests/ui/*.test.cjs
       - run: ruff check godseye tests experiments/validate_client.py experiments/benchmark_demo.py
       - name: Real HTTP client acceptance
         run: |
