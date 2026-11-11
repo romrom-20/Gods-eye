@@ -9,7 +9,7 @@ import threading
 from typing import Optional
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from .backends import DATA_DIR
 from .core import Store, apply_patch, difference, digest, tensor_summary
 from .jobs import Conflict, JobQueue, QueueFull
+from .experiment_spec import ContractError, HTTP_STATUS
 
 STATIC = Path(__file__).parent / 'static'
 MAX_BODY = 65536
@@ -90,6 +91,12 @@ class Boundary:
                 ]
             await send(message)
         if error:
+            if scope['path'].startswith('/api/v1/experiments/'):
+                code = ('not_authorized' if status in (401, 403) else
+                        'invalid_json' if status == 413 else 'invalid_schema')
+                failure = ContractError(code)
+                return await JSONResponse(failure.response(), status_code=HTTP_STATUS[code])(
+                    scope, receive, secured_send)
             return await JSONResponse({'error': error}, status_code=status)(scope, receive, secured_send)
         consumed = False
         async def replay():
@@ -101,7 +108,7 @@ class Boundary:
         await self.app(scope, replay, secured_send)
 
 
-def create_app(store=None, readonly=False, allowed_hosts=None, token=None):
+def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orchestration=None):
     store = store or Store(DATA_DIR / 'demo' if readonly else None)
     jobs = None if readonly else JobQueue(store)
     mutation_lock = threading.Lock()
@@ -109,6 +116,8 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None):
     @asynccontextmanager
     async def lifespan(app):
         yield
+        if orchestration:
+            orchestration.close()
         if jobs:
             jobs.close()
 
@@ -116,6 +125,7 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None):
                   description='Inspect → preview → branch → evaluate. Local CPU execution.',
                   docs_url=None, redoc_url=None, openapi_url='/api/v1/openapi.json', lifespan=lifespan)
     app.state.jobs = jobs
+    app.state.orchestration = orchestration
     app.add_middleware(Boundary, hosts=allowed_hosts or ['127.0.0.1', 'localhost', 'testserver'], token=token)
 
     @app.exception_handler(HTTPException)
@@ -235,6 +245,45 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None):
             raise HTTPException(403, 'Recorded demo is read-only')
         return jobs.cancel(job_id)
 
+    # Raw ingress preserves duplicate-key/nesting checks from the reviewed contract.
+    # The injected service belongs to this local server's single authorization scope.
+    async def experiment_operation(operation, request):
+        try:
+            if readonly:
+                raise ContractError('not_authorized')
+            if orchestration is None:
+                raise ContractError('unavailable')
+            # Keep blocking registry/SQLite/worker admission off the ASGI event loop.
+            from starlette.concurrency import run_in_threadpool
+            return await run_in_threadpool(orchestration.handle, operation, await request.body())
+        except ContractError as error:
+            headers = {'Retry-After': '5'} if error.code in (
+                'rate_limited', 'queue_full', 'worker_unavailable') else {}
+            return JSONResponse(error.response(), status_code=HTTP_STATUS[error.code], headers=headers)
+        except Exception:
+            error = ContractError('internal_error')
+            return JSONResponse(error.response(), status_code=500)
+
+    @app.post('/api/v1/experiments/plan')
+    async def experiment_plan(request: Request):
+        return await experiment_operation('plan', request)
+
+    @app.post('/api/v1/experiments/start')
+    async def experiment_start(request: Request):
+        return await experiment_operation('start', request)
+
+    @app.post('/api/v1/experiments/status')
+    async def experiment_status(request: Request):
+        return await experiment_operation('status', request)
+
+    @app.post('/api/v1/experiments/cancel')
+    async def experiment_cancel(request: Request):
+        return await experiment_operation('cancel', request)
+
+    @app.post('/api/v1/experiments/results')
+    async def experiment_results(request: Request):
+        return await experiment_operation('results', request)
+
     @app.get('/healthz')
     def health():
         return {'status': 'ok', 'mode': 'recorded-demo' if readonly else 'local'}
@@ -263,7 +312,13 @@ def serve(port=8787, demo=False, host='127.0.0.1'):
         raise ValueError('Writable server must bind to loopback. Use --demo for a read-only server.')
     hosts = [h.strip() for h in os.environ.get(
         'GODSEYE_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')]
-    app = create_app(readonly=demo, allowed_hosts=hosts, token=os.environ.get('GODSEYE_API_TOKEN'))
+    orchestration = None
+    if not demo and os.environ.get('GODSEYE_ORCHESTRATION_DIR'):
+        from .orchestration import DockerWorker, Orchestrator
+        orchestration = Orchestrator(os.environ['GODSEYE_ORCHESTRATION_DIR'],
+                                     worker=DockerWorker(Path(__file__).resolve().parents[1]))
+    app = create_app(readonly=demo, allowed_hosts=hosts, token=os.environ.get('GODSEYE_API_TOKEN'),
+                     orchestration=orchestration)
     print(f"God's Eye at http://{host}:{port} · {'recorded demo' if demo else 'local CPU lab'}", flush=True)
     uvicorn.run(app, host=host, port=port, workers=1, proxy_headers=False, limit_concurrency=32,
                 timeout_keep_alive=5, log_level='info')
