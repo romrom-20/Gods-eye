@@ -1,0 +1,27 @@
+name: Build and verify installable packages
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'build>=1.2,<2'
+      # build creates the wheel from the sdist, checking both delivery formats.
+      - run: python -m build
+      - name: Install outside checkout and run no-key CPU/HTTP example
+        run: |
+          set -- "$PWD"/dist/*.whl
+          GODSEYE_TEST_WHEEL="$1" \
+            python -m unittest discover -s tests -p test_package_install.py -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godseye-packages
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error

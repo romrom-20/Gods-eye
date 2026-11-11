@@ -6,9 +6,14 @@ from .core import Store, tensor_summary, digest
 
 
 def main():
-    parser = argparse.ArgumentParser(description="God's Eye · direct weight-space workbench")
+    parser = argparse.ArgumentParser(
+        description="God's Eye · local Breakout weight-space workbench",
+        epilog="First run: godseye serve, then open http://127.0.0.1:8787/lab. "
+               "The local CPU example needs no provider key or Docker.")
     sub = parser.add_subparsers(dest='command', required=True)
-    web = sub.add_parser('serve')
+    web = sub.add_parser('serve', help='Start the local browser app (requires the server extra)',
+                         description='Serve the Breakout browser app. Open /lab on the printed URL. '
+                         'No browser opens and no provider work starts automatically.')
     web.add_argument('--port', type=int, default=8787)
     web.add_argument('--demo', action='store_true', help='Serve bundled evidence read-only')
     web.add_argument('--host', default='127.0.0.1')
@@ -32,7 +37,17 @@ def main():
     if args.command in ('bootstrap', 'launch', 'readiness'):
         raise SystemExit(execute(args))
     if args.command == 'serve':
-        from .server import serve
+        try:
+            import uvicorn  # noqa: F401 — check both optional dependencies before startup
+            from .server import serve
+        except ModuleNotFoundError as error:
+            if error.name not in ('fastapi', 'uvicorn'):
+                raise
+            parser.error("The browser app needs server dependencies. Install your wheel with "
+                         "'[server]' (see docs/install.md), or from a checkout run "
+                         "python -m pip install -e '.[server]'.")
+        print(f"Open http://{args.host}:{args.port}/lab in your browser. Stop with Ctrl+C.",
+              flush=True)
         serve(args.port, demo=args.demo, host=args.host)
         return
     if args.command == 'export-demo':
