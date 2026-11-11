@@ -19,6 +19,7 @@ import threading
 import time
 import uuid
 
+from .activity import Journal, activity_request
 from .core import digest, load_weights
 from .experiment_spec import (
     ContractError, PlanningPolicy, TERMINAL, canonical_json,
@@ -328,6 +329,12 @@ class Orchestrator:
                                    reason='process_lost')
                     row.update(usage=usage, recovery_required=row['id'] not in recovered)
                     self.save(row['id'], 'run', row)
+                    journal = Journal(self.registration(row['spec']['baseline']['id'])['directory'])
+                    if journal.path.exists():
+                        try:
+                            journal.emit('worker_failed', 'worker', 'worker')
+                        except Exception:
+                            pass  # Lost journal never authorizes resume or refund.
 
     @contextmanager
     def transaction(self):
@@ -506,15 +513,47 @@ class Orchestrator:
         return validate_message('start_response', dict(schema_version=1, experiment_id=row['id'],
                                 spec_hash=row['hash'], status=row['status']))
 
-    @staticmethod
-    def response(row, operation):
+    def response(self, row, operation):
         value = dict(schema_version=1, experiment_id=row['id'], spec_hash=row['hash'],
-                     status=row['status'], phase=dict(name='unknown', event_sequence=None),
+                     status=row['status'], phase=self._activity_snapshot(row)['phase'],
                      verdict=evidence_verdict(row['evidence']) if row['status'] == 'completed'
                      else 'not_evaluated', reason=row['reason'], usage=row['usage'])
         if operation == 'results':
             value['evidence'] = row['evidence'] if row['status'] == 'completed' else None
         return validate_message(operation + '_response', value)
+
+    def _activity_snapshot(self, row, after=None, limit=50):
+        with self.lock:
+            stored = self.load(row['id'], 'run')
+            registration = self.registration(row['spec']['baseline']['id'])
+            fence = stored.get('activity_fence', 0)
+            gap_fence = stored.get('activity_gap_fence', 0)
+            cursor = fence if after is None else after
+            result = Journal(registration['directory']).read(row['id'], row['hash'],
+                row['status'], cursor, limit, gap_fence=gap_fence)
+            if result['high_water'] < fence:
+                result.update(available=False, gap=True, events=[], next_cursor=fence,
+                              high_water=fence, has_more=False,
+                              phase=dict(name='unknown', event_sequence=fence))
+            new_fence = max(fence, result['high_water'])
+            new_gap = (max(gap_fence, result['next_cursor'])
+                       if result['gap'] and cursor <= result['high_water'] else gap_fence)
+            if new_fence != fence or new_gap != gap_fence:
+                stored.update(activity_fence=new_fence, activity_gap_fence=new_gap)
+                owned_transaction = self.db.in_transaction
+                self.save(row['id'], 'run', stored)
+                if not owned_transaction:
+                    self.db.commit()
+            return result
+
+    def activity(self, request):
+        request = activity_request(request)
+        with self.transaction():
+            self.throttle('read', self.limits.reads_per_minute)
+            row = self.load(request['experiment_id'], 'run')
+            if row['hash'] != request['spec_hash']:
+                raise ContractError('spec_conflict')
+            return self._activity_snapshot(row, request['after'], request['limit'])
 
     def status(self, request):
         request = validate_message('status_request', request)
@@ -570,6 +609,10 @@ class Orchestrator:
             finally:
                 os.close(fd)
 
+            journal = Journal(registration['directory'])
+            journal.initialize(run_id, row['hash'])
+            journal.emit('worker_started', 'worker', 'worker')
+
             def check():
                 if event.is_set():
                     raise Stopped()
@@ -619,6 +662,16 @@ class Orchestrator:
                                recovery_required=reason == 'process_lost',
                                usage=usage, evidence=evidence if status == 'completed' else None)
                 self.save(run_id, 'run', current)
+                try:
+                    journal = Journal(self.registration(current['spec']['baseline']['id'])['directory'])
+                    if not journal.path.exists():
+                        journal.initialize(run_id, current['hash'])
+                    if journal.path.exists():
+                        kind = ('worker_finished' if status == 'completed' else
+                                'worker_cancelled' if status == 'cancelled' else 'worker_failed')
+                        journal.emit(kind, 'worker', 'worker')
+                except Exception:
+                    pass  # Journal marks observation loss; terminal state remains authoritative.
                 self.events.pop(run_id, None)
 
     def close(self):

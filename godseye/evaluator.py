@@ -13,6 +13,7 @@ from pathlib import Path
 import secrets
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from .activity import Journal
 from .benchmark import RepairBenchmark
 from .core import NAMES, difference
 from .storage import write_json
@@ -63,7 +64,6 @@ class Evaluator:
     def dispatch(self, role, operation, args):
         if role not in self.config['participants'] or type(args) is not dict:
             raise ValueError('Operation unavailable')
-        bench = RepairBenchmark(self.directory / role)
         fields = {
             'list': (), 'read': ('case_id', 'candidate_id', 'tensor', 'start', 'count'),
             'patch': ('case_id', 'parent_id', 'patch', 'hypothesis'),
@@ -78,6 +78,11 @@ class Evaluator:
                     raise ValueError('Slice offsets must be integers')
             elif not isinstance(value, str):
                 raise ValueError('Expected string')
+        with Journal(self.directory).operation(operation, role) as observe:
+            return self._dispatch(role, operation, args, observe)
+
+    def _dispatch(self, role, operation, args, observe):
+        bench = RepairBenchmark(self.directory / role, observe=observe)
         if operation == 'list':
             rows = bench.cases()
             for row in rows:
@@ -100,21 +105,26 @@ class Evaluator:
                 value = weights[args['tensor']]
                 if start + count > value.size:
                     raise ValueError('Slice exceeds tensor')
+                observe('edit_started', count=count)
                 return dict(tensor=args['tensor'], shape=list(value.shape), start=start,
                             values=value.ravel()[start:start + count].tolist())
         if operation == 'patch':
             return bench.patch(**args)
         if operation == 'evaluate':
             return bench.probe(**args)
-        return bench.finalize(**args, defer=True)
+        result = bench.finalize(**args, defer=True)
+        observe('selection_frozen')
+        return result
 
     def report(self):
         # Nothing held out is even executed until every participant freezes.
         benches = {name: RepairBenchmark(self.directory / name) for name in self.config['participants']}
         if not all(c['finalized'] for bench in benches.values() for c in bench.cases()):
             raise ValueError('Freeze all participants and cases before reveal')
-        for bench in benches.values():
-            bench.finish_frozen()
+        with Journal(self.directory).operation('report', 'administrator') as observe:
+            for bench in benches.values():
+                bench.observe = observe
+                bench.finish_frozen()
         reports = {name: bench.report() for name, bench in benches.items()}
         for name, report in reports.items():
             bench = benches[name]

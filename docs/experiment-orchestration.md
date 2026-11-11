@@ -165,10 +165,14 @@ cancellation committed before final result publication wins, even if measurement
 have finished. Provider execution/billing may continue remotely after local stop;
 retain in-flight/usage uncertainty. Disconnecting the browser is not cancellation.
 
-Phase is always `{name:"unknown",event_sequence:null}`. The existing evaluator
-and adapter do not supply the contract's authenticated live reservation journal.
-Neither provider prose, tool text, counts, elapsed time nor a report call is used
-to invent a phase or percentage.
+Phase now consumes the evaluator's private run/spec-bound activity journal; see
+[observed agent activity](agent-activity.md) for the additive router attachment,
+fixed public event schema, bounded reads, gap/replay fences and offline evidence.
+Only persisted evaluator reservations and validated operations establish a known
+phase, and operation completion resets it. Terminal state always yields unknown
+with its last sequence fence. Old runs or evaluator images without instrumentation
+remain unknown; no history is inferred from provider prose, tool text, counts,
+elapsed time or a report call. No completion percentage is estimated.
 
 ## Results and artifacts
 

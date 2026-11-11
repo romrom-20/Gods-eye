@@ -248,7 +248,8 @@ class OrchestrationTests(unittest.TestCase):
         self.error('idempotency_conflict', self.service.start,
                    dict(request, spec_hash='1' * 64))
         self.error('state_conflict', self.service.start, dict(request, idempotency_key='another'))
-        self.assertEqual(done['phase'], dict(name='unknown', event_sequence=None))
+        self.assertEqual(done['phase']['name'], 'unknown')
+        self.assertIsInstance(done['phase']['event_sequence'], int)
         self.assertTrue(done['usage']['usage_complete'])
         private = json.dumps(done)
         for forbidden in ('sk-temporary', str(self.path), 'held_seed', 'generation_seed', 'family'):
