@@ -1349,6 +1349,11 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   ids.forEach(id => $(id).addEventListener('input',invalidate));
   $('goal-example').onclick = () => { $('goal-draft').value = 'Improve Breakout score without control regressions'; invalidate(); };
   $('goal-consent').onchange = lock; $('goal-edit').onclick = invalidate;
+  $('goal-form').addEventListener('invalid', event => {
+    const options = event.target.closest('details');
+    if (options) options.open = true;
+    say('Choose your programmer model and check the highlighted options before reviewing the plan.');
+  }, true);
   $('goal-form').onsubmit = event => {
     event.preventDefault(); if (busy || pending || !$('goal-form').reportValidity()) return;
     invalidate();
