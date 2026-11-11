@@ -95,9 +95,14 @@ Upload the directory contents to any static host. Relative links also work under
 a subdirectory. No Python server or GPU is needed on that host. The export never
 reads your private `.godseye/` workspace and refuses to overwrite a nonempty folder.
 
+See [public demo preparation and approval steps](docs/public-demo.md) for the
+subdirectory preview, artifact audit and gated Pages workflow. Publication is
+disabled by default; no live hosted API is supplied.
+
 Alternatively, `godseye serve --demo` serves the bundled data read-only through
 Python. The GitHub Actions workflow tests the project and builds a downloadable
-`godseye-static-demo` artifact; it does not deploy automatically.
+`godseye-static-demo` artifact; deployment stays off unless explicitly enabled
+after user approval.
 
 ## Python API
 
@@ -198,8 +203,8 @@ needed to reconstruct the three candidate checkpoints.
 Start with the [implementation roadmap](docs/roadmap.md): validate a concealed
 repair task, add one small language-model backend, then add remote execution
 with tenant isolation and transactional spending limits. The static demo and
-local CPU lab are usable today. Autonomous LLM editing, remote workers,
-accounts, and billing are future milestones.
+local CPU lab are usable today. General autonomous repair quality, remote workers,
+accounts, and billing remain future milestones.
 
 ## Agent repair benchmark
 
@@ -220,8 +225,8 @@ A separate [container evaluator and restricted coding-agent adapter](docs/isolat
 now provide scoped authenticated tools, bounded tensor slices, and an experiment-wide
 held-out gate. [Saved baseline-only observations](docs/evaluator-pilot-report.md)
 include three instances per fault family and controls. The real-agent experiment
-and container verification remain unexecuted on the implementation host; the
-report separates those limits from completed code and deterministic tests.
+remains unexecuted; container validation with a scripted provider has passed.
+The report separates those limits from real-provider repair evidence.
 
 ## Add your model API key locally
 
@@ -244,3 +249,6 @@ The isolated agent enforces request, reported-token, elapsed-time, and tool limi
 Missing usage stops the run, and resuming an existing agent evidence directory is
 refused. Configure limits before launch; these are not dollar spending caps.
 See [agent budgets](docs/agent-budgets.md).
+
+See [Contributing](CONTRIBUTING.md) and [Changelog](CHANGELOG.md). Current package
+version: **0.3.0**; preparing this demo does not publish a versioned release.

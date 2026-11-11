@@ -1,0 +1,42 @@
+name: Deploy approved recorded demo
+on:
+  workflow_run:
+    workflows: ['Validate lab and static demo']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # Absent/false by default. Merging this workflow alone cannot publish anything.
+    if: >-
+      vars.PUBLIC_DEMO_PAGES_ENABLED == 'true' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download the exact successful main CI export
+        uses: actions/download-artifact@v4
+        with:
+          name: godseye-static-demo
+          path: site
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy recorded files
+        id: deployment
+        uses: actions/deploy-pages@v4

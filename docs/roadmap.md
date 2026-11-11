@@ -146,14 +146,17 @@ clearly distinguished. None is a universal replacement for the others.
 - Static export of two bundled recorded runs and four inspectable checkpoints.
   Static visitors can inspect and replay; they cannot execute experiments.
 - Automated core, API, security-boundary, queue, and export tests. CI builds
-  a wheel and a static website artifact. It does not publish the site.
+  a wheel and a static website artifact. An approval-gated Pages workflow is
+  prepared but disabled by default; see [public demo](public-demo.md).
 
 Also implemented: a separate restricted tool-calling programmer harness; validated
 Docker evaluator isolation; provider profiles, model discovery, and confirmed
 connection checks; cumulative request/reported-token limits and no-resume claims.
 The simplified local UI includes a guided fixed four-weight experiment.
 
-There is no browser natural-language-to-agent workflow, editable Qwen backend,
+A constrained browser goal review/start/status/cancel journey and operator service
+are implemented with scripted acceptance evidence; real-provider discovery and
+repair quality remain unproven. There is no editable Qwen backend,
 remote GPU worker, account system, paid service, or production multi-tenant
 isolation. Real-agent repair quality and cost savings remain unproven. Docker
 boundary tests with a scripted provider do not establish intelligent repair.
