@@ -1,0 +1,299 @@
+Goal experiment acceptance: executed output, not a release sign-off.
+Captured UTC: 2026-11-10T18:13:57.861173+00:00
+Acceptance checkout base: 874b41943072504a6baa37bd282848236b08ce13
+Backend worktree HEAD: 3f5ce3933a78febfb42146ef115d34a62eaf433f
+No backend or existing UI modifications by acceptance. No paid calls.
+Current checkout: 105 Python tests passed; 19 skipped (18 absent backend + 1 Docker).
+New local acceptance: 5 Python + 6 mock UI pass. Service: 18 pass separately against backend.
+Blocked: real browser/service integration, durable trusted phase journal, scoped artifact/checkpoint export.
+API handoff via backend worktree comment; structured messaging unavailable; no owner acknowledgment.
+
+Backend source SHA-256 at verification:
+4abcb7319a38f2e6d77fd46f3e3757d3fc72070aacb5bdcd6f9ec15043e5e945  godseye/orchestration.py
+4fc49722574c9759bb29ad70536f20edf8d288d8548288a27c6f455bed227c21  godseye/server.py
+7a619296985c3aeabfe1c47d08de983da7655146589c6ebc649fc7ea8db9d1a4  godseye/experiment_spec.py
+9b8cdc465d1cc83d91beab67d9e858f496d32ca82fc6e28a660061ab99fef10b  isolation/agent_adapter.py
+4f8b01df2a06c9bfb28b1b1c552bc417567b57ad73626b0fef4e78b592d8b377  godseye/evaluator.py
+
+New executable acceptance source SHA-256:
+a6b81da67176ab801faf16d356c87e687277aaff22f6e08cbbd29382cb2892bd  tests/goal_acceptance_support.py
+64d8f983914ed9ea535f878de55c39517b7426e5497d51103f457c91daeb76d2  tests/test_goal_journey_acceptance.py
+232115e0a09ef22db1e1c2caea3446912d08cbf44fb041f1dbfc1a6bb0ec5a88  tests/test_goal_service_acceptance.py
+b89eb6c596b762734fe1b0a0374ae224f306c7d291ff9b4e424ef873adcaffef  tests/ui/goal_acceptance.test.cjs
+
+========================================================================
+CURRENT CHECKOUT: full suite, Python 3.9.6
+Command: /Users/samanseshadri/orca/Gods-eye/.venv/bin/python -m unittest discover -s tests -v
+
+test_chat_usage_and_no_raw_usage_secrets (test_agent_budgets.BudgetTests) ... ok
+test_cli_env_validation_before_secret_read (test_agent_budgets.BudgetTests) ... ok
+test_cli_environment_and_override_without_real_secrets (test_agent_budgets.BudgetTests) ... ok
+test_error_response_counts_usage_without_executing_tools (test_agent_budgets.BudgetTests) ... ok
+test_errors_and_interruptions_reserve_request_and_redact (test_agent_budgets.BudgetTests) ... ok
+test_incomplete_chat_response_retains_reported_usage (test_agent_budgets.BudgetTests) ... ok
+test_inflight_time_exhaustion_records_usage_without_tools (test_agent_budgets.BudgetTests) ... ok
+test_input_equality (test_agent_budgets.BudgetTests) ... ok
+test_invalid_limits_before_claim_or_request (test_agent_budgets.BudgetTests) ... ok
+test_malformed_chat_response_counts_usage (test_agent_budgets.BudgetTests) ... ok
+test_missing_malformed_usage_is_terminal (test_agent_budgets.BudgetTests) ... ok
+test_output_overshoot (test_agent_budgets.BudgetTests) ... ok
+test_request_boundary_and_per_response_limit (test_agent_budgets.BudgetTests) ... ok
+test_restart_new_filename_rejected_even_after_success (test_agent_budgets.BudgetTests) ... ok
+test_round_boundary (test_agent_budgets.BudgetTests) ... ok
+test_time_equality_before_request (test_agent_budgets.BudgetTests) ... ok
+test_tool_boundary (test_agent_budgets.BudgetTests) ... ok
+test_zero_usage_still_counts_requests (test_agent_budgets.BudgetTests) ... ok
+test_budget_persists_after_failure_and_reload (test_benchmark.RepairBenchmarkTests) ... ok
+test_case_ownership_and_immutable_lineage (test_benchmark.RepairBenchmarkTests) ... ok
+test_crash_reservation_is_not_refunded (test_benchmark.RepairBenchmarkTests) ... ok
+test_creation_rejects_existing_data_and_invalid_settings (test_benchmark.RepairBenchmarkTests) ... ok
+test_final_failure_still_freezes_and_reserves (test_benchmark.RepairBenchmarkTests) ... ok
+test_no_private_labels_or_seeds_before_report_and_control_integrity (test_benchmark.RepairBenchmarkTests) ... ok
+test_probe_count_limit_independent_of_forward_budget (test_benchmark.RepairBenchmarkTests) ... ok
+test_demo_refuses_existing_output (test_benchmark_cli.BenchmarkCLITests) ... ok
+test_persistent_agent_workflow_and_report_gate (test_benchmark_cli.BenchmarkCLITests) ... ok
+test_matching_replay_is_verified_before_compaction (test_client_validation.ClientEvidenceTests) ... ok
+test_missing_replay_cannot_count_as_verified (test_client_validation.ClientEvidenceTests) ... ok
+test_replay_difference_fails_despite_identical_episode_metadata (test_client_validation.ClientEvidenceTests) ... ok
+test_checkpoint_roundtrip_retains_lineage (test_core.WeightSpaceTests) ... ok
+test_evaluation_bounds (test_core.WeightSpaceTests) ... ok
+test_observation_contract_preserves_each_channel (test_core.WeightSpaceTests) ... ok
+test_paired_identical_checkpoints_match_every_episode (test_core.WeightSpaceTests) ... ok
+test_patch_is_transactional_and_restorable (test_core.WeightSpaceTests) ... ok
+test_patch_rejects_execution_nonfinite_and_empty_edits (test_core.WeightSpaceTests) ... ok
+test_released_fixture_contract (test_core.WeightSpaceTests) ... ok
+test_sparse_forward_matches_dense_equations (test_core.WeightSpaceTests) ... ok
+test_adapter_ceiling_does_not_silently_freeze (test_evaluator.EvaluatorTests) ... ok
+test_auth_private_artifacts_and_allowlist (test_evaluator.EvaluatorTests) ... ok
+test_bounded_reads_and_cross_experiment_ids (test_evaluator.EvaluatorTests) ... ok
+test_concurrent_probe_reservations_never_overspend (test_evaluator.EvaluatorTests) ... ok
+test_deferred_final_failure_is_retained_without_retry (test_evaluator.EvaluatorTests) ... ok
+test_failure_and_process_death_preserve_budgets (test_evaluator.EvaluatorTests) ... ok
+test_global_reveal_gate_and_multiple_instances (test_evaluator.EvaluatorTests) ... ok
+test_independent_processes_share_admission_lock (test_evaluator.EvaluatorTests) ... ok
+test_invalid_patches_and_immutable_lineage (test_evaluator.EvaluatorTests) ... ok
+test_provider_failure_is_recorded_without_credentials (test_evaluator.EvaluatorTests) ... ok
+test_scripted_agent_uses_real_http_and_retains_failed_attempts (test_evaluator.EvaluatorTests) ... ok
+test_compose_isolation_persistence_and_scripted_agent (test_evaluator_container.ContainerBoundaryTests) ... skipped 'Requires Docker daemon and GODSEYE_CONTAINER_TEST=1; boundary unverified otherwise'
+test_confirmation_binds_reviewed_draft_and_hash (test_experiment_spec.ExperimentContractTests) ... ok
+test_error_http_mapping_and_fixed_retry_metadata (test_experiment_spec.ExperimentContractTests) ... ok
+test_every_lifecycle_edge (test_experiment_spec.ExperimentContractTests) ... ok
+test_finite_positive_limits_no_coercion_and_ceilings (test_experiment_spec.ExperimentContractTests) ... ok
+test_immutable_spec_hash_and_trusted_binding (test_experiment_spec.ExperimentContractTests) ... ok
+test_missing_and_unknown_fields_fail_closed_without_echo (test_experiment_spec.ExperimentContractTests) ... ok
+test_narrow_language_allowlist_and_no_injection_execution (test_experiment_spec.ExperimentContractTests) ... ok
+test_phase_projection_uses_only_ordered_scoped_trusted_events (test_experiment_spec.ExperimentContractTests) ... ok
+test_phase_schema_requires_observation_and_compatible_execution_status (test_experiment_spec.ExperimentContractTests) ... ok
+test_planning_and_validation_never_touch_io (test_experiment_spec.ExperimentContractTests) ... ok
+test_policy_cannot_weaken_evaluator_or_raise_first_release_caps (test_experiment_spec.ExperimentContractTests) ... ok
+test_provider_failures_are_terminal_reasons_not_retryable_service_errors (test_experiment_spec.ExperimentContractTests) ... ok
+test_provider_rules_reuse_safe_model_format_without_inference (test_experiment_spec.ExperimentContractTests) ... ok
+test_response_shapes_fail_closed_and_cover_every_schema (test_experiment_spec.ExperimentContractTests) ... ok
+test_result_requires_complete_safe_summary_and_consistent_reason (test_experiment_spec.ExperimentContractTests) ... ok
+test_result_verdict_and_execution_status_are_separate (test_experiment_spec.ExperimentContractTests) ... ok
+test_strict_json_ingress (test_experiment_spec.ExperimentContractTests) ... ok
+test_valid_plan_uses_existing_defaults_and_policy (test_experiment_spec.ExperimentContractTests) ... ok
+test_actual_phase_requires_ordered_trusted_observation_and_loss_stays_unknown (test_goal_journey_acceptance.GoalJourneyContractAcceptance) ... ok
+test_incomplete_evidence_is_never_zero_or_success (test_goal_journey_acceptance.GoalJourneyContractAcceptance) ... ok
+test_retry_contract_never_authorizes_fresh_spend (test_goal_journey_acceptance.GoalJourneyContractAcceptance) ... ok
+test_supported_goal_review_exact_limits_and_explicit_start (test_goal_journey_acceptance.GoalJourneyContractAcceptance) ... ok
+test_unsupported_and_pasted_secret_never_become_runnable_or_echo (test_goal_journey_acceptance.GoalJourneyContractAcceptance) ... ok
+test_abrupt_server_process_loss_interrupts_without_refund_or_resume (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_auth_origin_and_wrong_scope_errors_are_redacted (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_budget_exhaustion_preserves_usage_without_completed_result (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_cancel_waits_for_worker_ack_and_preserves_reservations (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_double_click_start_and_concurrent_replays_admit_once (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_held_out_report_is_blocked_until_every_selection_freezes (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_incomplete_selections_never_produce_measured_success (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_missing_final_scores_are_not_filled_with_zero (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_missing_provider_usage_stops_and_stays_unknown (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_provider_exception_cannot_echo_credentials_or_upstream_text (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_provider_rate_limit_is_terminal_and_has_no_inference_retry (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_queued_cancellation_does_not_load_a_second_key_or_refund_admission (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_reload_reconciles_existing_identity_and_never_restarts_work (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_root_mutation_after_review_invalidates_admission (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_service_rate_limit_has_bounded_same_action_retry_and_no_admission (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_stale_review_unconfirmed_and_changed_limits_fail_before_secrets (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_supported_journey_review_start_actual_measurement_and_keep_original (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_unsupported_requests_missing_selection_and_injected_fields_spend_nothing (test_goal_service_acceptance.GoalServiceAcceptance) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_actual_evaluation_progress_idempotency_and_persistence (test_platform.PlatformTests) ... ok
+test_http_security_boundary (test_platform.PlatformTests) ... ok
+test_mixed_boolean_literals_rejected_without_writes (test_platform.PlatformTests) ... ok
+test_optional_token_and_demo_mode (test_platform.PlatformTests) ... ok
+test_preview_is_read_only_and_hash_guard_is_enforced (test_platform.PlatformTests) ... ok
+test_rejects_executable_malformed_and_nonfinite_edits (test_platform.PlatformTests) ... ok
+test_schema_and_packaged_preset (test_platform.PlatformTests) ... ok
+test_strict_inputs_budget_and_missing_artifacts (test_platform.PlatformTests) ... ok
+test_capacity_cancel_and_restart (test_platform.QueueTests) ... ok
+test_export_contains_only_bundled_public_data (test_platform.QueueTests) ... ok
+test_confirmation_and_validation_before_transport (test_provider_discovery.DiscoveryTests) ... ok
+test_errors_and_malformed_catalog_are_sanitized_without_retry (test_provider_discovery.DiscoveryTests) ... ok
+test_probe_does_not_claim_unsupported_on_incomplete_invalid_or_plain_response (test_provider_discovery.DiscoveryTests) ... ok
+test_probe_one_request_provider_payload_limits_and_no_followup (test_provider_discovery.DiscoveryTests) ... ok
+test_provider_specific_catalogs_and_conservative_capabilities (test_provider_discovery.DiscoveryTests) ... ok
+test_fixed_url_timeout_one_request_no_redirects_and_redacted_http_errors (test_provider_discovery.TransportTests) ... ok
+test_invalid_json_size_network_failures_and_success (test_provider_discovery.TransportTests) ... ok
+test_bad_provider_and_incomplete_response_fail_closed (test_provider_routing.RoutingTests) ... ok
+test_chat_tool_roundtrip_and_routing (test_provider_routing.RoutingTests) ... ok
+test_openai_passes_responses_through (test_provider_routing.RoutingTests) ... ok
+test_profiles_do_not_reuse_keys (test_provider_routing.RoutingTests) ... ok
+test_actions_require_csrf_origin_and_strict_confirmation (test_provider_setup.ProviderSetupTests) ... ok
+test_directory_symlink_rejected (test_provider_setup.ProviderSetupTests) ... ok
+test_host_origin_csrf_and_body_boundaries (test_provider_setup.ProviderSetupTests) ... ok
+test_invalid_inputs_are_not_saved_or_echoed (test_provider_setup.ProviderSetupTests) ... ok
+test_load_and_test_use_selected_dummy_key_without_mutating_settings (test_provider_setup.ProviderSetupTests) ... ok
+test_page_and_save_never_read_keys_or_call_provider (test_provider_setup.ProviderSetupTests) ... ok
+test_provider_error_is_sanitized_and_no_retry (test_provider_setup.ProviderSetupTests) ... ok
+test_read_actions_reject_symlink_keys_and_invalid_fields (test_provider_setup.ProviderSetupTests) ... ok
+test_save_permissions_redaction_and_configuration (test_provider_setup.ProviderSetupTests) ... ok
+test_symlink_destinations_cannot_overwrite_unrelated_files (test_provider_setup.ProviderSetupTests) ... ok
+test_unknown_profile_settings_and_legacy_profile_survive_save (test_provider_setup.ProviderSetupTests) ... ok
+test_unsaved_key_can_load_without_persistence_and_missing_key_does_not_fallback (test_provider_setup.ProviderSetupTests) ... ok
+
+----------------------------------------------------------------------
+Ran 124 tests in 22.651s
+
+OK (skipped=19)
+
+========================================================================
+CURRENT CHECKOUT: acceptance, Python 3.12.14
+Command: /tmp/godseye-orchestration-venv/bin/python -m unittest discover -s tests -p 'test_goal*acceptance.py' -v
+
+/tmp/godseye-orchestration-venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_actual_phase_requires_ordered_trusted_observation_and_loss_stays_unknown (test_goal_journey_acceptance.GoalJourneyContractAcceptance.test_actual_phase_requires_ordered_trusted_observation_and_loss_stays_unknown) ... ok
+test_incomplete_evidence_is_never_zero_or_success (test_goal_journey_acceptance.GoalJourneyContractAcceptance.test_incomplete_evidence_is_never_zero_or_success) ... ok
+test_retry_contract_never_authorizes_fresh_spend (test_goal_journey_acceptance.GoalJourneyContractAcceptance.test_retry_contract_never_authorizes_fresh_spend) ... ok
+test_supported_goal_review_exact_limits_and_explicit_start (test_goal_journey_acceptance.GoalJourneyContractAcceptance.test_supported_goal_review_exact_limits_and_explicit_start) ... ok
+test_unsupported_and_pasted_secret_never_become_runnable_or_echo (test_goal_journey_acceptance.GoalJourneyContractAcceptance.test_unsupported_and_pasted_secret_never_become_runnable_or_echo) ... ok
+test_abrupt_server_process_loss_interrupts_without_refund_or_resume (test_goal_service_acceptance.GoalServiceAcceptance.test_abrupt_server_process_loss_interrupts_without_refund_or_resume) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_auth_origin_and_wrong_scope_errors_are_redacted (test_goal_service_acceptance.GoalServiceAcceptance.test_auth_origin_and_wrong_scope_errors_are_redacted) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_budget_exhaustion_preserves_usage_without_completed_result (test_goal_service_acceptance.GoalServiceAcceptance.test_budget_exhaustion_preserves_usage_without_completed_result) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_cancel_waits_for_worker_ack_and_preserves_reservations (test_goal_service_acceptance.GoalServiceAcceptance.test_cancel_waits_for_worker_ack_and_preserves_reservations) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_double_click_start_and_concurrent_replays_admit_once (test_goal_service_acceptance.GoalServiceAcceptance.test_double_click_start_and_concurrent_replays_admit_once) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_held_out_report_is_blocked_until_every_selection_freezes (test_goal_service_acceptance.GoalServiceAcceptance.test_held_out_report_is_blocked_until_every_selection_freezes) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_incomplete_selections_never_produce_measured_success (test_goal_service_acceptance.GoalServiceAcceptance.test_incomplete_selections_never_produce_measured_success) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_missing_final_scores_are_not_filled_with_zero (test_goal_service_acceptance.GoalServiceAcceptance.test_missing_final_scores_are_not_filled_with_zero) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_missing_provider_usage_stops_and_stays_unknown (test_goal_service_acceptance.GoalServiceAcceptance.test_missing_provider_usage_stops_and_stays_unknown) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_provider_exception_cannot_echo_credentials_or_upstream_text (test_goal_service_acceptance.GoalServiceAcceptance.test_provider_exception_cannot_echo_credentials_or_upstream_text) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_provider_rate_limit_is_terminal_and_has_no_inference_retry (test_goal_service_acceptance.GoalServiceAcceptance.test_provider_rate_limit_is_terminal_and_has_no_inference_retry) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_queued_cancellation_does_not_load_a_second_key_or_refund_admission (test_goal_service_acceptance.GoalServiceAcceptance.test_queued_cancellation_does_not_load_a_second_key_or_refund_admission) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_reload_reconciles_existing_identity_and_never_restarts_work (test_goal_service_acceptance.GoalServiceAcceptance.test_reload_reconciles_existing_identity_and_never_restarts_work) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_root_mutation_after_review_invalidates_admission (test_goal_service_acceptance.GoalServiceAcceptance.test_root_mutation_after_review_invalidates_admission) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_service_rate_limit_has_bounded_same_action_retry_and_no_admission (test_goal_service_acceptance.GoalServiceAcceptance.test_service_rate_limit_has_bounded_same_action_retry_and_no_admission) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_stale_review_unconfirmed_and_changed_limits_fail_before_secrets (test_goal_service_acceptance.GoalServiceAcceptance.test_stale_review_unconfirmed_and_changed_limits_fail_before_secrets) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_supported_journey_review_start_actual_measurement_and_keep_original (test_goal_service_acceptance.GoalServiceAcceptance.test_supported_journey_review_start_actual_measurement_and_keep_original) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+test_unsupported_requests_missing_selection_and_injected_fields_spend_nothing (test_goal_service_acceptance.GoalServiceAcceptance.test_unsupported_requests_missing_selection_and_injected_fields_spend_nothing) ... skipped 'BLOCKED: godseye.orchestration not integrated'
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.002s
+
+OK (skipped=18)
+
+========================================================================
+MOCK UI: six new + sixteen existing
+Command: node --test tests/ui/goal_acceptance.test.cjs tests/ui/goal_experience.test.cjs
+
+✔ A01 mock journey reviews all limits, explicitly starts once, inspects unproven outcome and keeps original (23.520916ms)
+✔ A02 every editable selection or limit invalidates review and confirmation (4.946ms)
+✔ A03 unsupported, clarification and rate-limit scenarios retain draft without execution (1.038292ms)
+✔ A04 budget, provider failure, cancellation and disconnection never imply a measured improvement (1.658042ms)
+✔ A05 reload restores draft/limits and discards even forged saved authorization (0.61825ms)
+✔ A06 request markup remains inert and the walkthrough saves only draft preferences (0.918042ms)
+✔ review is separate from explicit start; duplicate start cannot reset progress; completion makes no improvement claim (23.368292ms)
+✔ editing limits invalidates authorization and preserves draft (1.07275ms)
+✔ unsupported planning response preserves the draft and cannot start (0.3815ms)
+✔ ambiguous planning response preserves the draft and cannot start (0.361916ms)
+✔ rate planning response preserves the draft and cannot start (0.334917ms)
+✔ arbitrary and unsupported text is never silently replaced by a sample plan (0.365292ms)
+✔ budget finishes without verified results and allows a fresh review (0.3875ms)
+✔ failure finishes without verified results and allows a fresh review (0.377708ms)
+✔ unavailable finishes without verified results and allows a fresh review (0.817208ms)
+✔ disconnect retains active identity; status reconnect does not launch again (0.490042ms)
+✔ cancel stops mock only, keeps draft, and reload never resumes (0.753375ms)
+✔ blocked session storage is recoverable (0.365834ms)
+✔ contract allowlist accepts normalized phrases and rejects appended instructions (0.373666ms)
+✔ review displays all limits and selection; incompatible routing never creates a plan (0.356958ms)
+✔ one-click example saves an edited copy and runs the bounded comparison once (0.915084ms)
+✔ goal example opens simplified Start here without manual editing or execution (0.299625ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 97.745792
+
+========================================================================
+BACKEND WORKTREE: service acceptance, Python 3.9.6
+Command: cwd=/tmp; PYTHONPATH=/Users/samanseshadri/orca/workspaces/Gods-eye/experiment-orchestration /Users/samanseshadri/orca/Gods-eye/.venv/bin/python -m unittest discover -s /Users/samanseshadri/orca/workspaces/Gods-eye/experiment-acceptance/tests -p test_goal_service_acceptance.py -v
+
+test_abrupt_server_process_loss_interrupts_without_refund_or_resume (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_auth_origin_and_wrong_scope_errors_are_redacted (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_budget_exhaustion_preserves_usage_without_completed_result (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_cancel_waits_for_worker_ack_and_preserves_reservations (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_double_click_start_and_concurrent_replays_admit_once (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_held_out_report_is_blocked_until_every_selection_freezes (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_incomplete_selections_never_produce_measured_success (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_missing_final_scores_are_not_filled_with_zero (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_missing_provider_usage_stops_and_stays_unknown (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_provider_exception_cannot_echo_credentials_or_upstream_text (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_provider_rate_limit_is_terminal_and_has_no_inference_retry (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_queued_cancellation_does_not_load_a_second_key_or_refund_admission (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_reload_reconciles_existing_identity_and_never_restarts_work (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_root_mutation_after_review_invalidates_admission (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_service_rate_limit_has_bounded_same_action_retry_and_no_admission (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_stale_review_unconfirmed_and_changed_limits_fail_before_secrets (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_supported_journey_review_start_actual_measurement_and_keep_original (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+test_unsupported_requests_missing_selection_and_injected_fields_spend_nothing (test_goal_service_acceptance.GoalServiceAcceptance) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 4.491s
+
+OK
+
+========================================================================
+BACKEND WORKTREE: service acceptance, Python 3.12.14
+Command: cwd=/tmp; PYTHONPATH=/Users/samanseshadri/orca/workspaces/Gods-eye/experiment-orchestration /tmp/godseye-orchestration-venv/bin/python -m unittest discover -s /Users/samanseshadri/orca/workspaces/Gods-eye/experiment-acceptance/tests -p test_goal_service_acceptance.py -v
+
+/tmp/godseye-orchestration-venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_abrupt_server_process_loss_interrupts_without_refund_or_resume (test_goal_service_acceptance.GoalServiceAcceptance.test_abrupt_server_process_loss_interrupts_without_refund_or_resume) ... ok
+test_auth_origin_and_wrong_scope_errors_are_redacted (test_goal_service_acceptance.GoalServiceAcceptance.test_auth_origin_and_wrong_scope_errors_are_redacted) ... ok
+test_budget_exhaustion_preserves_usage_without_completed_result (test_goal_service_acceptance.GoalServiceAcceptance.test_budget_exhaustion_preserves_usage_without_completed_result) ... ok
+test_cancel_waits_for_worker_ack_and_preserves_reservations (test_goal_service_acceptance.GoalServiceAcceptance.test_cancel_waits_for_worker_ack_and_preserves_reservations) ... ok
+test_double_click_start_and_concurrent_replays_admit_once (test_goal_service_acceptance.GoalServiceAcceptance.test_double_click_start_and_concurrent_replays_admit_once) ... ok
+test_held_out_report_is_blocked_until_every_selection_freezes (test_goal_service_acceptance.GoalServiceAcceptance.test_held_out_report_is_blocked_until_every_selection_freezes) ... ok
+test_incomplete_selections_never_produce_measured_success (test_goal_service_acceptance.GoalServiceAcceptance.test_incomplete_selections_never_produce_measured_success) ... ok
+test_missing_final_scores_are_not_filled_with_zero (test_goal_service_acceptance.GoalServiceAcceptance.test_missing_final_scores_are_not_filled_with_zero) ... ok
+test_missing_provider_usage_stops_and_stays_unknown (test_goal_service_acceptance.GoalServiceAcceptance.test_missing_provider_usage_stops_and_stays_unknown) ... ok
+test_provider_exception_cannot_echo_credentials_or_upstream_text (test_goal_service_acceptance.GoalServiceAcceptance.test_provider_exception_cannot_echo_credentials_or_upstream_text) ... ok
+test_provider_rate_limit_is_terminal_and_has_no_inference_retry (test_goal_service_acceptance.GoalServiceAcceptance.test_provider_rate_limit_is_terminal_and_has_no_inference_retry) ... ok
+test_queued_cancellation_does_not_load_a_second_key_or_refund_admission (test_goal_service_acceptance.GoalServiceAcceptance.test_queued_cancellation_does_not_load_a_second_key_or_refund_admission) ... ok
+test_reload_reconciles_existing_identity_and_never_restarts_work (test_goal_service_acceptance.GoalServiceAcceptance.test_reload_reconciles_existing_identity_and_never_restarts_work) ... ok
+test_root_mutation_after_review_invalidates_admission (test_goal_service_acceptance.GoalServiceAcceptance.test_root_mutation_after_review_invalidates_admission) ... ok
+test_service_rate_limit_has_bounded_same_action_retry_and_no_admission (test_goal_service_acceptance.GoalServiceAcceptance.test_service_rate_limit_has_bounded_same_action_retry_and_no_admission) ... ok
+test_stale_review_unconfirmed_and_changed_limits_fail_before_secrets (test_goal_service_acceptance.GoalServiceAcceptance.test_stale_review_unconfirmed_and_changed_limits_fail_before_secrets) ... ok
+test_supported_journey_review_start_actual_measurement_and_keep_original (test_goal_service_acceptance.GoalServiceAcceptance.test_supported_journey_review_start_actual_measurement_and_keep_original) ... ok
+test_unsupported_requests_missing_selection_and_injected_fields_spend_nothing (test_goal_service_acceptance.GoalServiceAcceptance.test_unsupported_requests_missing_selection_and_injected_fields_spend_nothing) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 2.644s
+
+OK
+
+========================================================================
+Lint and whitespace verification:
+ruff check (three new Python files): exit 0
+All checks passed!
+git diff --no-index --check /dev/null <new-file>: no whitespace diagnostics for all six files. Exit 1 denotes a new-file diff.
+
+Interpretation limits:
+- Scripted in-process worker; production Docker isolation was not tested.
+- Tiny root-only real rollouts test honest no_improvement, not an edited success.
+- New-client reconciliation is not a real browser reload.
+- No checkpoint export endpoint was invented or tested.
+- Initial fixture errors were corrected: private probe count is len(attempts), and absent usage stops execution.
+- An intermediate invocation from the acceptance root mixed editable-install worktrees; final cross-worktree runs use /tmp and backend detection in the active package.
+- Backend source hashes were unchanged across final verification runs.
