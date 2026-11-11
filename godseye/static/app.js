@@ -1,3 +1,4 @@
+const staticDemo = document.documentElement.dataset.staticDemo === "true";
 const $ = (id) => document.getElementById(id);
 const state = {
   checkpoints: [],
@@ -53,6 +54,7 @@ function shortLabel(id) {
 }
 function showView(name) {
   if (!viewInfo[name]) name = "overview";
+  if (staticDemo && name === "evaluate") name = "history";
   if (name !== "overview") stopReplay();
   state.view = name;
   for (const section of document.querySelectorAll("[data-view]"))
@@ -69,7 +71,7 @@ function showView(name) {
   $("page-title").append(dot);
   $("page-description").textContent = viewInfo[name][2];
   document.querySelector(".page-heading > .primary").hidden =
-    name === "workbench" || name === "goal";
+    staticDemo || name === "workbench" || name === "goal";
   if (location.hash !== `#${name}`)
     window.history.replaceState(null, "", `#${name}`);
 }
@@ -163,6 +165,26 @@ function configureMode(data) {
   $("quick-hint").textContent = recorded
     ? "You’re viewing saved results. Run the local lab to try your own changes."
     : "Runs on your computer · no API key or paid AI calls · 4 games per version, up to 1,000 steps each.";
+  if (recorded) {
+    viewInfo.goal = ["Recorded demo", "Explore a recorded experiment", "Two saved comparisons, four checkpoints, and real tensor values. No live service is connected."];
+    viewInfo.overview = ["Replay evidence", "Watch the recorded comparisons", "Saved gameplay and paired measurements from bundled public examples."];
+    viewInfo.workbench = ["Inspect tensors", "Read the saved weights", "Select any of four checkpoints. Creating edits requires the local lab."];
+    document.querySelector('[data-nav="goal"]').textContent = "Recorded demo";
+    document.querySelector('[data-nav="workbench"]').textContent = "Inspect tensors";
+    document.querySelector('.workbench-intro .tag').textContent = "READ-ONLY TENSOR INSPECTION";
+    document.querySelector('.workbench-intro p').textContent = "Explore any bundled checkpoint. Run the local lab to create a new version.";
+    document.querySelector('.editor.panel').hidden = true;
+    document.querySelector('.workspace').style.gridTemplateColumns = "1fr";
+    document.querySelector('[data-nav="evaluate"]').hidden = true;
+    $("connection-settings").hidden = true;
+    $("quick-experiment").hidden = true;
+    $("cancel-job").disabled = true;
+    $("first-title").textContent = "Watch what four changed connections did";
+    document.querySelector(".simple-steps").hidden = true;
+    document.querySelector('[data-view="overview"] .first-experiment > p').textContent = "These are saved comparisons of a tiny Breakout policy, not games running in your browser. Choose a recording below and press Play.";
+    for (const control of document.querySelectorAll('[data-go="evaluate"]')) control.hidden = true;
+    showView(state.view);
+  }
   updateBudget();
 }
 $("connection-settings").onclick = () => {
@@ -949,6 +971,7 @@ async function initialize() {
 }
 // Goal workflow: mock-only boundary. No api(), fetch(), provider profiles, or keys.
 (() => {
+  if (typeof staticDemo !== "undefined" && staticDemo) return;
   if (typeof location !== "undefined" && new URLSearchParams(location.search).get("goalMode") !== "mock") return;
   const sampleGoal = "Improve Breakout score without control regressions.";
   const storageKey = "godseye.goal-draft.v1";
@@ -1142,7 +1165,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
 
 // Live goal transport. Mock controller and storage are deliberately separate.
 (() => {
-  if (new URLSearchParams(location.search).get('goalMode') === 'mock') return;
+  if ((typeof staticDemo !== 'undefined' && staticDemo) || new URLSearchParams(location.search).get('goalMode') === 'mock') return;
   const C = experimentContract, key = 'godseye.goal-live.v1';
   const fields = {requests:'max_requests', tokens:'max_input_tokens', output:'max_total_output_tokens', seconds:'max_seconds', rounds:'max_rounds', calls:'max_calls', reply:'max_output_tokens'};
   const ids = ['draft','provider','model','routing', ...Object.keys(fields)].map(x => 'goal-' + x);

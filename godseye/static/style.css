@@ -2814,3 +2814,6 @@ footer {
 .page-heading > .primary,.project-chevron,.avatar,.next-step,.nav-shortcut {display:none}
 .evaluation-layout {display:block}.evaluation-notes {margin-top:24px}.evaluation-notes > summary {cursor:pointer;padding:15px 0}
 @media(max-width:720px){.first-experiment{padding:20px}.simple-steps{grid-template-columns:1fr;gap:12px;margin:20px 0}.simple-steps li::before{float:left;margin:4px 12px 25px 0}.first-actions{flex-direction:column}.first-actions button{width:100%}.replays{grid-template-columns:1fr}.replay-analysis{grid-column:1}}
+
+/* Recorded export uses navigation links instead of experiment buttons. */
+.first-actions > a {display:inline-flex;align-items:center;justify-content:center;padding:11px 17px;border-radius:4px;text-decoration:none;font-weight:600}

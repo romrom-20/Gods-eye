@@ -18,6 +18,30 @@ def export_demo(destination):
         shutil.copyfile(static / name, destination / name)
     shutil.copyfile(static / 'landing.html', destination / 'index.html')
     lab = (static / 'index.html').read_text().replace('<html lang="en">', '<html lang="en" data-static-demo="true">')
+    lab = lab.replace('<title>God’s Eye — Describe an experiment</title>',
+                      '<title>God’s Eye — Recorded demo</title>')
+    start = lab.index('        <section data-view="goal"')
+    end = lab.index('        <section data-view="overview"', start)
+    lab = lab[:start] + """        <section data-view="goal" class="view" aria-label="Recorded demo">
+          <div class="panel first-experiment">
+            <span class="overline">RECORDED PUBLIC DEMO · READ ONLY</span>
+            <h2>Inspect the change. Replay the evidence.</h2>
+            <p>Explore two bundled comparisons and four checkpoints of a 20,486-parameter
+            Breakout policy. These are saved measurements and gameplay, not a live AI experiment.</p>
+            <p>Ablation and restoration demonstrate a known circuit. They do not establish
+            AI-discovered repair, general improvement, or cost savings.</p>
+            <div class="first-actions">
+              <a class="primary" href="#overview">Watch the recordings →</a>
+              <a class="secondary" href="#workbench">Inspect saved tensors →</a>
+            </div>
+            <p>To create edits or run a supported goal, install the local lab.
+            AI-guided goals additionally require the operator service, Docker, a private
+            evaluation suite, an explicitly selected provider model, and reviewed limits.</p>
+            <a href="./#start">Local installation instructions →</a>
+          </div>
+        </section>
+
+""" + lab[end:]
     (destination / 'lab.html').write_text(lab)
     store = Store(DATA_DIR / 'demo')
     tensors = {}

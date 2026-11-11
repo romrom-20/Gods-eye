@@ -174,6 +174,17 @@ class QueueTests(unittest.TestCase):
             data = json.loads((output / 'demo.json').read_text())
             self.assertEqual(data['state']['mode'], 'recorded-demo')
             self.assertEqual(len(data['runs']), 2)
+            self.assertEqual(len(data['state']['checkpoints']), 4)
+            self.assertEqual(set(data['tensors']), {'paper', 'zero',
+                             'bba6b79c8ba04971', '86bbfe9d4157446f'})
+            self.assertEqual({p.name for p in output.iterdir()}, {
+                'index.html', 'lab.html', 'app.js', 'style.css', 'landing.css',
+                'landing.js', 'api.html', 'LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
+                'demo.json', '.nojekyll', 'NETWORK-LICENSE.txt', 'NETWORK-PROVENANCE.md'})
+            lab = (output / 'lab.html').read_text()
+            self.assertNotIn('id="goal-form"', lab)
+            self.assertIn('RECORDED PUBLIC DEMO', lab)
+            self.assertNotIn('provider-setup.js', lab)
             self.assertIn('data-static-demo="true"', (output / 'lab.html').read_text())
             for run in data['traces'].values():
                 self.assertIn(run['candidate_id'], data['tensors'])
