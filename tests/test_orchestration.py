@@ -719,7 +719,8 @@ class OrchestrationTests(unittest.TestCase):
         with patch('godseye.orchestration.subprocess.run') as execute:
             execute.return_value.returncode = 0
             self.assertTrue(worker.available())
-            self.assertEqual(execute.call_args_list[0].args[0], ['docker', 'info'])
+            self.assertEqual(execute.call_args_list[0].args[0],
+                             ['docker', 'version', '--format', '{{.Server.Version}}'])
             self.assertEqual(execute.call_args.args[0], ['docker', 'image', 'inspect',
                              'isolation-evaluator', 'isolation-agent', 'isolation-gateway'])
         with self.assertRaises(ValueError):
