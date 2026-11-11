@@ -3,6 +3,7 @@
 Run with the project's server/dev dependencies. Never uses operator settings.
 Control endpoints exist only in this test app, never in the production server.
 """
+import os
 import sys
 import tempfile
 import threading
@@ -111,7 +112,7 @@ def main():
         with patch('urllib.request.urlopen', side_effect=AssertionError('External HTTP')), \
              patch('httpx.HTTPTransport.handle_request', side_effect=AssertionError('External HTTP')):
             try:
-                uvicorn.run(app, host='127.0.0.1', port=8879, log_level='warning')
+                uvicorn.run(app, host='127.0.0.1', port=int(os.environ.get('GODSEYE_BROWSER_PORT', '8879')), log_level='warning')
             finally:
                 worker.release.set()
                 service.close()

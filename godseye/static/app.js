@@ -20,7 +20,7 @@ const fmt = (v, digits = 1) =>
     : Number(v).toLocaleString(undefined, { maximumFractionDigits: digits });
 const label = (id) => state.checkpoints.find((c) => c.id === id)?.name || id;
 const viewInfo = {
-  goal: ["Describe a goal", "Describe the change. Review the evidence", "One supported goal, a reversible edit, and an honest result."],
+  goal: ["Describe a goal", "What should the Breakout player do better?", "Request a supported improvement, review the limits, then measure what changed."],
   overview: [
     "Start here",
     "Change a few numbers. See what happens",
@@ -67,7 +67,7 @@ function showView(name) {
   $("breadcrumb-view").textContent = viewInfo[name][0];
   $("page-title").replaceChildren(document.createTextNode(viewInfo[name][1]));
   const dot = document.createElement("span");
-  dot.textContent = ".";
+  dot.textContent = name === "goal" ? "" : ".";
   $("page-title").append(dot);
   $("page-description").textContent = viewInfo[name][2];
   document.querySelector(".page-heading > .primary").hidden =
@@ -1216,6 +1216,13 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
     catch { durable = false; $('goal-storage').textContent = 'Tab recovery unavailable. Copy your draft before reload. Start is disabled until storage works.'; return false; }
   }
   function lock() {
+    $('goal-request-layout').hidden = !!plan || !!pending;
+    $('goal-onboarding').hidden = !!plan || !!pending;
+    const current = run && terminal(run.status) ? 4 : pending ? 3 : plan ? 2 : 1;
+    for (let i = 1; i <= 4; i++) {
+      if (i === current) $('goal-step-' + i).setAttribute('aria-current', 'step');
+      else $('goal-step-' + i).removeAttribute('aria-current');
+    }
     const active = !!pending;
     ids.forEach(id => $(id).disabled = active || busy);
     $('goal-plan').disabled = active || busy; $('goal-example').disabled = active || busy;
@@ -1285,15 +1292,18 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
     const phase = {unknown:'Activity unavailable',checking_original:'Checking the original',trying_edit:'Trying an edit',testing:'Testing the result'};
     $('goal-phase').textContent = v.status + ' · ' + phase[v.phase.name];
     const u = v.usage;
-    $('goal-usage').textContent = `${u.requests} requests · ${u.input_tokens} known input tokens · ${u.output_tokens} known output tokens · ${u.tool_calls} tool calls · ${u.elapsed_seconds}s. ${u.usage_complete ? 'Reported usage complete.' : 'Additional usage and charges unknown.'} ${u.request_in_flight ? 'Request in flight; remote execution or billing may continue.' : ''}`;
+    $('goal-usage').textContent = `${u.requests} requests · ${u.input_tokens} known input tokens · ${u.output_tokens} known output tokens · ${u.tool_calls} tool calls · ${u.elapsed_seconds.toFixed(1)}s. ${u.usage_complete ? 'Reported usage complete.' : 'Additional usage and charges unknown.'} ${u.request_in_flight ? 'Request in flight; remote execution or billing may continue.' : ''}`;
     say('Execution: ' + v.status + '. Verdict: ' + v.verdict + (v.reason ? '. Reason: ' + v.reason : '') + '.');
     if ('evidence' in v) {
-      $('goal-result').hidden = false; $('goal-result-title').textContent = v.status + ' · ' + v.verdict;
+      $('goal-result').hidden = false;
+      const outcomes = {improved:'Measured improvement', no_improvement:'No measured improvement', inconclusive:'Evidence is inconclusive', not_evaluated:'No measured result'};
+      $('goal-result-title').textContent = outcomes[v.verdict] + ' · ' + v.status + ' · ' + v.verdict;
       downloadTarget = v.status === 'completed' && v.evidence ? {schema_version:1,experiment_id:v.experiment_id,artifact_id:v.evidence.candidate_manifest_id} : null;
       if ($('goal-download')) { $('goal-download').hidden = !downloadTarget; $('goal-download').disabled = !downloadTarget || downloadBusy; }
-      $('goal-result-text').textContent = v.evidence ? `Paired samples: ${v.evidence.paired_samples}. Mean score change: ${v.evidence.mean_delta}. Sample standard error: ${v.evidence.paired_se}. Minimum control mean change: ${v.evidence.min_control_delta}. Limitations: ${v.evidence.limitations.join(' ')}` : 'No complete measured evidence available. The original is preserved.';
+      $('goal-result-text').textContent = v.evidence ? `Paired samples: ${v.evidence.paired_samples}. Mean score change: ${v.evidence.mean_delta}. Sample standard error: ${v.evidence.paired_se}. Minimum control mean change: ${v.evidence.min_control_delta}. The original is preserved; selected checkpoints are separate copies. A negative control change indicates a regression. This sample does not guarantee future performance. Limitations: ${v.evidence.limitations.join(' ')}` : 'No complete measured evidence available. The original is preserved.';
     }
     lock();
+    if ('evidence' in v) $('goal-result-title').focus();
   }
   // Explicit checkpoint download: no inference or automatic retry.
   let downloadTarget = null, downloadBusy = false;
@@ -1443,12 +1453,12 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
     } finally { busy = false; lock(); }
   }
   // Replace sample-only copy without sharing mock state or confirmation.
-  $('goal-notice').textContent = 'Live experiment · review first, explicitly start once. Provider credentials stay on the server.';
+  $('goal-notice').textContent = 'Live experiment controls · requires operator setup. Review first, explicitly start once. Provider credentials stay on the server.';
   const mockLink = document.createElement('a'); mockLink.href = '?goalMode=mock#goal'; mockLink.textContent = 'Open separate mock walkthrough'; $('goal-notice').append(' ',mockLink);
-  $('goal-advanced').querySelector('summary').textContent = 'Programmer selection and finite limits';
+  $('goal-advanced').querySelector('summary').textContent = 'Advanced options · routing and seven usage limits';
   $('goal-advanced').querySelector('p').textContent = 'Finite usage limits apply to the confirmed experiment. Charges are unknown; these limits are not a hard dollar cap.';
-  document.querySelector('.goal-context dd:last-child').textContent = 'Select the programmer provider and model explicitly under options. Its own weights are not the editable target. Availability is checked by the service at admission.';
-  document.querySelector('#goal-review dt').textContent = 'Supported interpretation';
+  document.querySelector('.goal-context dd:last-child').textContent = 'Select the programmer provider and model explicitly beside your request. Its own weights are not the editable target. Availability is checked by the service at admission.';
+  $('goal-interpretation').textContent = 'Supported interpretation';
   document.querySelector('#goal-programmer').previousElementSibling.textContent = 'AI programmer';
   $('goal-scenario').hidden = true; document.querySelector('label[for="goal-scenario"]').hidden = true;
   document.querySelector('label[for="goal-provider"]').textContent = 'AI programmer provider';
@@ -1468,7 +1478,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
 
   ids.forEach(id => $(id).addEventListener('input',invalidate));
   $('goal-example').onclick = () => { $('goal-draft').value = 'Improve Breakout score without control regressions'; invalidate(); };
-  $('goal-consent').onchange = lock; $('goal-edit').onclick = invalidate;
+  $('goal-consent').onchange = lock; $('goal-edit').onclick = () => { invalidate(); $('goal-draft').focus(); };
   $('goal-form').addEventListener('invalid', event => {
     const options = event.target.closest('details');
     if (options) options.open = true;
@@ -1493,8 +1503,12 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
       if (digest !== p.spec_hash) throw Error('invalid');
       plan = p; $('goal-request').textContent = body.text; $('goal-canonical').textContent = JSON.stringify(s,null,2) + '\nSpecification SHA-256: ' + p.spec_hash;
       $('goal-programmer').textContent = `${s.provider.name} / ${s.provider.model} · ${s.provider.routing}`;
-      $('goal-limits').textContent = Object.entries(s.limits).map(([k,v]) => k + ': ' + v).join(' · ');
-      $('goal-review').hidden = false; say('Plan ready. Review the exact specification and explicitly authorize Start.');
+      const limitNames = {max_requests:'Programmer requests',max_input_tokens:'Reported input tokens',max_total_output_tokens:'Total reported output tokens',max_seconds:'Elapsed seconds',max_rounds:'Programmer rounds',max_calls:'Tool calls',max_output_tokens:'Output tokens per response'};
+      const list = document.createElement('ul'); list.className = 'goal-limit-list';
+      for (const [key,value] of Object.entries(s.limits)) { const item = document.createElement('li'); item.textContent = `${limitNames[key]}: ${value.toLocaleString()}`; list.append(item); }
+      $('goal-limits').replaceChildren(list);
+      $('goal-evaluation').textContent = `MinAtar Breakout · unchanged case roots: ${s.baseline.id}. Suite: ${e.suite_id} / ${e.revision}. ${e.episodes} episodes, up to ${e.max_steps} steps each; ${e.probes_per_case} development probes and ${e.forwards_per_case} forward passes per case. Select using development results; test held-out episodes once after all selections freeze.`;
+      $('goal-review').hidden = false; say('Plan ready. Review the exact specification and explicitly authorize Start.'); $('goal-review-title').focus();
     });
   };
   $('goal-start').onclick = () => {
@@ -1510,7 +1524,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
     perform(async () => { render(bound(await request('cancel',{schema_version:1,experiment_id:run.experiment_id}))); schedule(); });
   };
   $('goal-keep').onclick = () => say('Original preserved. No checkpoint was applied by this page.');
-  $('goal-again').onclick = () => { if (run && terminal(run.status)) { pending = null; run = null; $('goal-progress').hidden = true; invalidate(); } };
+  $('goal-again').onclick = () => { if (run && terminal(run.status)) { pending = null; run = null; $('goal-progress').hidden = true; invalidate(); $('goal-draft').focus(); } };
   $('goal-guided').onclick = () => { showView('overview'); $('quick-experiment').focus(); };
   try {
     const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
