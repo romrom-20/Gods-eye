@@ -7,9 +7,11 @@ and existing tests are unchanged.
 
 **Release acceptance is incomplete.** This checkout has the pure v1 contract and
 mock UI. The provisional service can be exercised separately in the backend
-owner's worktree. The real browser-to-service journey, trusted live phase journal,
-and scoped checkpoint download remain blocked. A passing mock or contract test
-must not be reported as a passing real experiment journey.
+owner's worktree. The real browser-to-service journey and trusted live phase
+journal remained blocked in this initial suite. Backend checkpoint download now
+has independent acceptance coverage in [checkpoint-export.md](checkpoint-export.md);
+browser download UX is separate. A passing mock or contract test must not be
+reported as a passing real experiment journey.
 
 ## What executes
 
@@ -103,13 +105,17 @@ reload or failure may overwrite them. Service tests compare tensor digests befor
 and after the supported journey, budget stop and cancellation. Mock A01 checks
 its honest acknowledgment that it changed nothing.
 
-**Obtaining a goal-generated edited checkpoint is blocked.** Public evidence IDs
-are references, not downloads. No scoped export operation exists in the inspected
-backend. Do not wire them to private filesystem paths or claim an edited artifact
-exists when root was selected or evidence is missing.
+**Backend checkpoint export is implemented and independently tested** in
+[checkpoint-export.md](checkpoint-export.md) and `tests/test_checkpoint_export.py`.
+The separate authorized endpoint returns bounded usable numeric artifacts for
+completed trusted selections. Its scripted changed selection passes actual
+root-before-candidate development comparisons, fresh-process reload, hash checks,
+paired held-out evaluation equality and rollback. Root selections are explicitly
+unchanged. Browser download integration remains a separate acceptance gate; public
+evidence IDs alone are not downloads or authorization.
 
-When export is implemented, script an authorized numeric edit that meets selection
-rules, or use an independently registered immutable completed-run fixture. Require:
+The export checks require an authorized numeric edit that meets selection rules
+or an independently registered immutable completed-run fixture, with:
 
 1. Comparison identifies original and selected hashes for every case; exact patches
    and immutable parent lineage are available, even for a negative measured result.
@@ -220,8 +226,9 @@ fields; opaque case IDs are permitted only in evaluator tool contexts.
 
 Auth, Host, Origin, cross-site and nonexistent scoped-ID failures are also checked.
 This verifies the tested experiment routes, not every legacy API or a formal
-noninterference proof. Scoped export responses and a connected browser's actual
-network/storage are blocked until those features exist. A public token/hash/ID is
+noninterference proof. Scoped export responses now have separate HTTP and
+redaction checks in `tests/test_checkpoint_export.py`; a connected browser's actual
+network/storage remains a separate acceptance gate. A public token/hash/ID is
 never treated as authorization by the acceptance scenarios.
 
 ## Commands and evidence

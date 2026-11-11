@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 from .backends import DATA_DIR
@@ -263,6 +263,25 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orche
         except Exception:
             error = ContractError('internal_error')
             return JSONResponse(error.response(), status_code=500)
+
+    @app.post('/api/v1/experiments/export')
+    async def experiment_export(request: Request):
+        try:
+            if readonly:
+                raise ContractError('not_authorized')
+            if orchestration is None:
+                raise ContractError('unavailable')
+            from starlette.concurrency import run_in_threadpool
+            from .checkpoint_export import export_checkpoint
+            output = await run_in_threadpool(export_checkpoint, orchestration, await request.body())
+            return Response(output, media_type='application/json', headers={
+                'Content-Disposition': 'attachment; filename="godseye-checkpoints-v1.json"'})
+        except ContractError as error:
+            headers = {'Retry-After': '5'} if error.code == 'rate_limited' else {}
+            return JSONResponse(error.response(), status_code=HTTP_STATUS[error.code], headers=headers)
+        except Exception:
+            error = ContractError('not_found')
+            return JSONResponse(error.response(), status_code=404)
 
     @app.post('/api/v1/experiments/plan')
     async def experiment_plan(request: Request):

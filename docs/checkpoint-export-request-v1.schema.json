@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gods Eye checkpoint export request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "experiment_id", "artifact_id"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "experiment_id": {"type": "string", "pattern": "^[a-f0-9]{32}$"},
+    "artifact_id": {"type": "string", "pattern": "^[a-f0-9]{32}$"}
+  }
+}

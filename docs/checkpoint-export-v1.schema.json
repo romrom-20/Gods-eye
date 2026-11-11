@@ -1,0 +1,217 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "format",
+    "experiment_id",
+    "spec_hash",
+    "artifact_id",
+    "baseline_id",
+    "checkpoints",
+    "instructions",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "format": {
+      "const": "godseye-checkpoint-v1"
+    },
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "spec_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "baseline_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,128}$"
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot",
+          "outcome",
+          "original_sha256",
+          "selected_sha256",
+          "original",
+          "delta"
+        ],
+        "properties": {
+          "slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31
+          },
+          "outcome": {
+            "enum": [
+              "changed",
+              "unchanged"
+            ]
+          },
+          "original_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "selected_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "original": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "W1",
+              "b1",
+              "W2",
+              "b2",
+              "W3",
+              "b3"
+            ],
+            "properties": {
+              "W1": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "minItems": 19200,
+                "maxItems": 19200
+              },
+              "b1": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "minItems": 32,
+                "maxItems": 32
+              },
+              "W2": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "minItems": 1024,
+                "maxItems": 1024
+              },
+              "b2": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "minItems": 32,
+                "maxItems": 32
+              },
+              "W3": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "minItems": 192,
+                "maxItems": 192
+              },
+              "b3": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "minItems": 6,
+                "maxItems": 6
+              }
+            }
+          },
+          "delta": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "tensor",
+                "index",
+                "before",
+                "after"
+              ],
+              "properties": {
+                "tensor": {
+                  "enum": [
+                    "W1",
+                    "b1",
+                    "W2",
+                    "b2",
+                    "W3",
+                    "b3"
+                  ]
+                },
+                "index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 19199
+                },
+                "before": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                },
+                "after": {
+                  "type": "number",
+                  "minimum": -3.4028234663852886e+38,
+                  "maximum": 3.4028234663852886e+38
+                }
+              }
+            },
+            "minItems": 0,
+            "maxItems": 20486
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "instructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reload",
+        "rollback"
+      ],
+      "properties": {
+        "reload": {
+          "type": "string"
+        },
+        "rollback": {
+          "type": "string"
+        }
+      }
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gods Eye checkpoint artifact v1",
+  "description": "Structural schema only; checkpoint_artifact.reload_artifact additionally enforces exact float32 roundtrip, content/tensor hashes, ordered replacement preconditions, instructions, and byte bound."
+}

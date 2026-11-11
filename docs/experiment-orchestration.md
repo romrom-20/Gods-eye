@@ -191,9 +191,10 @@ Artifact IDs are scoped to their persisted run. Private manifest artifacts retai
 original/selected IDs and tensor hashes; delta artifacts retain exact numeric
 patches and parent lineage for rollback. Reports retain all participant state,
 baseline arms, reservations and attempts. Adapter evidence references persist even
-for failed/interrupted runs and preserve malformed/rejected tool attempts. No
-browser export route is added: resolve artifacts only through a separately
-authorized export facility, never expose paths or private reports wholesale.
+for failed/interrupted runs and preserve malformed/rejected tool attempts. The
+separately versioned [checkpoint export facility](checkpoint-export.md) resolves
+completed candidate manifests into bounded numeric model artifacts. It uses the
+existing local operator authorization and never exposes private reports wholesale.
 
 ## Offline verification
 
