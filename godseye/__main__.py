@@ -26,7 +26,11 @@ def main():
     compare.add_argument('--episodes', type=int, default=8)
     compare.add_argument('--seed', type=int, default=1000)
     compare.add_argument('--max-steps', type=int, default=3000)
+    from .local_setup import add_commands, execute
+    add_commands(sub)
     args = parser.parse_args()
+    if args.command in ('bootstrap', 'launch', 'readiness'):
+        raise SystemExit(execute(args))
     if args.command == 'serve':
         from .server import serve
         serve(args.port, demo=args.demo, host=args.host)
