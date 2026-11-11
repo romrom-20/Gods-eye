@@ -214,9 +214,19 @@ The existing adapter redacts HTTP exception details; a provider 429 therefore
 remains the safe terminal `provider_error`, without retries or leaked headers.
 Specific provider reasons require trustworthy metadata unavailable in its evidence.
 Offline tests do not establish Docker/OS isolation; the existing opt-in
-`test_evaluator_container.py` remains the live isolation check.
+`test_evaluator_container.py` checks the Compose boundary. The additional
+`test_docker_worker.py` exercises the actual DockerWorker through Orchestrator:
 
-Implementation validation: Python 3.12 ran 27 dedicated orchestration tests and
+```sh
+GODSEYE_CONTAINER_TEST=1 python -m unittest discover -s tests -p test_docker_worker.py -v
+```
+
+It uses a separate scripted agent image and dummy credentials, never saved
+operator keys or real provider calls. See [DockerWorker validation](docker-worker-validation.md)
+for coverage, fixes, execution results and unverified behavior.
+
+Initial implementation validation: Python 3.12 ran 27 dedicated orchestration tests and
 128 tests in the full suite successfully (one Docker-only test skipped). Ruff and
 `git diff --check` pass; the new Python files also compile with Python 3.9. Live
-Docker isolation was not exercised during this implementation.
+Docker isolation was not exercised during that initial implementation; the linked
+worker validation records the subsequent real-container checks.

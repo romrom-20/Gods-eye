@@ -648,12 +648,21 @@ class DockerWorker:
         if not self.compose.is_file():
             raise ValueError('Existing isolation checkout required')
 
+    def _images(self):
+        # Trusted worker implementation only; never configured by an API request.
+        # Tests subclass this to select an image with a scripted transport while
+        # retaining the actual worker, adapter, and Compose isolation settings.
+        return {role: 'isolation-' + role for role in ('evaluator', 'agent', 'gateway')}
+
     def available(self):
         # No provider contact, key read, daemon mutation, image pull or build.
         if os.getuid() == 0:
             return False  # Never override Compose's non-root user with root.
         try:
-            if subprocess.run(['docker', 'info'], stdout=subprocess.DEVNULL,
+            # `info` also probes unrelated CLI plugins, which can hang even when
+            # the daemon is healthy. `version` checks the server without that scan.
+            if subprocess.run(['docker', 'version', '--format', '{{.Server.Version}}'],
+                              stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL, timeout=5).returncode:
                 return False
             return subprocess.run(['docker', 'image', 'inspect', 'isolation-evaluator',
@@ -683,7 +692,7 @@ class DockerWorker:
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                            timeout=10, check=True)
         subprocess.run(['docker', 'compose', '--project-name', project, '--env-file', '/dev/null',
-                        '-f', str(self.compose), 'down', '--timeout', '1'], env=env,
+                        '-f', str(self.compose), '--profile', 'agent', 'down', '--timeout', '1'], env=env,
                        cwd=self.checkout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        timeout=15, check=True)
         (directory / 'provider.key').unlink(missing_ok=True)
@@ -711,8 +720,8 @@ class DockerWorker:
         # image tags too. Pin the existing operator-built images without modifying
         # any service's mounts, networking, resource limits, user or entrypoint.
         image_config = directory / 'compose-images.json'
-        write_json(image_config, dict(services={role: dict(image='isolation-' + role)
-                                               for role in ('evaluator', 'agent', 'gateway')}))
+        write_json(image_config, dict(services={role: dict(image=image)
+                                               for role, image in self._images().items()}))
         command = ['docker', 'compose', '--project-name', project, '--env-file', '/dev/null',
                    '-f', str(self.compose), '-f', str(image_config)]
 
