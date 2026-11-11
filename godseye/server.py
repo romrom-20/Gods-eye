@@ -14,6 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
+from .checkpoint_import import MAX_JSON, compatible, request_payload
 from .backends import DATA_DIR
 from .core import Store, apply_patch, difference, digest, tensor_summary
 from .jobs import Conflict, JobQueue, QueueFull
@@ -45,6 +46,7 @@ class Boundary:
     """Validate Host/Origin and bound streamed bodies before JSON parsing."""
     def __init__(self, app, hosts, token):
         self.app, self.hosts, self.token = app, set(hosts), token
+        self.import_slot = threading.BoundedSemaphore(1)
 
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':
@@ -68,18 +70,33 @@ class Boundary:
         if scope['method'] in ('POST', 'PUT', 'PATCH'):
             if headers.get(b'content-type', b'').split(b';')[0].strip() != b'application/json':
                 error, status = 'Use application/json', 415
-        body = b''
-        if not error:
-            while True:
-                message = await receive()
-                if message['type'] == 'http.disconnect':
-                    return
-                body += message.get('body', b'')
-                if len(body) > MAX_BODY:
-                    error, status = 'Request body exceeds 64 KiB', 413
-                    break
-                if not message.get('more_body', False):
-                    break
+        is_import = scope['method'] == 'POST' and scope['path'] == '/api/v1/checkpoints/import'
+        maximum = MAX_JSON if is_import else MAX_BODY
+        admitted = False
+        if is_import and not error:
+            admitted = self.import_slot.acquire(blocking=False)
+            if not admitted:
+                error, status = 'Checkpoint import already in progress', 429
+        body = bytearray()
+        try:
+            if not error:
+                while True:
+                    message = await receive()
+                    if message['type'] == 'http.disconnect':
+                        if admitted:
+                            self.import_slot.release()
+                        return
+                    chunk = message.get('body', b'')
+                    if len(body) + len(chunk) > maximum:
+                        error, status = f'Request body exceeds {maximum // 1024} KiB', 413
+                        break
+                    body.extend(chunk)
+                    if not message.get('more_body', False):
+                        break
+        except BaseException:
+            if admitted:
+                self.import_slot.release()
+            raise
         async def secured_send(message):
             if message['type'] == 'http.response.start':
                 message['headers'] = list(message.get('headers', [])) + [
@@ -91,6 +108,8 @@ class Boundary:
                 ]
             await send(message)
         if error:
+            if admitted:
+                self.import_slot.release()
             if scope['path'].startswith('/api/v1/experiments/'):
                 code = ('not_authorized' if status in (401, 403) else
                         'invalid_json' if status == 413 else 'invalid_schema')
@@ -104,8 +123,12 @@ class Boundary:
             if consumed:
                 return await receive()
             consumed = True
-            return {'type': 'http.request', 'body': body, 'more_body': False}
-        await self.app(scope, replay, secured_send)
+            return {'type': 'http.request', 'body': bytes(body), 'more_body': False}
+        try:
+            await self.app(scope, replay, secured_send)
+        finally:
+            if admitted:
+                self.import_slot.release()
 
 
 def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orchestration=None):
@@ -164,7 +187,8 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orche
                 'architecture': '600 → 32 → 32 → 6 · tanh',
                 'mode': 'recorded-demo' if readonly else 'local',
                 'limits': {'max_forwards': MAX_FORWARDS, 'queue_capacity': 4},
-                'capabilities': ['tensor_read', 'patch_preview'] + ([] if readonly else ['patch', 'evaluate', 'cancel'])}
+                'capabilities': ['tensor_read', 'patch_preview'] + ([] if readonly else ['patch', 'evaluate', 'cancel'])
+                    + (['checkpoint_import'] if not readonly and compatible(store.backend) else [])}
 
     @app.get('/api/tensor', include_in_schema=False)
     @app.get('/api/v1/tensor')
@@ -213,6 +237,18 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orche
             writable()
             preview(body)
             return store.patch(body.base_id, body.patch, body.hypothesis)
+
+    @app.post('/api/v1/checkpoints/import', status_code=201)
+    async def import_checkpoint(request: Request):
+        from starlette.concurrency import run_in_threadpool
+        def publish(raw):
+            with mutation_lock:
+                writable()
+                if not compatible(store.backend):
+                    raise HTTPException(400, 'Checkpoint import requires the built-in Breakout backend')
+                data, name, provenance = request_payload(raw)
+                return store.import_checkpoint(data, name, provenance)
+        return await run_in_threadpool(publish, await request.body())
 
     @app.post('/api/v1/jobs', status_code=202)
     def submit(body: EvaluationRequest, idempotency_key: Optional[str] = Header(default=None)):
