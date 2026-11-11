@@ -341,12 +341,17 @@ class Orchestrator:
                 raise
 
     def rows(self, kind):
-        return [json.loads(r[0]) for r in self.db.execute(
-            'SELECT body FROM documents WHERE kind=?', (kind,))]
+        # Materialize under the same lock as writers. INSERT OR REPLACE can move
+        # a row during a live cursor scan on this shared connection, causing the
+        # reader to observe it twice even though the primary key stays unique.
+        with self.lock:
+            return [json.loads(r[0]) for r in self.db.execute(
+                'SELECT body FROM documents WHERE kind=?', (kind,))]
 
     def load(self, identifier, kind):
-        row = self.db.execute('SELECT body FROM documents WHERE id=? AND kind=?',
-                              (identifier, kind)).fetchone()
+        with self.lock:
+            row = self.db.execute('SELECT body FROM documents WHERE id=? AND kind=?',
+                                  (identifier, kind)).fetchone()
         if row is None:
             raise ContractError('not_found')
         return json.loads(row[0])

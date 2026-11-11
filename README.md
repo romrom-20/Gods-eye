@@ -1,55 +1,85 @@
 # God's Eye
 
-A website, local CPU lab, and API for **direct weight-space programming**. Inspect an actual
-neural network, edit its tensors, branch checkpoints, compare gameplay, and
-replay the decisions. No training loop, API key, or remote compute required.
+[![Validate lab and static demo](https://github.com/romrom-20/Gods-eye/actions/workflows/ci.yml/badge.svg)](https://github.com/romrom-20/Gods-eye/actions/workflows/ci.yml)
 
-The starting network is the released Breakout policy from
-[Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/).
-It is a 600 → 32 → 32 → 6 tanh MLP with 20,486 parameters. Attribution and
-licenses are in [fixtures/breakout/PROVENANCE.md](fixtures/breakout/PROVENANCE.md).
+**Edit a neural network's weights. Run both versions. See what changed.**
 
-## Where we’re going
+God's Eye is an open-source weight-space programming workbench with a browser UI,
+Python API, and isolated AI repair harness. Start with a tiny Breakout-playing
+network on your CPU. Preserve the original, make an explicit edit, and compare
+measured behavior.
 
-Describe a supported improvement in natural language, review the experiment limits,
-and receive a tested, reversible model change—or a clear report that it did not
-improve. The current release is a local Breakout workbench with a separate agent
-harness; the natural-language workflow and editable language-model backend are
-next. Better quality or lower cost must be demonstrated, not assumed.
+[Quick start](#try-a-real-experiment-no-api-key) · [Agent setup](docs/experiment-orchestration.md) ·
+[Roadmap](docs/roadmap.md) · [Report a problem](https://github.com/romrom-20/Gods-eye/issues)
 
-See the [prioritized roadmap and release criteria](docs/roadmap.md).
+## Try a real experiment — no API key
 
-## Run
-
-Python 3.9–3.12:
+Requires Python 3.9–3.12. On macOS or Linux:
 
 ```sh
+git clone https://github.com/romrom-20/Gods-eye.git
+cd Gods-eye
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install -e '.[server]'
 .venv/bin/python -m godseye serve
 ```
 
-Open **http://127.0.0.1:8787** for the website or **http://127.0.0.1:8787/lab**
-for the lab. Existing experiments appear in Overview with paired gameplay,
-action probabilities, and neuron activations. A new workspace starts empty;
-create your first comparison in Evaluations. Use the sidebar to move between
-**Tensor lab**, **Evaluations**, and **Run history**.
+Open **http://127.0.0.1:8787/lab.html#overview** and click
+**Try the four-number change**. It saves an edited copy and plays four games per
+version, capped at 1,000 steps each. Compare scores and replay the gameplay.
+The original remains unchanged. No Docker, GPU, provider key, or paid call is
+needed for this example.
 
-In **Tensor lab**, select **Ablate a circuit**, preview the changes, create a checkpoint, and use
-**Compare this checkpoint** to run an evaluation. Then select **Restore it**,
-branch from the ablated checkpoint, create a checkpoint, and compare again.
-The original checkpoint remains available for rollback.
+Use **Edit weights** for your own numeric changes, **Compare** for paired
+evaluations, and **History** to revisit results. The known four-weight edit tests
+the mechanics; it is not an AI-discovered improvement or a new research result.
 
-The presets remove and restore four known output connections. The observed
-score change tests this workbench's mechanics; it is not a new scientific
-result or an independent replication of the full paper.
+## What works today
 
-**Write a reactive policy** starts from zero weights and loads
-[experiments/ball-chaser.edits](experiments/ball-chaser.edits), a small controller
-authored for this project. Its first hidden unit computes the difference
-between ball and paddle columns; the next layers turn that into movement
-logits. It has no velocity prediction. Compare it with zero initialization
-and with the released policy, and inspect its much sparser tensors.
+- **CPU workbench:** inspect tensors, preview numeric patches, save immutable
+  checkpoints, compare versions, and replay results.
+- **Goal-driven experiment UI and API:** review a supported Breakout goal and
+  finite limits, explicitly start, follow status, cancel, and inspect evidence.
+  This requires the separately configured experiment service below.
+- **Isolated repair worker:** Docker execution, persistent budgets, duplicate-start
+  protection, crash recovery, and tested cleanup. Provider adapters support
+  OpenAI, OpenRouter, and Hugging Face; real-provider compatibility and repair
+  quality are not established by scripted tests.
+
+The current planner recognizes a small set of Breakout phrases, including
+“Improve Breakout score.” It does not understand arbitrary requests or edit Qwen.
+Goal-generated checkpoint downloads, detailed live activity phases, and hosted
+multi-user access remain unfinished. No quality improvement or inference-cost
+saving is promised.
+
+## Run an AI-guided experiment
+
+The AI programmer proposes edits to the Breakout model; its own weights are not
+modified. This path requires Docker, a fresh registered private evaluation suite,
+a configured provider key, an explicit model selection, and reviewed limits.
+Follow the [experiment service setup](docs/experiment-orchestration.md).
+
+Starting the ordinary lab alone does **not** configure that service. If the goal
+screen reports “Experiment service is unavailable,” use the CPU example above or
+complete the service setup. Saving a provider key alone does not launch anything.
+Provider requests may incur charges; token limits are not hard dollar caps.
+
+The [mock walkthrough](http://127.0.0.1:8787/lab.html?goalMode=mock#goal) is available
+while your local server runs. It is explicitly labeled and runs no experiment.
+Local links work only on the machine running the server; there is no public
+multi-user instance yet.
+
+## Research and project direction
+
+The starting network is the released Breakout policy from
+[Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/):
+a 600 → 32 → 32 → 6 tanh MLP with 20,486 parameters. See
+[provenance and licenses](fixtures/breakout/PROVENANCE.md).
+
+Our goal is to turn a supported request into a tested, reversible model change—or
+an honest report that no improvement was found. Next: usable checkpoint export,
+clearer setup, trustworthy activity observations, and an invite-only hosted beta
+with user isolation and spending controls. See the [roadmap](docs/roadmap.md).
 
 ## Share a demo without hosting compute
 
@@ -139,7 +169,7 @@ mapping follows the authors' released prompt. Capped episodes are marked as
 truncated. The UI reports mean score, standard error, and the mean and standard
 error of paired score differences; these are not confidence intervals.
 
-The quick default uses eight episodes and a 3,000-step cap. The upstream
+The one-click example uses four episodes and a 1,000-step cap; the advanced comparison defaults to eight episodes and a 3,000-step cap. The upstream
 evaluation uses 1,000 episodes and a 10,000-step cap. The CLI caps a run at 64
 episodes per model; full benchmark replication is outside this first version.
 Using the same random seeds does not force identical environment trajectories

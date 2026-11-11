@@ -618,6 +618,31 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(self.wait(replay)['status'], 'completed')
         self.assertEqual(len(self.worker.calls), 1)
 
+    def test_public_reads_wait_for_transaction_commit(self):
+        # Neither listing nor loading may inspect a transaction owned by another
+        # thread on the shared SQLite connection.
+        for read in (lambda: self.service.rows('probe'),
+                     lambda: self.service.load('read-fence', 'probe')):
+            entered = threading.Event()
+            done = threading.Event()
+            result = []
+            def reader():
+                entered.set()
+                result.append(read())
+                done.set()
+            with self.service.transaction():
+                self.service.save('read-fence', 'probe', {'value': 'uncommitted'})
+                thread = threading.Thread(target=reader)
+                thread.start()
+                self.assertTrue(entered.wait(2))
+                try:
+                    self.assertFalse(done.wait(.05), 'Read escaped transaction lock')
+                finally:
+                    self.service.save('read-fence', 'probe', {'value': 'committed'})
+            thread.join(2)
+            self.assertFalse(thread.is_alive())
+            self.assertIn(result[0], ([{'value': 'committed'}], {'value': 'committed'}))
+
     def test_unknown_worker_stop_fences_live_admission(self):
         with patch.object(self.worker, 'execute', side_effect=WorkerFailure('process_lost')):
             run = self.service.start(self.start_request())
