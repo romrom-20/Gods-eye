@@ -57,7 +57,9 @@ saving is promised.
 The AI programmer proposes edits to the Breakout model; its own weights are not
 modified. This path requires Docker, a fresh registered private evaluation suite,
 a configured provider key, an explicit model selection, and reviewed limits.
-Follow the [experiment service setup](docs/experiment-orchestration.md).
+Start with the [local setup and launch guide](docs/local-operator-setup.md).
+The [experiment service contract](docs/experiment-orchestration.md) explains
+registration, isolation, cancellation, and results in detail.
 
 Starting the ordinary lab alone does **not** configure that service. If the goal
 screen reports “Experiment service is unavailable,” use the CPU example above or

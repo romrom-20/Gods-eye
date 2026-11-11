@@ -14,7 +14,7 @@ own virtual environment, then prepare the existing images explicitly:
 ```sh
 python3.12 -m venv .venv
 .venv/bin/python -m pip install -e '.[server]'
-docker compose --project-name isolation -f isolation/compose.yaml build evaluator agent gateway
+EVALUATOR_PRIVATE_DIR=/tmp/godseye-build-placeholder docker compose --project-name isolation -f isolation/compose.yaml build evaluator agent gateway
 ```
 
 Image building is an operator prerequisite, not part of bootstrap or launch.
