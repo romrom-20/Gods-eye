@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import time
+import threading
 import uuid
 
 import numpy as np
@@ -223,6 +224,7 @@ class Store:
     def __init__(self, path=None, backend=None):
         from .backends import BreakoutBackend
         self.backend = backend or BreakoutBackend()
+        self._import_lock = threading.Lock()
         self.path = Path(path or os.environ.get('GODSEYE_DATA_DIR') or Path.cwd() / '.godseye')
         self.path.mkdir(parents=True, exist_ok=True)
         self.paper = self.backend.initial_weights()
@@ -272,6 +274,34 @@ class Store:
         # Publish metadata last: list operations cannot discover half a checkpoint.
         write_json(self.path / ('checkpoint-' + model_id + '.json'), report)
         return report
+
+    def import_checkpoint(self, raw, name, provenance=''):
+        """Publish an independent fixed-architecture root, retaining source bytes."""
+        from .checkpoint_import import compatible, metadata, read_weights
+        if not compatible(self.backend):
+            raise ValueError('Checkpoint import requires the built-in Breakout backend')
+        metadata(name, provenance)
+        if not self._import_lock.acquire(blocking=False):
+            raise ValueError('Checkpoint import already in progress')
+        try:
+            weights = read_weights(raw)
+            model_id = uuid.uuid4().hex[:16]
+            report = {'schema_version': 1, 'backend': self.backend.id,
+                      'id': model_id, 'name': name, 'parent': None,
+                      'sha256': digest(weights), 'created': time.time(),
+                      'source_sha256': hashlib.sha256(raw).hexdigest(), 'provenance': provenance}
+            self._mark_workspace()
+            target = self.path / (model_id + '.npz')
+            atomic_write(target, raw)
+            try:
+                # Publication point: listing discovers only complete checkpoint records.
+                write_json(self.path / ('checkpoint-' + model_id + '.json'), report)
+            except BaseException:
+                target.unlink(missing_ok=True)
+                raise
+            return report
+        finally:
+            self._import_lock.release()
 
     def run(self, base_id, candidate_id, **kwargs):
         base, candidate = self.weights(base_id), self.weights(candidate_id)

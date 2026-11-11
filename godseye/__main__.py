@@ -25,6 +25,10 @@ def main():
     patch.add_argument('--base', default='paper')
     patch.add_argument('--file', type=Path, required=True)
     patch.add_argument('--hypothesis', required=True)
+    importer = sub.add_parser('import-checkpoint', help='Import a local fixed-schema Breakout NPZ')
+    importer.add_argument('--file', type=Path, required=True)
+    importer.add_argument('--name', required=True)
+    importer.add_argument('--provenance', default='')
     compare = sub.add_parser('compare')
     compare.add_argument('--base', default='zero')
     compare.add_argument('--candidate', default='paper')
@@ -58,6 +62,12 @@ def main():
     if args.command == 'inspect':
         weights = store.weights(args.checkpoint)
         result = {'sha256': digest(weights), 'tensors': tensor_summary(weights)}
+    elif args.command == 'import-checkpoint':
+        from .checkpoint_import import read_local
+        try:
+            result = store.import_checkpoint(read_local(args.file), args.name, args.provenance)
+        except (ValueError, OSError) as error:
+            parser.error(str(error))
     elif args.command == 'patch':
         result = store.patch(args.base, args.file.read_text(), args.hypothesis)
     else:

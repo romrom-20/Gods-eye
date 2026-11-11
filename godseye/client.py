@@ -1,4 +1,5 @@
 """Small dependency-free HTTP client for researchers and coding agents."""
+import base64
 import errno
 import json
 import socket
@@ -95,6 +96,13 @@ class Client:
 
     def patch(self, base, patch, hypothesis, **options):
         return self._request('checkpoints', dict(base_id=base, patch=patch, hypothesis=hypothesis, **options))
+
+    def import_checkpoint(self, path, name, provenance=''):
+        """One bounded local file read and one HTTP attempt; never retries a write."""
+        from .checkpoint_import import metadata, read_local
+        metadata(name, provenance)
+        return self._request('checkpoints/import', dict(name=name, provenance=provenance,
+            npz_base64=base64.b64encode(read_local(path)).decode('ascii')))
 
     def evaluate(self, base, candidate, idempotency_key=None, **settings):
         return self._request('jobs', dict(base_id=base, candidate_id=candidate, **settings), idempotency_key)
