@@ -232,6 +232,39 @@ for p in ['/app/forbidden', '/run/secrets/agent_api_key', '/run/secrets/agent_to
         self.assertTrue((self.directory / 'held-out.json').is_file())
         self.assertTrue((self.directory / 'evidence/.agent-run.claim').exists())
         self.assertTrue((self.path / 'private/.orchestration.claim').exists())
+        # The container evaluator must really have supplied this scoped journal.
+        request = dict(schema_version=1, experiment_id=self.run_id, spec_hash=done['hash'],
+                       after=0, limit=100)
+        events = []
+        while True:
+            activity = self.service.activity(request)
+            self.assertTrue(activity['available'], activity)
+            self.assertFalse(activity['gap'])
+            events.extend(activity['events'])
+            request['after'] = activity['next_cursor']
+            if not activity['has_more']:
+                break
+        self.assertEqual([e['sequence'] for e in events], list(range(1,len(events)+1)))
+        self.assertEqual(events[0]['kind'],'worker_started')
+        self.assertEqual(events[-1]['kind'],'worker_finished')
+        self.assertTrue(any(e['kind']=='root_probe_reserved' for e in events))
+        self.assertTrue(any(e['arm']=='agent' and e['kind']=='selection_frozen' for e in events))
+        freezes = [e['sequence'] for e in events if e['kind']=='selection_frozen']
+        held = [e['sequence'] for e in events if e['kind']=='held_out_reserved']
+        self.assertTrue(held)
+        self.assertLess(max(freezes),min(held))
+        self.assertEqual(activity['phase'],dict(name='unknown',event_sequence=len(events)))
+        journal = self.path / 'private/activity.sqlite3'
+        self.assertEqual(journal.stat().st_mode & 0o777,0o600)
+        public = json.dumps(activity) + json.dumps(events)
+        secrets = ['dummy-docker-worker-only',str(self.path)] + [p.read_text() for p in
+                   (self.path / 'private').glob('*.token')]
+        for secret in secrets:
+            self.assertNotIn(secret,public)
+        replay = self.service.activity(dict(request,after=0))
+        self.assertEqual(replay['events'],events[:100])
+        with self.assertRaises(ContractError):
+            self.service.activity(dict(request,spec_hash='0'*64))
         self.assert_clean()
 
     def test_cancellation_waits_for_cleanup_and_retains_uncertain_request(self):

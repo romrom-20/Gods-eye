@@ -13,7 +13,6 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from godseye.activity import Journal
-from godseye.activity_api import activity_router
 from godseye.benchmark import RepairBenchmark
 from godseye.core import Store
 from godseye.evaluator import Evaluator
@@ -37,7 +36,6 @@ class ActivityTests(unittest.TestCase):
         self.addCleanup(self.service.close)
         self.service.register(self.private, baseline_id='activity', suite_id='suite', revision='v1')
         self.app = create_app(Store(self.root / 'lab'), orchestration=self.service, token='test-auth')
-        self.app.include_router(activity_router(self.service))
         self.client = TestClient(self.app, headers={'Authorization': 'Bearer test-auth'})
         self.addCleanup(self.client.close)
         self.outbound = patch('urllib.request.urlopen', side_effect=AssertionError('No provider transport'))
@@ -63,6 +61,7 @@ class ActivityTests(unittest.TestCase):
     def test_actual_worker_evaluator_order_pagination_redaction_and_old_runs(self):
         run = self.start()
         self.assertEqual(self.wait(run)['status'], 'completed')
+        self.assertIn('/api/v1/experiments/activity',self.app.openapi()['paths'])
         response = self.read(run, limit=7)
         self.assertEqual(response.status_code, 200)
         self.assertIn('no-store', response.headers['cache-control'])
@@ -113,6 +112,48 @@ class ActivityTests(unittest.TestCase):
         self.assertEqual(old['events'], [])
         self.assertEqual(old['phase'], dict(name='unknown', event_sequence=None))
 
+    def test_browser_fixture_uses_actual_export_and_independent_reload(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('activity_browser_fixture',
+            Path(__file__).parent / 'browser/activity_backend.py')
+        fixture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixture)
+        run = self.start(); self.wait(run)
+        app = fixture.create_app(Store(self.root / 'fixture-lab'), orchestration=self.service)
+        client = TestClient(app)
+        self.addCleanup(client.close)
+        expected = client.post('/__fixture/checkpoint-hashes',json=query(run)).json()
+        result = self.service.results(query(run))
+        request = dict(schema_version=1,experiment_id=run['experiment_id'],
+                       artifact_id=result['evidence']['candidate_manifest_id'])
+        self.assertEqual(client.post('/__fixture/export-mode',json=dict(query(run),ok=False)).status_code,200)
+        failure = client.post('/api/v1/experiments/export',json=request)
+        self.assertEqual(failure.status_code,404)
+        self.assertEqual(failure.json()['error']['code'],'not_found')
+        self.assertEqual(client.post('/__fixture/export-mode',json=dict(query(run),ok=True)).status_code,200)
+        download = client.post('/api/v1/experiments/export',json=request)
+        self.assertEqual(download.status_code,200)
+        self.assertIn('attachment',download.headers['content-disposition'])
+        artifact = download.json()
+        path = self.root / 'browser-export.json'; path.write_bytes(download.content)
+        script = """
+import json,sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+from godseye.checkpoint_artifact import reload_artifact
+from godseye.core import digest
+pairs=reload_artifact(Path(sys.argv[2]).read_bytes(),expected_sha256=sys.argv[3])
+print(json.dumps([[digest(a),digest(b)] for a,b in pairs]))
+"""
+        process = subprocess.run([expected['python_executable'],'-I','-c',script,
+            expected['source_root'],str(path),artifact['content_sha256']],
+            capture_output=True,text=True,timeout=20,check=True)
+        self.assertEqual(json.loads(process.stdout),expected['hashes'])
+        self.assertEqual(expected['hashes'],[[r['original_sha256'],r['selected_sha256']]
+                                           for r in artifact['checkpoints']])
+        self.assertEqual(len(self.worker.calls),1)
+        self.assertEqual(self.worker.key_reads,1)
+
     def test_live_reservation_and_finish_reset_before_next_provider_request(self):
         entered, release = threading.Event(), threading.Event()
         self.addCleanup(release.set)
@@ -153,7 +194,6 @@ class ActivityTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/v1/experiments/activity',json=body,headers={'Authorization':'Bearer wrong'}).status_code,403)
         self.assertEqual(self.client.post('/api/v1/experiments/activity',json=body,headers={'Origin':'https://other.invalid'}).status_code,403)
         readonly = create_app(Store(self.root / 'readonly'), readonly=True, orchestration=self.service)
-        readonly.include_router(activity_router(self.service))
         client = TestClient(readonly)
         self.addCleanup(client.close)
         self.assertEqual(client.post('/api/v1/experiments/activity',json=body).status_code,403)

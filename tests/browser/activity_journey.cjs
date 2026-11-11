@@ -1,6 +1,6 @@
 // Run against tests/browser/activity_backend.py only. No operator service.
 const assert=(v,m)=>{if(!v)throw Error(m);};
-const task=await taskSpace('Observed agent activity');
+const task=await taskSpace('Integrated activity and checkpoint export');
 console.log({spaceId:task.spaceId});
 const page=task.page('p1'),base='http://127.0.0.1:8881';
 const post=async(path,body)=>{const r=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert(r.ok,'fixture request failed');return r.json();};
@@ -38,21 +38,39 @@ await waitText('goal-result-title','completed');
 const after=await(await fetch(base+'/__fixture/state')).json();
 assert(before.workers===after.workers,'reload launched worker');
 assert(before.key_reads===after.key_reads,'reload read key');
+const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('godseye.goal-live.v1')));
+const expected=await post('/__fixture/checkpoint-hashes',{experiment_id:saved.run.experiment_id});
+await post('/__fixture/export-mode',{ok:false,experiment_id:saved.run.experiment_id});
 await page.click('#goal-download');
 await waitText('goal-download-status','Download unavailable:');
-await post('/__fixture/export-mode',{ok:true});
+await post('/__fixture/export-mode',{ok:true,experiment_id:saved.run.experiment_id});
 const downloadPromise=page.waitForEvent('download',{timeout:20000});
 await page.click('#goal-download');
 const download=await downloadPromise;
-const path='/tmp/godseye-activity-download-fixture.json';await download.saveAs(path);
+const path='/tmp/godseye-activity-download-'+saved.run.experiment_id+'.json';await download.saveAs(path);
 const fs=await import('node:fs/promises');
-assert(JSON.parse(await fs.readFile(path,'utf8')).test_transport_only===true,'attachment transport changed');
+const artifact=JSON.parse(await fs.readFile(path,'utf8'));
+assert(artifact.format==='godseye-checkpoint-v1','not the production export format');
+assert(artifact.experiment_id===saved.run.experiment_id,'download scope differs');
+const {execFile}=await import('node:child_process');
+const validation=await new Promise((resolve,reject)=>execFile(expected.python_executable,['-I','-c',`
+import json,sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+from godseye.checkpoint_artifact import reload_artifact
+from godseye.core import digest
+pairs=reload_artifact(Path(sys.argv[2]).read_bytes(),expected_sha256=sys.argv[3])
+print(json.dumps([[digest(original),digest(selected)] for original,selected in pairs]))
+`,expected.source_root,path,artifact.content_sha256],{timeout:20000},(error,stdout,stderr)=>error?reject(Error(stderr||error.message)):resolve(JSON.parse(stdout))));
+assert(JSON.stringify(validation)===JSON.stringify(expected.hashes),'independent reload differs from private original/selected hashes');
+assert(JSON.stringify(validation)===JSON.stringify(artifact.checkpoints.map(c=>[c.original_sha256,c.selected_sha256])),'declared checkpoint hashes differ');
 await fs.unlink(path);
 await waitText('goal-download-status','Checkpoint download requested');
-const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('godseye.goal-live.v1')));
+const downloadedState=await(await fetch(base+'/__fixture/state')).json();
+assert(downloadedState.workers===after.workers && downloadedState.key_reads===after.key_reads,'download launched work or read credentials');
 await post('/__fixture/activity-gap',{experiment_id:saved.run.experiment_id});
 await page.click('#goal-reconnect');await waitText('goal-activity-notice','Activity unavailable');
 assert((await text('goal-phase')).includes('Activity unavailable'),'gap advertised a phase');
-console.log({result:'passed',reloadWorkers:after.workers,observedHistory:history.length,download:'inert transport fixture only'});
+console.log({result:'passed',reloadWorkers:after.workers,observedHistory:history.length,download:'real export independently reloaded',checkpoints:validation.length});
 console.log(await page.snapshot());
 await task.finish({keep:[]});

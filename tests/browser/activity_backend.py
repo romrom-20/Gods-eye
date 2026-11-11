@@ -1,20 +1,18 @@
-"""Controlled loopback browser fixture: real activity, synthetic download transport only.
+"""Loopback fixture for actual activity/export, with controlled artifact corruption.
 
-No export correctness is claimed by the inert test attachment. No operator settings,
-provider requests, image builds, or production server changes are used.
+No duplicate production routes, saved operator settings, provider calls or images.
 """
+import json
 from pathlib import Path
 import sqlite3
 import sys
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import goal_backend  # noqa: E402
 from godseye.activity import Journal  # noqa: E402
-from godseye.activity_api import activity_router  # noqa: E402
-from godseye.experiment_spec import ContractError  # noqa: E402
+from godseye.core import digest, load_weights  # noqa: E402
 
 original_create_app = goal_backend.create_app
 original_run = goal_backend.uvicorn.run
@@ -23,13 +21,38 @@ original_run = goal_backend.uvicorn.run
 def create_app(*a, **kw):
     app = original_create_app(*a, **kw)
     service = kw['orchestration']
-    app.include_router(activity_router(service))
-    fixture = dict(export_ok=False, export_calls=0)
+    assert '/api/v1/experiments/activity' in app.openapi()['paths']
+    assert sum(getattr(route, 'path', None) == '/api/v1/experiments/export'
+               for route in app.routes) == 1, 'Production export must be attached exactly once'
+    backups = {}
 
     @app.post('/__fixture/export-mode')
     async def mode(request: Request):
-        fixture['export_ok'] = (await request.json())['ok']
-        return fixture
+        body = await request.json()
+        row = service.load(body['experiment_id'], 'run')
+        assert row['status'] == 'completed'
+        manifest_id = row['evidence']['candidate_manifest_id']
+        path = Path(row['artifacts'][manifest_id])
+        # Corrupt only the temporary completed fixture manifest. The real export
+        # handler must reject it; no API route or successful payload is replaced.
+        if body['ok']:
+            path.write_bytes(backups.pop(row['id']))
+        else:
+            assert row['id'] not in backups
+            backups[row['id']] = path.read_bytes()
+            path.write_bytes(b'{}')
+        return dict(ok=True)
+
+    @app.post('/__fixture/checkpoint-hashes')
+    async def hashes(request: Request):
+        row = service.load((await request.json())['experiment_id'], 'run')
+        assert row['status'] == 'completed'
+        private = Path(service.registration(row['spec']['baseline']['id'])['directory'])
+        state = json.loads((private / 'agent/private-state.json').read_text())
+        return dict(python_executable=sys.executable, source_root=str(Path(__file__).resolve().parents[2]),
+                    hashes=[[digest(load_weights(private / 'agent' / (case['root_id'] + '.npz'))),
+                             digest(load_weights(private / 'agent' / (case['final']['candidate_id'] + '.npz')))]
+                            for case in state['cases']])
 
     @app.post('/__fixture/activity-gap')
     async def gap(request: Request):
@@ -38,20 +61,6 @@ def create_app(*a, **kw):
         with sqlite3.connect(Journal(private).path) as db:
             db.execute('DELETE FROM events WHERE sequence=2')
         return dict(ok=True)
-
-    @app.post('/api/v1/experiments/export')
-    async def export_transport(request: Request):
-        fixture['export_calls'] += 1
-        body = await request.json()
-        result = service.results(dict(schema_version=1, experiment_id=body['experiment_id']))
-        assert result['status'] == 'completed'
-        assert body == dict(schema_version=1, experiment_id=result['experiment_id'],
-                            artifact_id=result['evidence']['candidate_manifest_id'])
-        if not fixture['export_ok']:
-            return JSONResponse(ContractError('unavailable').response(), status_code=503)
-        # Inert download fixture: explicitly not a model or verified exporter result.
-        return JSONResponse(dict(test_transport_only=True), headers={
-            'Content-Disposition': 'attachment; filename="fixture.json"'})
     return app
 
 
