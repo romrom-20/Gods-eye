@@ -111,7 +111,11 @@ after user approval.
 
 ## Python API
 
-Install the package with `pip install -e '.[server]'`, then run `godseye serve`.
+Install the package with `pip install -e '.[server]'`. In a **separate terminal**,
+run `godseye serve` and leave it running while you use the client below.
+`Client()` only stores connection settings; the first method call contacts the
+server. Its default URL is `http://127.0.0.1:8787`; use `Client(url=...)` if the
+server prints another address or port.
 
 ```python
 from godseye.client import Client
@@ -133,6 +137,15 @@ or use `wait`. A wait timeout does not cancel the job. Jobs survive page reload;
 restart marks unfinished jobs interrupted. See `/api.html` for the developer
 guide and `/api/v1/openapi.json` for the typed schema. The former synchronous
 `POST /api/compare` route is replaced by `POST /api/v1/jobs`.
+
+Connection failures raise `godseye.client.TransportError` with setup guidance and
+safe `reason`/`errno` classification. The client does not automatically retry.
+A write that loses its response has an unknown outcome: inspect jobs/state before
+submitting again and retain the original idempotency key. A transport failure
+does not prove that work stopped or was never admitted.
+
+For the same no-key workflow using raw HTTP, see the short
+[preview → checkpoint → job → result example](docs/http-example.md).
 
 One CPU worker executes at a time, with four admitted jobs and a 250,000 maximum
 forward-call budget per job. The CLI permits larger bounded local experiments.

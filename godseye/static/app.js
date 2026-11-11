@@ -1443,8 +1443,10 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   }
   async function perform(fn) {
     if (busy) return; busy = true; clearTimeout(timer); lock();
-    try { await fn(); } catch (e) {
+    try { await fn(); $('goal-setup-help').hidden = true; } catch (e) {
+      if (e.message !== 'superseded' && (!e.safe || ['unavailable','worker_unavailable'].includes(e.message))) $('goal-setup-help').hidden = false;
       if (e.message !== 'superseded') say(e.safe ? 'Service: ' + e.message + '. Draft and identity preserved. Use Refresh / reconcile to retry explicitly.' : 'Service state unavailable. Admission may have committed. Draft and identity preserved. Use Refresh / reconcile; do not start another run.');
+      if (!pending && e.safe && e.message === 'unavailable') say('Service: unavailable. Your draft is preserved. Read the setup guide or open the no-key CPU example below.');
       if (pending?.rejected) say('Start rejected before admission: the reviewed plan expired or changed. Choose Review again to obtain a fresh plan. No new experiment has been started.');
       if (pending) {
         $('goal-progress').hidden = false;
@@ -1455,6 +1457,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   // Replace sample-only copy without sharing mock state or confirmation.
   $('goal-notice').textContent = 'Live experiment controls · requires operator setup. Review first, explicitly start once. Provider credentials stay on the server.';
   const mockLink = document.createElement('a'); mockLink.href = '?goalMode=mock#goal'; mockLink.textContent = 'Open separate mock walkthrough'; $('goal-notice').append(' ',mockLink);
+  const setupLink = document.createElement('a'); setupLink.href = 'https://github.com/romrom-20/Gods-eye/blob/main/docs/local-operator-setup.md'; setupLink.textContent = 'Experiment service setup guide'; $('goal-notice').append(' · ',setupLink);
   $('goal-advanced').querySelector('summary').textContent = 'Advanced options · routing and seven usage limits';
   $('goal-advanced').querySelector('p').textContent = 'Finite usage limits apply to the confirmed experiment. Charges are unknown; these limits are not a hard dollar cap.';
   document.querySelector('.goal-context dd:last-child').textContent = 'Select the programmer provider and model explicitly beside your request. Its own weights are not the editable target. Availability is checked by the service at admission.';
@@ -1525,7 +1528,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   };
   $('goal-keep').onclick = () => say('Original preserved. No checkpoint was applied by this page.');
   $('goal-again').onclick = () => { if (run && terminal(run.status)) { pending = null; run = null; $('goal-progress').hidden = true; invalidate(); $('goal-draft').focus(); } };
-  $('goal-guided').onclick = () => { showView('overview'); $('quick-experiment').focus(); };
+  $('goal-guided').onclick = $('goal-setup-example').onclick = () => { showView('overview'); $('quick-experiment').focus(); };
   try {
     const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
     if (saved?.draft) ids.forEach(id => { if (typeof saved.draft[id] === 'string') $(id).value = saved.draft[id]; });

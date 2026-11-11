@@ -184,6 +184,12 @@
             </aside>
           </div>
           <p id="goal-status" class="goal-status" role="status" aria-live="polite" tabindex="-1">Describe a goal, then review it before starting anything.</p>
+          <aside id="goal-setup-help" class="goal-status" hidden aria-label="Experiment setup help">
+            <p>The AI experiment service needs separate operator setup. The local CPU example works without a provider key.</p>
+            <p><a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/install.md">Read local installation and setup instructions</a> · <a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/local-operator-setup.md">Read AI experiment service setup</a></p>
+            <button type="button" class="secondary" id="goal-setup-example">Open the no-key CPU example</button>
+            <p>Opening the example does not cancel or restart an existing experiment. Return to Describe a goal to refresh or reconcile its saved identity.</p>
+          </aside>
           <section id="goal-review" class="panel goal-card" hidden aria-labelledby="goal-review-title">
             <span class="overline">MOCK PLAN · NOT AN EXECUTION</span><h2 id="goal-review-title" tabindex="-1">Review the interpretation</h2>
             <p id="goal-request"></p><details class="goal-spec"><summary>Exact specification &amp; identity</summary><pre id="goal-canonical" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details><dl>
