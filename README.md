@@ -9,7 +9,7 @@ Python API, and isolated AI repair harness. Start with a tiny Breakout-playing
 network on your CPU. Preserve the original, make an explicit edit, and compare
 measured behavior.
 
-[Quick start](#try-a-real-experiment-no-api-key) · [Agent setup](docs/experiment-orchestration.md) ·
+[Quick start](#try-a-real-experiment-no-api-key) · [Install a package](docs/install.md) · [Agent setup](docs/experiment-orchestration.md) ·
 [Roadmap](docs/roadmap.md) · [Report a problem](https://github.com/romrom-20/Gods-eye/issues)
 
 ## Try a real experiment — no API key
