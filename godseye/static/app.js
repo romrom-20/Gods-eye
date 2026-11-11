@@ -943,12 +943,13 @@ async function initialize() {
   } catch (e) {
     $("environment-label").textContent = "Local lab unavailable";
     $("connection-label").textContent = "Disconnected";
-    $("execution-label").textContent = "Local engine unavailable · mock goal flow available";
-    message("overview-status", "Cannot reach the local lab. Check the server and connection settings, then reload. The mock goal workflow remains available.", true);
+    $("execution-label").textContent = "Local engine unavailable";
+    message("overview-status", "Cannot reach the local lab. Check the server and connection settings, then reload. The goal service may also be unavailable; your draft is preserved.", true);
   }
 }
 // Goal workflow: mock-only boundary. No api(), fetch(), provider profiles, or keys.
 (() => {
+  if (typeof location !== "undefined" && new URLSearchParams(location.search).get("goalMode") !== "mock") return;
   const sampleGoal = "Improve Breakout score without control regressions.";
   const storageKey = "godseye.goal-draft.v1";
   const limitFields = ["requests", "tokens", "output", "seconds", "rounds", "calls", "reply"];
@@ -1136,4 +1137,270 @@ async function initialize() {
   }
 })();
 // End goal workflow.
+// Generated from godseye.experiment_spec; refresh when contract v1 changes.
+const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"schema_version":{"enum":[1]},"target":{"enum":["breakout"]},"goal":{"enum":["improve_score"]},"baseline":{"type":"object","properties":{"id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"sha256":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"}},"required":["id","sha256"],"additionalProperties":false},"evaluation":{"type":"object","properties":{"suite_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"revision":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"episodes":{"type":"integer","minimum":2,"maximum":8},"max_steps":{"type":"integer","minimum":1,"maximum":1000},"probes_per_case":{"type":"integer","minimum":2,"maximum":100},"forwards_per_case":{"type":"integer","minimum":1,"maximum":1000000},"development":{"enum":["selection_only"]},"held_out":{"enum":["once_after_all_freezes"]}},"required":["suite_id","revision","episodes","max_steps","probes_per_case","forwards_per_case","development","held_out"],"additionalProperties":false},"success":{"enum":["positive_paired_mean_2se_and_no_control_regression"]},"editing":{"enum":["numeric_tensor_assignments_v1"]},"provider":{"type":"object","properties":{"name":{"enum":["openai","openrouter","huggingface"]},"model":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},"routing":{"enum":["price","latency","throughput"]}},"required":["name","model","routing"],"additionalProperties":false},"limits":{"type":"object","properties":{"max_requests":{"type":"integer","minimum":1},"max_input_tokens":{"type":"integer","minimum":1},"max_total_output_tokens":{"type":"integer","minimum":1},"max_seconds":{"type":"integer","minimum":1},"max_rounds":{"type":"integer","minimum":1},"max_calls":{"type":"integer","minimum":1},"max_output_tokens":{"type":"integer","minimum":1}},"required":["max_requests","max_input_tokens","max_total_output_tokens","max_seconds","max_rounds","max_calls","max_output_tokens"],"additionalProperties":false}},"required":["schema_version","target","goal","baseline","evaluation","success","editing","provider","limits"],"additionalProperties":false},"plan_request":{"type":"object","properties":{"schema_version":{"enum":[1]},"text":{"type":"string","minLength":1,"maxLength":2000},"provider":{"type":"object","properties":{"name":{"enum":["openai","openrouter","huggingface"]},"model":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},"routing":{"enum":["price","latency","throughput"]}},"required":["name","model","routing"],"additionalProperties":false},"limits":{"type":"object","properties":{"max_requests":{"type":"integer","minimum":1},"max_input_tokens":{"type":"integer","minimum":1},"max_total_output_tokens":{"type":"integer","minimum":1},"max_seconds":{"type":"integer","minimum":1},"max_rounds":{"type":"integer","minimum":1},"max_calls":{"type":"integer","minimum":1},"max_output_tokens":{"type":"integer","minimum":1}},"required":["max_requests","max_input_tokens","max_total_output_tokens","max_seconds","max_rounds","max_calls","max_output_tokens"],"additionalProperties":false}},"required":["schema_version","text","provider","limits"],"additionalProperties":false},"plan_response":{"type":"object","properties":{"schema_version":{"enum":[1]},"outcome":{"enum":["ready","clarification_required","rejected"]},"draft_id":{"anyOf":[{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},{"type":"null"}]},"spec":{"anyOf":[{"type":"object","properties":{"schema_version":{"enum":[1]},"target":{"enum":["breakout"]},"goal":{"enum":["improve_score"]},"baseline":{"type":"object","properties":{"id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"sha256":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"}},"required":["id","sha256"],"additionalProperties":false},"evaluation":{"type":"object","properties":{"suite_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"revision":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"episodes":{"type":"integer","minimum":2,"maximum":8},"max_steps":{"type":"integer","minimum":1,"maximum":1000},"probes_per_case":{"type":"integer","minimum":2,"maximum":100},"forwards_per_case":{"type":"integer","minimum":1,"maximum":1000000},"development":{"enum":["selection_only"]},"held_out":{"enum":["once_after_all_freezes"]}},"required":["suite_id","revision","episodes","max_steps","probes_per_case","forwards_per_case","development","held_out"],"additionalProperties":false},"success":{"enum":["positive_paired_mean_2se_and_no_control_regression"]},"editing":{"enum":["numeric_tensor_assignments_v1"]},"provider":{"type":"object","properties":{"name":{"enum":["openai","openrouter","huggingface"]},"model":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},"routing":{"enum":["price","latency","throughput"]}},"required":["name","model","routing"],"additionalProperties":false},"limits":{"type":"object","properties":{"max_requests":{"type":"integer","minimum":1},"max_input_tokens":{"type":"integer","minimum":1},"max_total_output_tokens":{"type":"integer","minimum":1},"max_seconds":{"type":"integer","minimum":1},"max_rounds":{"type":"integer","minimum":1},"max_calls":{"type":"integer","minimum":1},"max_output_tokens":{"type":"integer","minimum":1}},"required":["max_requests","max_input_tokens","max_total_output_tokens","max_seconds","max_rounds","max_calls","max_output_tokens"],"additionalProperties":false}},"required":["schema_version","target","goal","baseline","evaluation","success","editing","provider","limits"],"additionalProperties":false},{"type":"null"}]},"spec_hash":{"anyOf":[{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},{"type":"null"}]},"issues":{"type":"array","items":{"type":"object","properties":{"code":{"enum":["invalid_json","invalid_schema","unsupported_version","policy_violation","clarification_required","unsupported_goal","spec_conflict","state_conflict","idempotency_conflict","not_found","result_not_ready","not_authorized","unavailable","rate_limited","queue_full","worker_unavailable","internal_error"]},"field":{"type":"string","minLength":1,"maxLength":200},"message":{"type":"string","minLength":1,"maxLength":500}},"required":["code","field","message"],"additionalProperties":false},"minItems":0,"maxItems":10}},"required":["schema_version","outcome","draft_id","spec","spec_hash","issues"],"additionalProperties":false},"start_request":{"type":"object","properties":{"schema_version":{"enum":[1]},"draft_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"spec_hash":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},"idempotency_key":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"confirmed":{"const":true}},"required":["schema_version","draft_id","spec_hash","idempotency_key","confirmed"],"additionalProperties":false},"start_response":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"spec_hash":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},"status":{"enum":["queued","running","cancelling","completed","failed","cancelled","interrupted"]}},"required":["schema_version","experiment_id","spec_hash","status"],"additionalProperties":false},"status_request":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"}},"required":["schema_version","experiment_id"],"additionalProperties":false},"cancel_request":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"}},"required":["schema_version","experiment_id"],"additionalProperties":false},"results_request":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"}},"required":["schema_version","experiment_id"],"additionalProperties":false},"status_response":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"spec_hash":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},"status":{"enum":["draft","ready","queued","running","cancelling","completed","failed","cancelled","interrupted"]},"phase":{"type":"object","properties":{"name":{"enum":["unknown","checking_original","trying_edit","testing"]},"event_sequence":{"anyOf":[{"type":"integer","minimum":1},{"type":"null"}]}},"required":["name","event_sequence"],"additionalProperties":false},"verdict":{"enum":["not_evaluated","improved","no_improvement","inconclusive"]},"reason":{"anyOf":[{"enum":["budget_exhausted","provider_error","evaluation_error","provider_rate_limited","provider_unavailable","agent_incomplete","runtime_failure","user_cancelled","process_lost"]},{"type":"null"}]},"usage":{"type":"object","properties":{"requests":{"type":"integer","minimum":0},"input_tokens":{"type":"integer","minimum":0},"output_tokens":{"type":"integer","minimum":0},"tool_calls":{"type":"integer","minimum":0},"elapsed_seconds":{"type":"number","minimum":0},"usage_complete":{"type":"boolean"},"request_in_flight":{"type":"boolean"}},"required":["requests","input_tokens","output_tokens","tool_calls","elapsed_seconds","usage_complete","request_in_flight"],"additionalProperties":false}},"required":["schema_version","experiment_id","spec_hash","status","phase","verdict","reason","usage"],"additionalProperties":false},"cancel_response":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"spec_hash":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},"status":{"enum":["draft","ready","queued","running","cancelling","completed","failed","cancelled","interrupted"]},"phase":{"type":"object","properties":{"name":{"enum":["unknown","checking_original","trying_edit","testing"]},"event_sequence":{"anyOf":[{"type":"integer","minimum":1},{"type":"null"}]}},"required":["name","event_sequence"],"additionalProperties":false},"verdict":{"enum":["not_evaluated","improved","no_improvement","inconclusive"]},"reason":{"anyOf":[{"enum":["budget_exhausted","provider_error","evaluation_error","provider_rate_limited","provider_unavailable","agent_incomplete","runtime_failure","user_cancelled","process_lost"]},{"type":"null"}]},"usage":{"type":"object","properties":{"requests":{"type":"integer","minimum":0},"input_tokens":{"type":"integer","minimum":0},"output_tokens":{"type":"integer","minimum":0},"tool_calls":{"type":"integer","minimum":0},"elapsed_seconds":{"type":"number","minimum":0},"usage_complete":{"type":"boolean"},"request_in_flight":{"type":"boolean"}},"required":["requests","input_tokens","output_tokens","tool_calls","elapsed_seconds","usage_complete","request_in_flight"],"additionalProperties":false}},"required":["schema_version","experiment_id","spec_hash","status","phase","verdict","reason","usage"],"additionalProperties":false},"results_response":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"spec_hash":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},"status":{"enum":["draft","ready","queued","running","cancelling","completed","failed","cancelled","interrupted"]},"phase":{"type":"object","properties":{"name":{"enum":["unknown","checking_original","trying_edit","testing"]},"event_sequence":{"anyOf":[{"type":"integer","minimum":1},{"type":"null"}]}},"required":["name","event_sequence"],"additionalProperties":false},"verdict":{"enum":["not_evaluated","improved","no_improvement","inconclusive"]},"reason":{"anyOf":[{"enum":["budget_exhausted","provider_error","evaluation_error","provider_rate_limited","provider_unavailable","agent_incomplete","runtime_failure","user_cancelled","process_lost"]},{"type":"null"}]},"usage":{"type":"object","properties":{"requests":{"type":"integer","minimum":0},"input_tokens":{"type":"integer","minimum":0},"output_tokens":{"type":"integer","minimum":0},"tool_calls":{"type":"integer","minimum":0},"elapsed_seconds":{"type":"number","minimum":0},"usage_complete":{"type":"boolean"},"request_in_flight":{"type":"boolean"}},"required":["requests","input_tokens","output_tokens","tool_calls","elapsed_seconds","usage_complete","request_in_flight"],"additionalProperties":false},"evidence":{"anyOf":[{"type":"object","properties":{"baseline_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"candidate_manifest_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"delta_artifact_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"report_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"paired_samples":{"type":"integer","minimum":2},"mean_delta":{"type":"number"},"paired_se":{"type":"number","minimum":0},"min_control_delta":{"type":"number"},"limitations":{"type":"array","items":{"type":"string","minLength":1,"maxLength":500},"minItems":1,"maxItems":10}},"required":["baseline_id","candidate_manifest_id","delta_artifact_id","report_id","paired_samples","mean_delta","paired_se","min_control_delta","limitations"],"additionalProperties":false},{"type":"null"}]}},"required":["schema_version","experiment_id","spec_hash","status","phase","verdict","reason","usage","evidence"],"additionalProperties":false},"error_response":{"type":"object","properties":{"schema_version":{"enum":[1]},"error":{"type":"object","properties":{"code":{"enum":["invalid_json","invalid_schema","unsupported_version","policy_violation","spec_conflict","state_conflict","idempotency_conflict","not_found","result_not_ready","not_authorized","unavailable","rate_limited","queue_full","worker_unavailable","internal_error"]},"field":{"type":"string","minLength":1,"maxLength":200},"message":{"type":"string","minLength":1,"maxLength":500}},"required":["code","field","message"],"additionalProperties":false},"retry":{"type":"object","properties":{"action":{"enum":["none","same_request","poll_status"]},"after_seconds":{"anyOf":[{"type":"integer","minimum":1,"maximum":5},{"type":"null"}]},"max_attempts":{"type":"integer","minimum":0,"maximum":3}},"required":["action","after_seconds","max_attempts"],"additionalProperties":false}},"required":["schema_version","error","retry"],"additionalProperties":false},"phase_event":{"type":"object","properties":{"schema_version":{"enum":[1]},"experiment_id":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"},"spec_hash":{"type":"string","minLength":64,"maxLength":64,"pattern":"^[0-9a-f]{64}$"},"sequence":{"type":"integer","minimum":1},"kind":{"enum":["root_probe_reserved","edit_started","candidate_probe_reserved","held_out_reserved","activity_finished","activity_failed","activity_unknown"]}},"required":["schema_version","experiment_id","spec_hash","sequence","kind"],"additionalProperties":false}},"messages":{"invalid_json":"Expected bounded, unambiguous UTF-8 JSON.","invalid_schema":"Message does not match experiment contract v1.","unsupported_version":"Unsupported experiment contract version.","policy_violation":"Specification exceeds or differs from trusted policy.","clarification_required":"Use an explicit supported Breakout score-improvement request.","unsupported_goal":"Only the existing Breakout score-improvement goal is supported.","spec_conflict":"The reviewed specification has changed.","state_conflict":"Operation is unavailable in the current state.","idempotency_conflict":"Idempotency key is already bound to another submission.","not_found":"Experiment is unavailable in this scope.","result_not_ready":"The experiment has no terminal result yet.","not_authorized":"Operation is not authorized.","unavailable":"Experiment service is unavailable.","rate_limited":"Too many requests. Wait before retrying the same action.","queue_full":"Experiment queue is full. No new experiment was admitted.","worker_unavailable":"No compatible worker is available. No new experiment was admitted.","internal_error":"Experiment service failed. Admission state may be unknown."},"paths":["$","$.baseline","$.baseline.id","$.baseline.sha256","$.confirmed","$.draft_id","$.editing","$.error","$.error.code","$.error.field","$.error.message","$.evaluation","$.evaluation.development","$.evaluation.episodes","$.evaluation.forwards_per_case","$.evaluation.held_out","$.evaluation.max_steps","$.evaluation.probes_per_case","$.evaluation.revision","$.evaluation.suite_id","$.evidence","$.evidence.baseline_id","$.evidence.candidate_manifest_id","$.evidence.delta_artifact_id","$.evidence.limitations","$.evidence.limitations[]","$.evidence.mean_delta","$.evidence.min_control_delta","$.evidence.paired_samples","$.evidence.paired_se","$.evidence.report_id","$.experiment_id","$.goal","$.idempotency_key","$.issues","$.issues[]","$.issues[].code","$.issues[].field","$.issues[].message","$.kind","$.limits","$.limits.max_calls","$.limits.max_input_tokens","$.limits.max_output_tokens","$.limits.max_requests","$.limits.max_rounds","$.limits.max_seconds","$.limits.max_total_output_tokens","$.outcome","$.phase","$.phase.event_sequence","$.phase.name","$.provider","$.provider.model","$.provider.name","$.provider.routing","$.reason","$.retry","$.retry.action","$.retry.after_seconds","$.retry.max_attempts","$.schema_version","$.sequence","$.spec","$.spec.baseline","$.spec.baseline.id","$.spec.baseline.sha256","$.spec.editing","$.spec.evaluation","$.spec.evaluation.development","$.spec.evaluation.episodes","$.spec.evaluation.forwards_per_case","$.spec.evaluation.held_out","$.spec.evaluation.max_steps","$.spec.evaluation.probes_per_case","$.spec.evaluation.revision","$.spec.evaluation.suite_id","$.spec.goal","$.spec.limits","$.spec.limits.max_calls","$.spec.limits.max_input_tokens","$.spec.limits.max_output_tokens","$.spec.limits.max_requests","$.spec.limits.max_rounds","$.spec.limits.max_seconds","$.spec.limits.max_total_output_tokens","$.spec.provider","$.spec.provider.model","$.spec.provider.name","$.spec.provider.routing","$.spec.schema_version","$.spec.success","$.spec.target","$.spec_hash","$.status","$.success","$.target","$.text","$.usage","$.usage.elapsed_seconds","$.usage.input_tokens","$.usage.output_tokens","$.usage.request_in_flight","$.usage.requests","$.usage.tool_calls","$.usage.usage_complete","$.verdict"],"retries":{"invalid_json":{"action":"none","after_seconds":null,"max_attempts":0},"invalid_schema":{"action":"none","after_seconds":null,"max_attempts":0},"unsupported_version":{"action":"none","after_seconds":null,"max_attempts":0},"policy_violation":{"action":"none","after_seconds":null,"max_attempts":0},"clarification_required":{"action":"none","after_seconds":null,"max_attempts":0},"unsupported_goal":{"action":"none","after_seconds":null,"max_attempts":0},"spec_conflict":{"action":"none","after_seconds":null,"max_attempts":0},"state_conflict":{"action":"none","after_seconds":null,"max_attempts":0},"idempotency_conflict":{"action":"none","after_seconds":null,"max_attempts":0},"not_found":{"action":"none","after_seconds":null,"max_attempts":0},"result_not_ready":{"action":"poll_status","after_seconds":2,"max_attempts":3},"not_authorized":{"action":"none","after_seconds":null,"max_attempts":0},"unavailable":{"action":"none","after_seconds":null,"max_attempts":0},"rate_limited":{"action":"same_request","after_seconds":5,"max_attempts":3},"queue_full":{"action":"same_request","after_seconds":5,"max_attempts":3},"worker_unavailable":{"action":"same_request","after_seconds":5,"max_attempts":3},"internal_error":{"action":"none","after_seconds":null,"max_attempts":0}}};
+
+// Live goal transport. Mock controller and storage are deliberately separate.
+(() => {
+  if (new URLSearchParams(location.search).get('goalMode') === 'mock') return;
+  const C = experimentContract, key = 'godseye.goal-live.v1';
+  const fields = {requests:'max_requests', tokens:'max_input_tokens', output:'max_total_output_tokens', seconds:'max_seconds', rounds:'max_rounds', calls:'max_calls', reply:'max_output_tokens'};
+  const ids = ['draft','provider','model','routing', ...Object.keys(fields)].map(x => 'goal-' + x);
+  const terminal = s => ['completed','failed','cancelled','interrupted'].includes(s);
+  let plan = null, pending = null, run = null, busy = false, timer = null, epoch = 0, durable = true;
+  const say = text => { $('goal-status').textContent = text; };
+  const canonical = v => JSON.stringify(v && typeof v === 'object' ? (Array.isArray(v) ? v.map(x => JSON.parse(canonical(x))) : Object.fromEntries(Object.keys(v).sort().map(k => [k, JSON.parse(canonical(v[k]))]))) : v).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4,'0'));
+  function shape(v, s) {
+    if (s.anyOf) return s.anyOf.some(x => shape(v,x));
+    if (s.enum && !s.enum.includes(v) || 'const' in s && v !== s.const) return false;
+    if (s.type === 'null') return v === null;
+    if (s.type === 'object') return v !== null && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === s.required.length && s.required.every(k => Object.hasOwn(v,k) && shape(v[k],s.properties[k]));
+    if (s.type === 'array') return Array.isArray(v) && v.length >= s.minItems && v.length <= s.maxItems && v.every(x => shape(x,s.items));
+    if (s.type === 'string') return typeof v === 'string' && v.length >= s.minLength && v.length <= s.maxLength && (!s.pattern || new RegExp(s.pattern).test(v));
+    if (['integer','number'].includes(s.type)) return typeof v === 'number' && Number.isFinite(v) && (s.type !== 'integer' || Number.isSafeInteger(v)) && (s.minimum === undefined || v >= s.minimum) && (s.maximum === undefined || v <= s.maximum);
+    return s.type !== 'boolean' || typeof v === 'boolean';
+  }
+  function valid(kind, v) {
+    if (!shape(v,C.schemas[kind])) throw Error('invalid');
+    if (kind === 'error_response') {
+      if (C.messages[v.error.code] !== v.error.message || !C.paths.includes(v.error.field) || canonical(v.retry) !== canonical(C.retries[v.error.code])) throw Error('invalid');
+    }
+    if (kind === 'plan_response') {
+      if (v.outcome === 'ready') {
+        if (!v.spec || !v.draft_id || !v.spec_hash || v.issues.length) throw Error('invalid');
+      } else {
+        const expected = v.outcome === 'rejected' ? 'unsupported_goal' : 'clarification_required';
+        if (v.spec !== null || v.draft_id !== null || v.spec_hash !== null || !v.issues.length || v.issues.some(i => i.code !== expected || i.message !== C.messages[i.code] || !C.paths.includes(i.field))) throw Error('invalid');
+      }
+    }
+    if (v.phase) {
+      if (v.phase.name !== 'unknown' && (!['running','cancelling'].includes(v.status) || v.phase.event_sequence === null)) throw Error('invalid');
+      if ((v.status === 'completed') !== (v.verdict !== 'not_evaluated')) throw Error('invalid');
+      const reasons = {failed:['budget_exhausted','provider_error','provider_rate_limited','provider_unavailable','evaluation_error','agent_incomplete','runtime_failure'],cancelled:['user_cancelled'],interrupted:['process_lost']};
+      if (!(reasons[v.status] || [null]).includes(v.reason)) throw Error('invalid');
+    }
+    if (kind === 'results_response') {
+      if (!terminal(v.status) || (v.status === 'completed') !== (v.evidence !== null)) throw Error('invalid');
+      if (v.evidence) {
+        const e = v.evidence, verdict = e.mean_delta <= 0 || e.min_control_delta < 0 ? 'no_improvement' : e.mean_delta - 2*e.paired_se > 0 ? 'improved' : 'inconclusive';
+        if (verdict !== v.verdict || e.baseline_id !== pending.baseline_id) throw Error('invalid');
+      }
+    }
+    return v;
+  }
+  function save() {
+    try { sessionStorage.setItem(key, JSON.stringify({draft:Object.fromEntries(ids.map(id => [id,$(id).value])),pending,run})); durable = true; return true; }
+    catch { durable = false; $('goal-storage').textContent = 'Tab recovery unavailable. Copy your draft before reload. Start is disabled until storage works.'; return false; }
+  }
+  function lock() {
+    const active = !!pending;
+    ids.forEach(id => $(id).disabled = active || busy);
+    $('goal-plan').disabled = active || busy; $('goal-example').disabled = active || busy;
+    $('goal-edit').disabled = active || busy;
+    $('goal-consent').disabled = active || busy;
+    $('goal-start').disabled = active || busy || !plan || !$('goal-consent').checked || !durable;
+    $('goal-cancel').disabled = busy || !run || terminal(run.status) || run.status === 'cancelling';
+    $('goal-review-again').hidden = !pending?.rejected || !!pending.uncertain || !!run;
+    $('goal-review-again').disabled = busy;
+    $('goal-reconnect').disabled = busy; $('goal-again').disabled = busy || !!pending && (!run || !terminal(run.status));
+  }
+  function invalidate() {
+    if (pending) return;
+    epoch++; clearTimeout(timer); plan = null; $('goal-consent').checked = false;
+    $('goal-review').hidden = true; $('goal-result').hidden = true; save(); lock();
+  }
+  function parseResponse(raw) {
+    if (new TextEncoder().encode(raw).length > 65536) throw Error('invalid');
+    const value = JSON.parse(raw), stack = [];
+    // JSON.parse accepts duplicate keys. Reject those before interpreting a message.
+    for (const token of raw.match(/"(?:\\.|[^"\\])*"|[{}\[\],:]/g) || []) {
+      if (token === '{' || token === '[') {
+        stack.push({object:token === '{', keys:new Set(), key:true});
+        if (stack.length > 16) throw Error('invalid');
+      } else if (token === '}' || token === ']') stack.pop();
+      else if (token === ',' && stack.at(-1)?.object) stack.at(-1).key = true;
+      else if (token[0] === '"' && stack.at(-1)?.object && stack.at(-1).key) {
+        const frame = stack.at(-1), key = JSON.parse(token);
+        if (frame.keys.has(key)) throw Error('invalid');
+        frame.keys.add(key); frame.key = false;
+      }
+    }
+    return value;
+  }
+  async function request(op, body, action = {retries:0}, generation = epoch) {
+    for (;;) {
+      const abort = new AbortController(), timeout = setTimeout(() => abort.abort(), 15000);
+      let response, v;
+      try {
+        const headers = {'Content-Type':'application/json'};
+        if (state.token) headers.Authorization = 'Bearer ' + state.token;
+        response = await fetch('/api/v1/experiments/' + op, {method:'POST',headers,body:JSON.stringify(body),cache:'no-store',signal:abort.signal});
+        v = parseResponse(await response.text());
+      } finally { clearTimeout(timeout); }
+      if (generation !== epoch) throw Error('superseded');
+      if (response.ok) return valid(op + '_response',v);
+      valid('error_response',v);
+      const retry = v.retry;
+      if (retry.action === 'same_request' && action.retries < 3 && !action.noAuto) {
+        const delay = retry.after_seconds * 1000 * 2**action.retries++;
+        save(); say('Service busy. Retrying the same request (' + action.retries + '/3).');
+        await new Promise(resolve => setTimeout(resolve,delay));
+        if (generation !== epoch) throw Error('superseded');
+        continue;
+      }
+      if (v.error.code === 'result_not_ready') { const e = Error('result_not_ready'); e.poll = true; throw e; }
+      const e = Error(v.error.code); e.safe = true;
+      // Only these exact contract responses confirm that this request admitted nothing.
+      const preAdmissionStatus = {spec_conflict:409, rate_limited:429, queue_full:503, worker_unavailable:503};
+      e.confirmedNonAdmission = op === 'start' && Object.hasOwn(preAdmissionStatus, v.error.code) && response.status === preAdmissionStatus[v.error.code];
+      throw e;
+    }
+  }
+  function render(v) {
+    run = {schema_version:1,experiment_id:v.experiment_id,spec_hash:v.spec_hash,status:v.status}; save();
+    $('goal-progress').hidden = false; $('goal-review').hidden = true;
+    const phase = {unknown:'Activity unavailable',checking_original:'Checking the original',trying_edit:'Trying an edit',testing:'Testing the result'};
+    $('goal-phase').textContent = v.status + ' · ' + phase[v.phase.name];
+    const u = v.usage;
+    $('goal-usage').textContent = `${u.requests} requests · ${u.input_tokens} known input tokens · ${u.output_tokens} known output tokens · ${u.tool_calls} tool calls · ${u.elapsed_seconds}s. ${u.usage_complete ? 'Reported usage complete.' : 'Additional usage and charges unknown.'} ${u.request_in_flight ? 'Request in flight; remote execution or billing may continue.' : ''}`;
+    say('Execution: ' + v.status + '. Verdict: ' + v.verdict + (v.reason ? '. Reason: ' + v.reason : '') + '.');
+    if ('evidence' in v) {
+      $('goal-result').hidden = false; $('goal-result-title').textContent = v.status + ' · ' + v.verdict;
+      $('goal-result-text').textContent = v.evidence ? `Paired samples: ${v.evidence.paired_samples}. Mean score change: ${v.evidence.mean_delta}. Sample standard error: ${v.evidence.paired_se}. Minimum control mean change: ${v.evidence.min_control_delta}. Limitations: ${v.evidence.limitations.join(' ')}` : 'No complete measured evidence available. The original is preserved.';
+    }
+    lock();
+  }
+  function bound(v) {
+    if (v.spec_hash !== pending.spec_hash || run && v.experiment_id !== run.experiment_id) throw Error('invalid');
+    return v;
+  }
+  async function observe(action = {retries:0}) {
+    const body = {schema_version:1,experiment_id:run.experiment_id};
+    const v = bound(await request('status',body,action)); render(v);
+    if (terminal(v.status)) {
+      try { render(bound(await request('results',body,action))); }
+      catch (e) {
+        if (!e.poll || action.noAuto || action.retries >= 3) throw e;
+        schedule(action, 2000 * 2**action.retries++);
+      }
+    } else schedule();
+  }
+  function schedule(action, delay = 2000) { clearTimeout(timer); timer = setTimeout(() => perform(() => observe(action)),delay); }
+  async function reconcile(action = pending) {
+    if (!run) {
+      try {
+        pending.inFlight = true; pending.rejected = false;
+        if (!save()) throw Error('recovery_unavailable');
+        const v = bound(await request('start',pending.body,action));
+        pending.inFlight = false; run = v; save();
+      } catch (e) {
+        // A later rejection cannot erase an earlier uncertain admission.
+        pending.inFlight = false;
+        if (!e.confirmedNonAdmission) pending.uncertain = true;
+        pending.rejected = !pending.uncertain && e.confirmedNonAdmission && e.message === 'spec_conflict';
+        save();
+        throw e;
+      }
+    }
+    await observe(action);
+  }
+  function reviewAgain() {
+    if (busy || run || !pending?.rejected || pending.uncertain) return;
+    pending = null;
+    $('goal-progress').hidden = true;
+    invalidate();
+    say('Start was rejected before admission. Review the goal again and confirm the new plan before starting.');
+  }
+  async function perform(fn) {
+    if (busy) return; busy = true; clearTimeout(timer); lock();
+    try { await fn(); } catch (e) {
+      if (e.message !== 'superseded') say(e.safe ? 'Service: ' + e.message + '. Draft and identity preserved. Use Refresh / reconcile to retry explicitly.' : 'Service state unavailable. Admission may have committed. Draft and identity preserved. Use Refresh / reconcile; do not start another run.');
+      if (pending?.rejected) say('Start rejected before admission: the reviewed plan expired or changed. Choose Review again to obtain a fresh plan. No new experiment has been started.');
+      if (pending) {
+        $('goal-progress').hidden = false;
+        $('goal-phase').textContent = (run ? 'Last observed execution: ' + run.status : pending.rejected ? 'Not admitted' : 'Admission unknown') + ' · Activity unavailable';
+      }
+    } finally { busy = false; lock(); }
+  }
+  // Replace sample-only copy without sharing mock state or confirmation.
+  $('goal-notice').textContent = 'Live experiment · review first, explicitly start once. Provider credentials stay on the server.';
+  const mockLink = document.createElement('a'); mockLink.href = '?goalMode=mock#goal'; mockLink.textContent = 'Open separate mock walkthrough'; $('goal-notice').append(' ',mockLink);
+  $('goal-advanced').querySelector('summary').textContent = 'Programmer selection and finite limits';
+  $('goal-advanced').querySelector('p').textContent = 'Finite usage limits apply to the confirmed experiment. Charges are unknown; these limits are not a hard dollar cap.';
+  document.querySelector('.goal-context dd:last-child').textContent = 'Select the programmer provider and model explicitly under options. Its own weights are not the editable target. Availability is checked by the service at admission.';
+  document.querySelector('#goal-review dt').textContent = 'Supported interpretation';
+  document.querySelector('#goal-programmer').previousElementSibling.textContent = 'AI programmer';
+  $('goal-scenario').hidden = true; document.querySelector('label[for="goal-scenario"]').hidden = true;
+  document.querySelector('label[for="goal-provider"]').textContent = 'AI programmer provider';
+  document.querySelector('label[for="goal-model"]').textContent = 'AI programmer model ID (explicit selection required)';
+  $('goal-model').value = ''; $('goal-model').placeholder = 'Enter your chosen tool-capable model ID';
+  $('goal-plan').textContent = 'Review experiment plan'; $('goal-start').textContent = 'Start experiment';
+  document.querySelector('.goal-consent').lastChild.textContent = ' I reviewed this exact specification and authorize this bounded experiment.';
+  document.querySelector('#goal-review .overline').textContent = 'SERVER PLAN · REVIEW BEFORE START';
+  document.querySelector('#goal-review dl + p').textContent = 'Confirm the exact server specification above, including provider, limits, registered baseline and evaluation rules. No hard dollar cap or automatic provider fallback.';
+  document.querySelector('#goal-progress .overline').textContent = 'SERVICE STATUS'; $('goal-progress-title').textContent = 'Follow the experiment';
+  $('goal-phase').nextElementSibling.textContent = 'Activity is shown only when observed by the service. Closing this tab does not cancel work. Cancellation requires worker acknowledgment; remote charges may continue.';
+  const usage = document.createElement('p'); usage.id = 'goal-usage'; $('goal-phase').after(usage);
+  $('goal-next').hidden = true; $('goal-cancel').textContent = 'Request cancellation';
+  $('goal-reconnect').hidden = false; $('goal-reconnect').textContent = 'Refresh / reconcile';
+  $('goal-compare').hidden = true; $('goal-comparison').hidden = true;
+  document.querySelector('#goal-result .overline').textContent = 'SERVICE OUTCOME';
+  const unavailable = document.createElement('p'); unavailable.textContent = 'Checkpoint downloads unavailable: this service has no scoped export operation.'; $('goal-result').append(unavailable);
+  ids.forEach(id => $(id).addEventListener('input',invalidate));
+  $('goal-example').onclick = () => { $('goal-draft').value = 'Improve Breakout score without control regressions'; invalidate(); };
+  $('goal-consent').onchange = lock; $('goal-edit').onclick = invalidate;
+  $('goal-form').onsubmit = event => {
+    event.preventDefault(); if (busy || pending || !$('goal-form').reportValidity()) return;
+    invalidate();
+    const body = {schema_version:1,text:$('goal-draft').value,provider:{name:$('goal-provider').value,model:$('goal-model').value,routing:$('goal-routing').value},limits:Object.fromEntries(Object.entries(fields).map(([id,name]) => [name,Number($('goal-'+id).value)]))};
+    perform(async () => {
+      const p = await request('plan',body);
+      if (p.outcome !== 'ready') {
+        if (p.spec !== null || p.draft_id !== null || p.spec_hash !== null || !p.issues.length) throw Error('invalid');
+        say(p.outcome === 'rejected' ? 'Unsupported goal. Draft preserved.' : 'Clarification required. Try “Improve Breakout score”. Draft preserved.'); return;
+      }
+      if (!p.spec || !p.draft_id || p.issues.length) throw Error('invalid');
+      const s = p.spec, model = s.provider.model;
+      if (model.includes('//') || model.split('/').some(x => x === '.' || x === '..') || /^[A-Za-z]:/.test(model) || s.provider.name !== 'openrouter' && s.provider.routing !== 'price') throw Error('invalid');
+      const e = s.evaluation;
+      if (e.forwards_per_case < e.episodes*e.max_steps*e.probes_per_case || canonical(s.provider) !== canonical(body.provider) || canonical(s.limits) !== canonical(body.limits)) throw Error('invalid');
+      const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(s))))).map(x => x.toString(16).padStart(2,'0')).join('');
+      if (digest !== p.spec_hash) throw Error('invalid');
+      plan = p; $('goal-request').textContent = body.text; $('goal-canonical').textContent = JSON.stringify(s,null,2) + '\nSpecification SHA-256: ' + p.spec_hash;
+      $('goal-programmer').textContent = `${s.provider.name} / ${s.provider.model} · ${s.provider.routing}`;
+      $('goal-limits').textContent = Object.entries(s.limits).map(([k,v]) => k + ': ' + v).join(' · ');
+      $('goal-review').hidden = false; say('Plan ready. Review the exact specification and explicitly authorize Start.');
+    });
+  };
+  $('goal-start').onclick = () => {
+    if (busy || pending || !plan || !$('goal-consent').checked) return;
+    pending = {body:{schema_version:1,draft_id:plan.draft_id,spec_hash:plan.spec_hash,idempotency_key:crypto.randomUUID(),confirmed:true},spec_hash:plan.spec_hash,baseline_id:plan.spec.baseline.id,retries:0,uncertain:false,rejected:false};
+    if (!save()) { pending = null; lock(); return; }
+    $('goal-consent').checked = false; perform(() => reconcile());
+  };
+  $('goal-review-again').onclick = reviewAgain;
+  $('goal-reconnect').onclick = () => perform(() => pending ? reconcile({...pending,retries:0,noAuto:true}) : Promise.resolve());
+  $('goal-cancel').onclick = () => {
+    if (!run || terminal(run.status)) return;
+    perform(async () => { render(bound(await request('cancel',{schema_version:1,experiment_id:run.experiment_id}))); schedule(); });
+  };
+  $('goal-keep').onclick = () => say('Original preserved. No checkpoint was applied by this page.');
+  $('goal-again').onclick = () => { if (run && terminal(run.status)) { pending = null; run = null; $('goal-progress').hidden = true; invalidate(); } };
+  $('goal-guided').onclick = () => { showView('overview'); $('quick-experiment').focus(); };
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if (saved?.draft) ids.forEach(id => { if (typeof saved.draft[id] === 'string') $(id).value = saved.draft[id]; });
+    if (saved?.pending) {
+      const p = saved.pending; valid('start_request',p.body);
+      if (p.spec_hash !== p.body.spec_hash || !shape(p.baseline_id,C.schemas.spec.properties.baseline.properties.id)) throw Error('invalid');
+      pending = {...p,noAuto:true,rejected:false,uncertain:p.uncertain !== false || p.inFlight === true};
+      if (saved.run) { valid('start_response',saved.run); run = bound(saved.run); }
+      $('goal-progress').hidden = false;
+      if (run) perform(() => observe({noAuto:true,retries:3}));
+      else say('Previous Start acknowledgment unavailable. Use Refresh / reconcile to recover the same admission. No new key will be created.');
+    }
+  } catch { say('Saved recovery data unavailable. Review again before starting.'); }
+  $('goal-consent').checked = false; lock();
+})();
+
 initialize();

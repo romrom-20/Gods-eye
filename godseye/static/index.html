@@ -132,7 +132,7 @@
         </div>
 
         <section data-view="goal" class="view goal-experience" aria-label="Goal experiment">
-          <div class="goal-notice"><strong>Mock workflow · no AI requests or experiments run here.</strong>
+          <div class="goal-notice" id="goal-notice"><strong>Mock workflow · no AI requests or experiments run here.</strong>
             Review the proposed journey using sample responses. The no-key local example below uses real CPU evaluation.</div>
           <ol class="goal-steps" aria-label="Experiment steps">
             <li id="goal-step-1" aria-current="step">1. Describe</li><li id="goal-step-2">2. Review</li>
@@ -185,7 +185,7 @@
           <p id="goal-status" class="goal-status" role="status" aria-live="polite" tabindex="-1">Describe a goal, then review it before starting anything.</p>
           <section id="goal-review" class="panel goal-card" hidden aria-labelledby="goal-review-title">
             <span class="overline">MOCK PLAN · NOT AN EXECUTION</span><h2 id="goal-review-title">Review the interpretation</h2>
-            <p id="goal-request"></p><dl>
+            <p id="goal-request"></p><pre id="goal-canonical" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><dl>
               <dt>Sample interpretation</dt><dd>Try to improve held-out Breakout score relative to each registered case root, without regressions on untouched controls. The offline planner recognizes a small set of phrases; it does not interpret arbitrary text.</dd>
               <dt>Success criteria &amp; checks</dt><dd>Use development episodes to select edits, freeze every selection, then evaluate held-out episodes once. Improvement requires positive mean paired score change, mean minus two standard errors above zero, and no control regression. Report sample count, uncertainty, and limitations; this rule is descriptive evidence, not a significance guarantee.</dd>
               <dt>Permitted changes</dt><dd>Bounded numeric weight edits on a new checkpoint. No executable code or edits to the original.</dd>
@@ -198,7 +198,7 @@
           <section id="goal-progress" class="panel goal-card" hidden aria-labelledby="goal-progress-title">
             <span class="overline">MOCK PROGRESS · MANUALLY STEPPED</span><h2 id="goal-progress-title">Walk through the experiment</h2>
             <p id="goal-phase"></p><p>No work is running. Each next step displays another sample response.</p>
-            <div class="goal-actions"><button class="primary" id="goal-next">Show next sample step</button><button class="secondary" id="goal-cancel">Cancel mock walkthrough</button><button class="secondary" id="goal-reconnect" hidden>Reconnect to mock status</button></div>
+            <div class="goal-actions"><button class="primary" id="goal-next">Show next sample step</button><button class="secondary" id="goal-cancel">Cancel mock walkthrough</button><button class="secondary" id="goal-review-again" hidden>Review again</button><button class="secondary" id="goal-reconnect" hidden>Reconnect to mock status</button></div>
           </section>
           <section id="goal-result" class="panel goal-card" hidden aria-labelledby="goal-result-title">
             <span class="overline">MOCK OUTCOME · NO MEASURED RESULT</span><h2 id="goal-result-title"></h2><p id="goal-result-text"></p>
