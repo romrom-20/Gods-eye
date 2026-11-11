@@ -1289,10 +1289,106 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
     say('Execution: ' + v.status + '. Verdict: ' + v.verdict + (v.reason ? '. Reason: ' + v.reason : '') + '.');
     if ('evidence' in v) {
       $('goal-result').hidden = false; $('goal-result-title').textContent = v.status + ' · ' + v.verdict;
+      downloadTarget = v.status === 'completed' && v.evidence ? {schema_version:1,experiment_id:v.experiment_id,artifact_id:v.evidence.candidate_manifest_id} : null;
+      if ($('goal-download')) { $('goal-download').hidden = !downloadTarget; $('goal-download').disabled = !downloadTarget || downloadBusy; }
       $('goal-result-text').textContent = v.evidence ? `Paired samples: ${v.evidence.paired_samples}. Mean score change: ${v.evidence.mean_delta}. Sample standard error: ${v.evidence.paired_se}. Minimum control mean change: ${v.evidence.min_control_delta}. Limitations: ${v.evidence.limitations.join(' ')}` : 'No complete measured evidence available. The original is preserved.';
     }
     lock();
   }
+  // Explicit checkpoint download: no inference or automatic retry.
+  let downloadTarget = null, downloadBusy = false;
+  async function downloadCheckpoint() {
+    if (!downloadTarget || downloadBusy) return;
+    downloadBusy = true;
+    const target = {...downloadTarget}, button = $('goal-download');
+    button.disabled = true; $('goal-download-status').textContent = 'Preparing checkpoint download…';
+    const abort = new AbortController(), timeout = setTimeout(() => abort.abort(),30000);
+    let url = null;
+    try {
+      const headers = {'Content-Type':'application/json'};
+      if (state.token) headers.Authorization = 'Bearer ' + state.token;
+      const response = await fetch('/api/v1/experiments/export',{method:'POST',headers,body:JSON.stringify(target),cache:'no-store',signal:abort.signal});
+      if (!response.ok) {
+        const error = valid('error_response',parseResponse(await response.text()));
+        throw Error('Download unavailable: ' + error.error.message + ' Refresh the result, then retry the download explicitly.');
+      }
+      if (!response.headers.get('Content-Type')?.includes('application/json')) throw Error('Checkpoint response unavailable. Refresh the result and retry explicitly.');
+      const blob = await response.blob();
+      url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = 'godseye-checkpoint-' + target.experiment_id + '.json';
+      document.body.append(link); link.click(); link.remove();
+      $('goal-download-status').textContent = 'Checkpoint download requested. The original remains preserved.';
+    } catch (error) {
+      $('goal-download-status').textContent = error.message.startsWith('Download unavailable:') ? error.message : 'Download failed or disconnected. Refresh the result and retry the download explicitly.';
+    } finally {
+      if (url) URL.revokeObjectURL(url);
+      clearTimeout(timeout); downloadBusy = false; button.disabled = !downloadTarget;
+    }
+  }
+  if ($('goal-download')) $('goal-download').onclick = downloadCheckpoint;
+  // Activity is an optional additive API. Never called in recorded or mock mode.
+  let activityRun = null, activityCursor = 0, activityFence = 0, activityBusy = false, activityHadGap = false;
+  const activityKinds = new Set(['worker_started','worker_finished','worker_failed','worker_cancelled','operation_started','activity_finished','activity_failed','activity_unknown','root_probe_reserved','candidate_probe_reserved','edit_started','held_out_reserved','selection_frozen']);
+  const activityOps = new Set(['worker','list','read','patch','evaluate','freeze','report']);
+  const activityArms = new Set(['agent','unchanged','heuristic','administrator','worker']);
+  function activityLabel(e) {
+    const names = {list:'Case listing',read:'Tensor inspection',patch:'Numeric edit',evaluate:'Development evaluation',freeze:'Selection freeze',report:'Held-out evaluation',worker:'Worker'};
+    const kinds = {worker_started:'Worker started',worker_finished:'Worker finished',worker_failed:'Worker failed or interrupted',worker_cancelled:'Worker cancellation acknowledged',root_probe_reserved:'Original policy probe reserved',candidate_probe_reserved:'Edited candidate probe reserved',held_out_reserved:'Held-out rollout reserved after all selections froze',selection_frozen:'Selection frozen',activity_unknown:'Observation unavailable'};
+    return kinds[e.kind] || names[e.operation] + ({operation_started:' requested',edit_started:' admitted',activity_finished:' completed',activity_failed:' failed'}[e.kind] || '') + (e.count === null ? '' : ' · ' + e.count + ' values');
+  }
+  async function observeActivity() {
+    const panel = $('goal-activity');
+    if (!panel || !run || activityBusy) return;
+    activityBusy = true;
+    panel.hidden = false;
+    if (activityRun !== run.experiment_id) {
+      activityRun = run.experiment_id; activityCursor = 0; activityFence = 0; activityHadGap = false;
+      $('goal-activity-events').replaceChildren();
+    }
+    const identity = activityRun, generation = epoch, cursor = activityCursor;
+    const abort = new AbortController(), timeout = setTimeout(() => abort.abort(),15000);
+    try {
+      const headers = {'Content-Type':'application/json'};
+      if (state.token) headers.Authorization = 'Bearer ' + state.token;
+      const response = await fetch('/api/v1/experiments/activity',{method:'POST',headers,cache:'no-store',signal:abort.signal,body:JSON.stringify({schema_version:1,experiment_id:identity,spec_hash:run.spec_hash,after:cursor,limit:50})});
+      if (!response.ok) throw Error('unavailable');
+      const v = parseResponse(await response.text());
+      if (generation !== epoch || identity !== activityRun) return;
+      const integer = x => Number.isSafeInteger(x) && x >= 0;
+      const keys = ['schema_version','experiment_id','spec_hash','available','status','phase','events','next_cursor','high_water','gap','has_more'];
+      if (Object.keys(v).sort().join() !== keys.sort().join() || v.schema_version !== 1 || v.experiment_id !== identity || v.spec_hash !== run.spec_hash || v.status !== run.status || typeof v.available !== 'boolean' || typeof v.gap !== 'boolean' || typeof v.has_more !== 'boolean' || !integer(v.next_cursor) || !integer(v.high_water) || !Array.isArray(v.events) || v.events.length > 50 || v.high_water < activityFence) throw Error('invalid');
+      let previous = cursor;
+      for (const e of v.events) {
+        if (Object.keys(e).sort().join() !== 'arm,count,kind,operation,sequence' || !integer(e.sequence) || e.sequence !== previous + 1 || !activityKinds.has(e.kind) || !activityOps.has(e.operation) || !activityArms.has(e.arm) || !(e.count === null || integer(e.count) && e.count <= 256)) throw Error('gap');
+        previous = e.sequence;
+      }
+      if (!v.available || v.gap) {
+        if (v.gap) activityHadGap = true;
+        if (v.events.length || v.next_cursor < cursor || v.next_cursor > v.high_water) throw Error('gap');
+        activityCursor = v.next_cursor; activityFence = Math.max(activityFence,v.high_water);
+        throw Error('unavailable');
+      }
+      if (previous !== v.next_cursor || previous > v.high_water || v.has_more !== (previous < v.high_water)) throw Error('gap');
+      activityFence = Math.max(activityFence,v.high_water);
+      for (const e of v.events) {
+        const item = document.createElement('li');
+        item.textContent = '#' + e.sequence + ' · ' + e.arm + ' · ' + activityLabel(e);
+        $('goal-activity-events').append(item);
+      }
+      // Keep browser memory bounded as well as each HTTP read.
+      const list = $('goal-activity-events');
+      while (list.children.length > 200) list.firstElementChild.remove();
+      activityCursor = v.next_cursor;
+      $('goal-activity-notice').textContent = (activityHadGap ? 'Some earlier observations are missing. ' : '') + 'Observed operations only. Showing up to 200 recent loaded events. ' + (v.has_more ? 'More history available.' : 'History caught up.');
+      $('goal-activity-more').hidden = !v.has_more;
+    } catch (_) {
+      if (generation !== epoch || identity !== activityRun) return;
+      $('goal-activity-notice').textContent = 'Activity unavailable. Earlier observations remain; refresh status to reconnect. No work is restarted.';
+      $('goal-activity-more').hidden = true;
+      $('goal-phase').textContent = run.status + ' · Activity unavailable';
+    } finally { clearTimeout(timeout); activityBusy = false; }
+  }
+  if ($('goal-activity-more')) $('goal-activity-more').onclick = () => observeActivity();
   function bound(v) {
     if (v.spec_hash !== pending.spec_hash || run && v.experiment_id !== run.experiment_id) throw Error('invalid');
     return v;
@@ -1300,6 +1396,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   async function observe(action = {retries:0}) {
     const body = {schema_version:1,experiment_id:run.experiment_id};
     const v = bound(await request('status',body,action)); render(v);
+    await observeActivity();
     if (terminal(v.status)) {
       try { render(bound(await request('results',body,action))); }
       catch (e) {
@@ -1368,7 +1465,7 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   $('goal-reconnect').hidden = false; $('goal-reconnect').textContent = 'Refresh / reconcile';
   $('goal-compare').hidden = true; $('goal-comparison').hidden = true;
   document.querySelector('#goal-result .overline').textContent = 'SERVICE OUTCOME';
-  const unavailable = document.createElement('p'); unavailable.textContent = 'Checkpoint downloads unavailable: this service has no scoped export operation.'; $('goal-result').append(unavailable);
+
   ids.forEach(id => $(id).addEventListener('input',invalidate));
   $('goal-example').onclick = () => { $('goal-draft').value = 'Improve Breakout score without control regressions'; invalidate(); };
   $('goal-consent').onchange = lock; $('goal-edit').onclick = invalidate;

@@ -19,7 +19,8 @@ from .storage import write_json
 
 
 class RepairBenchmark:
-    def __init__(self, path):
+    def __init__(self, path, *, observe=None):
+        self.observe = observe or (lambda *a, **kw: None)
         self.path = Path(path)
         self.path.mkdir(parents=True, exist_ok=True)
         self.state_path = self.path / 'private-state.json'
@@ -139,6 +140,7 @@ class RepairBenchmark:
             row = dict(id=uuid.uuid4().hex, parent=parent_id, hypothesis=hypothesis, patch=patch,
                        sha256=digest(after), parent_sha256=digest(before),
                        diff=difference(before, after))
+            self.observe('edit_started')
             save_weights(self.path / (row['id'] + '.npz'), after)
             case['candidates'].append(row)
             self._save(state)
@@ -171,6 +173,8 @@ class RepairBenchmark:
             case['attempts'].append(attempt)
             case['forward_reserved'] += cost
             self._save(state)  # Crash/failure consumes reservation; never refunded.
+            self.observe('root_probe_reserved' if candidate_id == case['root_id']
+                         else 'candidate_probe_reserved')
             try:
                 attempt['result'] = self._evaluate(weights, case['dev_seed'], state)
                 attempt['status'] = 'completed'
@@ -210,6 +214,7 @@ class RepairBenchmark:
                 if case['final']['status'] == 'frozen':
                     case['final']['status'] = 'reserved'
                     self._save(state)
+                    self.observe('held_out_reserved')
                     self._finish_final(state, case, self._weights(case, case['final']['candidate_id']))
 
     def _finish_final(self, state, case, weights):

@@ -198,10 +198,17 @@
           <section id="goal-progress" class="panel goal-card" hidden aria-labelledby="goal-progress-title">
             <span class="overline">MOCK PROGRESS · MANUALLY STEPPED</span><h2 id="goal-progress-title">Walk through the experiment</h2>
             <p id="goal-phase"></p><p>No work is running. Each next step displays another sample response.</p>
+            <details id="goal-activity" class="goal-activity" hidden>
+              <summary>Observed agent activity</summary>
+              <p id="goal-activity-notice" role="status">Activity unavailable</p>
+              <ol id="goal-activity-events" aria-label="Observed operations"></ol>
+              <button id="goal-activity-more" type="button" hidden>Load more activity</button>
+            </details>
             <div class="goal-actions"><button class="primary" id="goal-next">Show next sample step</button><button class="secondary" id="goal-cancel">Cancel mock walkthrough</button><button class="secondary" id="goal-review-again" hidden>Review again</button><button class="secondary" id="goal-reconnect" hidden>Reconnect to mock status</button></div>
           </section>
           <section id="goal-result" class="panel goal-card" hidden aria-labelledby="goal-result-title">
             <span class="overline">MOCK OUTCOME · NO MEASURED RESULT</span><h2 id="goal-result-title"></h2><p id="goal-result-text"></p>
+            <button id="goal-download" type="button" hidden disabled>Download checkpoint</button><p id="goal-download-status" role="status"></p>
             <div class="goal-actions"><button class="secondary" id="goal-compare">Compare sample evidence</button><button class="primary" id="goal-keep">Keep original</button><button class="secondary" id="goal-again">Return to draft</button></div>
             <div id="goal-comparison" hidden><h3>Evidence is required before choosing an edit</h3><dl>
               <dt>Original</dt><dd>Unchanged case roots must be preserved by a live experiment. No registered baseline or new measurement in this walkthrough; the local example’s “paper” checkpoint is separate.</dd>
