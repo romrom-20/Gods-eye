@@ -2833,3 +2833,20 @@ footer {
 .goal-experience :focus-visible {outline:3px solid #9c411e;outline-offset:4px}
 #goal-download {min-height:44px;background:var(--accent);color:white;padding:12px 18px;border:0;border-radius:4px}
 @media(max-width:720px){.goal-onboarding{display:block;padding:20px}.goal-onboarding button{width:100%;margin-top:16px}.goal-limit-list{grid-template-columns:1fr}.goal-card dd{overflow-wrap:anywhere}}
+
+/* Local checkpoint import stays beside saved weights, separate from AI goals. */
+.checkpoint-import {padding:24px;margin-bottom:24px}
+.import-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.import-heading h2 {font-size:21px;margin:0}
+.checkpoint-import p {font-size:14px;line-height:1.65;max-width:850px}
+.checkpoint-import label {display:block;margin:18px 0 8px;letter-spacing:0;font-size:14px}
+.checkpoint-import input,.checkpoint-import textarea {display:block;width:100%;max-width:680px;font:inherit;font-size:16px}
+.checkpoint-import input[type="file"] {padding:12px;border:1px solid var(--line)}
+.checkpoint-import textarea {resize:vertical;padding:12px;border:1px solid var(--line);background:var(--paper,#fffefa)}
+.import-actions {display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.checkpoint-import button {min-height:44px;padding:10px 16px}
+.checkpoint-import :focus-visible {outline:3px solid #9c411e;outline-offset:3px}
+.checkpoint-import [aria-invalid="true"] {border:2px solid #a43520}
+.import-metadata {white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;padding:12px;background:#edf0e7;border-left:3px solid #8c9c7c}
+#import-status {overflow-wrap:anywhere}
+@media(max-width:720px){.checkpoint-import{padding:20px}.import-actions{flex-direction:column}.import-actions button,.import-heading button{width:100%}}

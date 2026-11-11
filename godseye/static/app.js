@@ -122,12 +122,14 @@ async function api(path, body) {
       $("connection-panel").hidden = false;
       $("connection-panel").open = true;
     }
-    throw new Error(
+    const error = new Error(
       (data.error || "Request failed") +
         (data.issues
           ? ": " + data.issues.map((i) => i.field + " " + i.message).join("; ")
           : ""),
     );
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -282,9 +284,10 @@ function sidebarCheckpoints() {
   }
 }
 async function refresh() {
-  const data = await api("/api/state");
+  const data = await api(staticDemo ? "/api/state" : "/api/v1/state");
   state.checkpoints = data.checkpoints;
   configureMode(data);
+  configureImport(data);
   for (const id of ["inspect-model", "patch-base", "base", "candidate"]) {
     const select = $(id),
       value = select.value;
@@ -304,7 +307,149 @@ async function refresh() {
         : "paper";
   }
   sidebarCheckpoints();
+  renderImportMetadata();
 }
+// Local checkpoint import: explicit writes only; uncertain writes require reconciliation.
+const checkpointImport = {supported: false, busy: false, uncertain: false, importedId: null};
+function configureImport(data) {
+  const recorded = staticDemo || data.mode === "recorded-demo";
+  checkpointImport.supported = !recorded && data.mode === "local" &&
+    data.backend === "minatar-breakout-v1" && Array.isArray(data.capabilities) &&
+    data.capabilities.includes("checkpoint_import");
+  for (const id of ["import-open", "import-sidebar"]) {
+    $(id).hidden = recorded;
+  }
+  $("import-form").hidden = recorded || !checkpointImport.supported ||
+    $("import-open").getAttribute("aria-expanded") !== "true";
+  $("import-support").textContent = recorded
+    ? "Recorded demo is read-only. Run a local writable Breakout server to import checkpoints."
+    : checkpointImport.supported
+      ? "Import local weights into Saved versions. Bundled Original policy and Zero initialization remain available."
+      : "Checkpoint import is unsupported by this server. Use a local writable Breakout server with checkpoint_import capability.";
+  lockImport();
+}
+function lockImport() {
+  const busy = checkpointImport.busy;
+  for (const id of ["import-open", "import-sidebar"])
+    $(id).disabled = busy || !checkpointImport.supported;
+  for (const id of ["import-file", "import-name", "import-provenance", "import-refresh"])
+    $(id).disabled = busy || !checkpointImport.supported;
+  $("import-submit").disabled = busy || !checkpointImport.supported || checkpointImport.uncertain || !!checkpointImport.importedId;
+  $("import-form").setAttribute("aria-busy", String(busy));
+}
+function openImport() {
+  if (!checkpointImport.supported || checkpointImport.busy) return;
+  showView("workbench");
+  $("import-form").hidden = false;
+  $("import-open").setAttribute("aria-expanded", "true");
+  $("import-file").focus();
+}
+function importNotice(text, error = false, field = "import-status") {
+  message("import-status", text, error);
+  $(field).focus();
+  if (field !== "import-status") $(field).setAttribute("aria-invalid", "true");
+}
+function renderImportMetadata() {
+  const c = state.checkpoints.find(c => c.id === $("inspect-model").value);
+  const imported = c?.parent == null && typeof c?.source_sha256 === "string";
+  $("import-metadata").hidden = !imported;
+  $("import-metadata").textContent = imported
+    ? `Imported original · ${c.name}\nSource file SHA256: ${c.source_sha256}\nSource / license notes (user-provided, unverified): ${c.provenance || "None provided."}`
+    : "";
+}
+async function selectImported() {
+  const id = checkpointImport.importedId;
+  if (!id || !state.checkpoints.some(c => c.id === id)) return false;
+  $("inspect-model").value = id;
+  $("patch-base").value = id;
+  $("base").value = id;
+  $("candidate").value = "paper";
+  renderImportMetadata();
+  sidebarCheckpoints();
+  $("import-compare").hidden = false;
+  await loadTensor(true);
+  return true;
+}
+async function submitImport(event) {
+  event.preventDefault();
+  if (!checkpointImport.supported || checkpointImport.busy || checkpointImport.uncertain || checkpointImport.importedId) return;
+  for (const id of ["import-file", "import-name", "import-provenance"]) $(id).removeAttribute("aria-invalid");
+  const file = $("import-file").files?.[0];
+  const name = $("import-name").value.trim(), provenance = $("import-provenance").value;
+  if (!file || !/\.npz$/i.test(file.name)) return importNotice("Choose a local .npz checkpoint file.", true, "import-file");
+  // Bound the raw file before reading it or allocating a base64 representation.
+  if (!Number.isInteger(file.size) || file.size <= 0 || file.size > 128 * 1024)
+    return importNotice("Choose a nonempty .npz file no larger than 128 KiB (131,072 bytes).", true, "import-file");
+  if (!name || [...name].length > 80) return importNotice("Enter a display name of 1–80 characters.", true, "import-name");
+  if ([...provenance].length > 2000) return importNotice("Source / license notes must be at most 2,000 characters.", true, "import-provenance");
+  checkpointImport.busy = true;
+  lockImport();
+  let posted = false;
+  message("import-status", "Reading checkpoint…");
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.length !== file.size || bytes.length > 128 * 1024) throw new Error("File size changed; choose the file again.");
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    message("import-status", "Importing checkpoint…");
+    posted = true;
+    const record = await api("/api/v1/checkpoints/import", {name, provenance, npz_base64: btoa(binary)});
+    if (!record || typeof record.id !== "string" || !record.id || record.parent !== null) throw new Error("Invalid import acknowledgment.");
+    checkpointImport.importedId = record.id;
+    try {
+      await refresh();
+      if (!await selectImported()) throw new Error("Imported checkpoint is not visible yet.");
+      importNotice("Imported original saved and selected for inspection and editing. Compare uses this original against the bundled policy; choose either version in Compare. No AI run started.");
+    } catch (_) {
+      importNotice("Import acknowledged, but saved versions could not be refreshed. Use Refresh saved versions to select the imported original. Do not import it again.", true);
+    }
+  } catch (error) {
+    checkpointImport.uncertain = posted && !(error.status >= 400 && error.status < 500);
+    importNotice(checkpointImport.uncertain
+      ? "Import outcome is unknown; the checkpoint may have been saved. No automatic retry was made. Refresh saved versions and check them before deciding whether to submit again."
+      : posted ? `Import rejected by the server: ${error.message}` : "Could not read this file. Choose the file again.", true);
+  } finally {
+    checkpointImport.busy = false;
+    lockImport();
+  }
+}
+$("import-open").onclick = openImport;
+$("import-sidebar").onclick = openImport;
+$("import-form").onsubmit = submitImport;
+for (const id of ["import-file", "import-name", "import-provenance"]) $(id).addEventListener("input", () => {
+  // Editing a form never clears an uncertain write; refresh explicitly first.
+  if (!checkpointImport.busy && !checkpointImport.uncertain) {
+    checkpointImport.importedId = null;
+    $("import-compare").hidden = true;
+  }
+  $(id).removeAttribute("aria-invalid");
+  lockImport();
+});
+$("import-refresh").onclick = async () => {
+  if (!checkpointImport.supported || checkpointImport.busy) return;
+  checkpointImport.busy = true;
+  lockImport();
+  try {
+    await refresh();
+    const selected = await selectImported();
+    checkpointImport.uncertain = false;
+    importNotice(selected ? "Saved versions refreshed. Imported original selected for inspection and editing. No AI run started."
+      : "Saved versions refreshed. Check the saved-version selector for your import before submitting again; a lost acknowledgment can still mean it was saved.");
+  } catch (_) {
+    importNotice("Could not refresh saved versions. Your form is preserved. Check the server connection and refresh again; no import was retried.", true);
+  } finally {
+    checkpointImport.busy = false;
+    lockImport();
+  }
+};
+$("import-compare").onclick = () => {
+  if (!checkpointImport.importedId) return;
+  $("base").value = checkpointImport.importedId;
+  $("candidate").value = "paper";
+  showView("evaluate");
+  $("base").focus();
+};
+// End local checkpoint import.
 function matrix() {
   return Array.isArray(state.values[0])
     ? state.values
@@ -338,6 +483,7 @@ function paintTensor() {
 }
 let tensorRequest = 0;
 async function loadTensor(reset = false) {
+  renderImportMetadata();
   const request = ++tensorRequest;
   try {
     const model = $("inspect-model").value,

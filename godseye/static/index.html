@@ -59,6 +59,7 @@
           CHECKPOINTS <span id="checkpoint-count"></span>
         </div>
         <div id="checkpoint-list"></div>
+        <button id="import-sidebar" class="checkpoint-link" type="button" disabled>Import checkpoint…</button>
       </details>
       <div class="sidebar-bottom">
         <a href="api.html"><span>↗</span> API &amp; developer guide</a
@@ -467,6 +468,29 @@
               history.
             </p>
           </div>
+          <section class="checkpoint-import panel" aria-labelledby="import-title">
+            <div class="import-heading">
+              <h2 id="import-title">Bring your own Breakout checkpoint</h2>
+              <button id="import-open" type="button" disabled aria-expanded="false" aria-controls="import-form">Import checkpoint…</button>
+            </div>
+            <p id="import-support" role="status">Checking local checkpoint import support…</p>
+            <form id="import-form" hidden novalidate aria-describedby="import-help">
+              <p id="import-help">Only the same Breakout 600 → 32 → 32 → 6 architecture is accepted, as a local .npz file up to 128 KiB. The server validates the tensors. Import saves a separate original for inspection and editing; no AI run starts.</p>
+              <label for="import-file">Checkpoint file (.npz, required)</label>
+              <input id="import-file" type="file" accept=".npz" required aria-describedby="import-help import-status">
+              <label for="import-name">Display name (required, up to 80 characters)</label>
+              <input id="import-name" type="text" maxlength="80" required autocomplete="off" aria-describedby="import-status">
+              <label for="import-provenance">Source / license notes (optional, up to 2,000 characters)</label>
+              <p class="hint" id="import-source-help">User-provided, unverified. Record where these weights came from and their license; these notes do not verify origin or permission.</p>
+              <textarea id="import-provenance" maxlength="2000" rows="3" aria-describedby="import-source-help import-status"></textarea>
+              <div class="import-actions">
+                <button id="import-submit" class="primary" type="submit" disabled>Import checkpoint</button>
+                <button id="import-refresh" type="button">Refresh saved versions</button>
+                <button id="import-compare" type="button" hidden>Compare imported original</button>
+              </div>
+              <p id="import-status" role="status" tabindex="-1" aria-live="polite"></p>
+            </form>
+          </section>
           <div class="workspace">
             <section class="weights panel">
               <div class="panel-heading">
@@ -478,6 +502,7 @@
               </div>
               <label for="inspect-model">SAVED VERSION</label
               ><select id="inspect-model"></select>
+              <p id="import-metadata" class="import-metadata" hidden></p>
               <div
                 class="tensor-tabs"
                 id="tensor-tabs"
