@@ -22,7 +22,7 @@ function setup(responses = [], config = live, recorded = false) {
     btoa:s=>Buffer.from(s,'binary').toString('base64'),
     message(id,text,error){$(id).textContent=text;$(id).error=error;},showView(v){ctx.state.view=v;},
     shortLabel(id){return ctx.state.checkpoints.find(c=>c.id===id)?.name||id;},fmt:String,
-    document:{createElement:node},window:{scrollTo(){}},configureMode(){},
+    document:{createElement:node},window:{scrollTo(){}},configureMode(){},renderExperimentBoard(){},
     async loadTensor(){tensors.push($('inspect-model').value);},
     async api(path,body){calls.push({path,body});const response=responses.shift();if(response instanceof Error)throw response;return typeof response==='function'?response():response;},
   };

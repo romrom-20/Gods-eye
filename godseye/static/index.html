@@ -36,7 +36,7 @@
             <rect x="12" y="3" width="5" height="5" rx="1" />
             <rect x="3" y="12" width="5" height="5" rx="1" />
             <rect x="12" y="12" width="5" height="5" rx="1" /></svg
-          >Start here<span class="nav-shortcut">01</span>
+          >Evidence<span class="nav-shortcut">01</span>
         </button>
         <button class="nav-link" data-nav="workbench">
           <svg viewBox="0 0 20 20">
@@ -61,6 +61,7 @@
         <div id="checkpoint-list"></div>
         <button id="import-sidebar" class="checkpoint-link" type="button" disabled>Import checkpoint…</button>
       </details>
+      <section class="rail-activity" aria-label="Workspace activity"><span class="overline">OBSERVED / SAVED</span><div id="board-activity">Loading saved records…</div></section>
       <div class="sidebar-bottom">
         <a href="api.html"><span>↗</span> API &amp; developer guide</a
         ><button class="connection-button" id="connection-settings">
@@ -116,6 +117,19 @@
             Kept only in this page’s memory. Never saved to browser storage.
           </p>
         </details>
+        <div class="experiment-layout">
+        <section class="experiment-board" aria-labelledby="board-title">
+          <div class="board-heading"><div><span class="overline">MINATAR / BREAKOUT</span><h1 id="board-title">Experiment workspace<span>.</span></h1></div><span class="board-scope" id="board-scope">Connecting</span></div>
+          <div class="board-request"><div><strong>One question. A traceable experiment.</strong><p>Request → review → preserve the original → measure the edit.</p></div><button class="primary" id="board-request">Describe a goal ↗</button></div>
+          <div class="board-toolbar"><span id="board-counts" role="status">Loading saved objects…</span><div><button id="board-zoom-out" aria-label="Zoom board out">−</button><button id="board-fit">Fit</button><button id="board-zoom-in" aria-label="Zoom board in">+</button><button id="board-list-toggle" aria-pressed="false">List</button></div></div>
+          <div class="board-viewport" id="board-viewport" tabindex="0" aria-label="Connected experiment board. Tab to select objects; use List for a linear alternative."><div id="board-graph" class="board-graph"></div></div>
+          <div id="board-list" class="board-list" hidden aria-label="Experiment objects"></div>
+          <p class="board-legend-text"><span>◇ Original</span><span>↳ Saved edit</span><span>◉ Measured comparison</span></p>
+          <p class="board-footnote">Lines show saved parentage and evaluated checkpoint IDs. A saved edit is not evidence of improvement.</p>
+          <details class="agent-entry"><summary>Bring an external agent</summary><p>Use the <a href="api.html">API &amp; developer guide</a> with your own local agent. No provider connection is made here.</p><p id="agent-brief">Target: fixed MinAtar Breakout 600 → 32 → 32 → 6. Inspect registered checkpoints, propose bounded numeric edits on a child, preserve roots, compare paired seeds, and report uncertainty. Never claim improvement without measured evidence.</p><button id="copy-agent-brief">Copy non-secret brief</button><span id="copy-brief-status" role="status"></span></details>
+        </section>
+        <aside class="detail-inspector" aria-label="Contextual experiment details">
+        <div class="inspector-heading"><span class="overline">DETAIL INSPECTOR</span><p id="board-selection" tabindex="-1">Select an object to inspect its tensors or evidence.</p></div>
         <div class="page-heading">
           <div>
             <div class="eyebrow">
@@ -782,6 +796,8 @@ W3[0:8:2, 1] = 0</textarea
             <div id="history"></div>
           </div>
         </section>
+        </aside>
+        </div>
         <footer>
           <span
             >GOD’S EYE <span class="footer-slash">/</span> A WORKSPACE FOR
