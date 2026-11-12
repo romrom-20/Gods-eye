@@ -1,0 +1,169 @@
+{
+  "base_commit": "8694007",
+  "date": "2026-11-12",
+  "dedicated_tests": {
+    "command": "python -m unittest discover -s tests -p test_lm_pilot.py -v",
+    "passed": 7,
+    "run": 7,
+    "skipped": 0
+  },
+  "interpretation": "Synthetic fixtures verify numerics and evidence protocol only; no model quality or GPU compatibility established.",
+  "kind": "offline_validation_only",
+  "other_executed": [
+    "both CLI dry runs (standard library only, also tested with -S)",
+    "py_compile",
+    "git diff --check",
+    "installed Modal SDK signature inspection only"
+  ],
+  "pilot_plan": {
+    "arms": [
+      "unchanged",
+      "prompt",
+      "decoding",
+      "weight"
+    ],
+    "candidates": [
+      {
+        "column": 0,
+        "scale": 0.0
+      },
+      {
+        "column": 1,
+        "scale": 0.5
+      }
+    ],
+    "cases_per_split": 4,
+    "command": "python -m experiments.modal_lm_pilot --profile pilot --output lm-result-pilot --execute",
+    "cpu_physical_cores": 2,
+    "data_digest": "ae26404a7b21b605841df91285395fa3734512d93292ee344849292d5066c0e6",
+    "device": "cuda",
+    "dtype": "float32",
+    "estimate_caveat": "Not billed cost or hard cap; excludes image build, idle, storage, network, tax; download/model load consume invocation time; credits eligibility and remaining balance unknown",
+    "estimated_780s_compute_usd": 0.221302,
+    "evaluation_seconds": 480,
+    "generation": {
+      "decoding_arm_repetition_penalty": 1.15,
+      "do_sample": false,
+      "enable_thinking": false,
+      "num_beams": 1,
+      "repetition_penalty": 1.0
+    },
+    "gpu": "L4",
+    "harness_digest": "7400ffc28542d3d2ea622c88ad96aa8ee5acf27c7b2969424f9ea524352a6a5b",
+    "invocation_timeout": 600,
+    "max_containers": 1,
+    "max_generations": 36,
+    "max_new_tokens": 24,
+    "max_prompt_chars": 512,
+    "max_prompt_tokens": 128,
+    "memory_gib": 16,
+    "model": "Qwen/Qwen3.5-0.8B",
+    "parameter": "model.layers.0.mlp.down_proj.weight",
+    "pricing_date": "2026-11-12",
+    "profile": "pilot",
+    "prompt_baseline_prefix": "Be concise. Return only the requested answer, no explanation.\n",
+    "rates_usd_second": {
+      "cpu_core": 1.31e-05,
+      "gpu": 0.000222,
+      "ram_gib": 2.22e-06
+    },
+    "retries": 0,
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "runtime": {
+      "modal": "1.6.4",
+      "numpy": "2.2.6",
+      "safetensors": "0.8.0",
+      "torch": "2.15.0",
+      "transformers": "5.22.2"
+    },
+    "schema_version": 1,
+    "seed": 1729,
+    "startup_timeout": 180,
+    "tokenizer_revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "python": "3.12.14",
+  "runtime_pins_installed": {
+    "modal": "1.6.4",
+    "numpy": "2.2.6",
+    "safetensors": "0.8.0",
+    "torch": "2.15.0",
+    "transformers": "5.22.2"
+  },
+  "schema_version": 1,
+  "smoke_plan": {
+    "arms": [
+      "unchanged",
+      "prompt",
+      "decoding",
+      "weight"
+    ],
+    "candidates": [
+      {
+        "column": 0,
+        "scale": 0.0
+      },
+      {
+        "column": 1,
+        "scale": 0.5
+      }
+    ],
+    "cases_per_split": 2,
+    "command": "python -m experiments.modal_lm_pilot --profile smoke --output lm-result-smoke --execute",
+    "cpu_physical_cores": 2,
+    "data_digest": "ae26404a7b21b605841df91285395fa3734512d93292ee344849292d5066c0e6",
+    "device": "cuda",
+    "dtype": "float32",
+    "estimate_caveat": "Not billed cost or hard cap; excludes image build, idle, storage, network, tax; download/model load consume invocation time; credits eligibility and remaining balance unknown",
+    "estimated_780s_compute_usd": 0.221302,
+    "evaluation_seconds": 120,
+    "generation": {
+      "decoding_arm_repetition_penalty": 1.15,
+      "do_sample": false,
+      "enable_thinking": false,
+      "num_beams": 1,
+      "repetition_penalty": 1.0
+    },
+    "gpu": "L4",
+    "harness_digest": "7400ffc28542d3d2ea622c88ad96aa8ee5acf27c7b2969424f9ea524352a6a5b",
+    "invocation_timeout": 600,
+    "max_containers": 1,
+    "max_generations": 18,
+    "max_new_tokens": 8,
+    "max_prompt_chars": 512,
+    "max_prompt_tokens": 128,
+    "memory_gib": 16,
+    "model": "Qwen/Qwen3.5-0.8B",
+    "parameter": "model.layers.0.mlp.down_proj.weight",
+    "pricing_date": "2026-11-12",
+    "profile": "smoke",
+    "prompt_baseline_prefix": "Be concise. Return only the requested answer, no explanation.\n",
+    "rates_usd_second": {
+      "cpu_core": 1.31e-05,
+      "gpu": 0.000222,
+      "ram_gib": 2.22e-06
+    },
+    "retries": 0,
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "runtime": {
+      "modal": "1.6.4",
+      "numpy": "2.2.6",
+      "safetensors": "0.8.0",
+      "torch": "2.15.0",
+      "transformers": "5.22.2"
+    },
+    "schema_version": 1,
+    "seed": 1729,
+    "startup_timeout": 180,
+    "tokenizer_revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "unexecuted": [
+    "pretrained model download/load",
+    "real-model generation",
+    "CUDA/GPU execution",
+    "Modal App/image construction/build/run/deploy",
+    "Volume creation",
+    "provider calls",
+    "credential/token reads",
+    "billing access"
+  ]
+}

@@ -1,0 +1,7 @@
+# Optional isolated Python 3.12 environment; never installed by the base project.
+# Direct runtime pins; transitive versions must also be recorded in run evidence.
+torch==2.15.0
+transformers==5.22.2
+safetensors==0.8.0
+modal==1.6.4
+numpy==2.2.6
