@@ -34,6 +34,12 @@ Use **Edit weights** for your own numeric changes, **Compare** for paired
 evaluations, and **History** to revisit results. The known four-weight edit tests
 the mechanics; it is not an AI-discovered improvement or a new research result.
 
+The connected workspace shows saved originals, edited checkpoints, and measured
+comparisons. Select a checkpoint to inspect its tensors and saved patch; select a
+comparison to replay both versions. **List** provides keyboard-friendly navigation.
+Lines represent recorded parentage and comparisons, not inferred model circuits.
+See [workspace behavior and limitations](docs/experiment-workspace.md).
+
 ## Bring your own Breakout checkpoint
 
 In **Edit weights**, choose **Import checkpoint** and select a compatible `.npz`.
@@ -64,6 +70,12 @@ with rollback to the original. [Observed activity](docs/agent-activity.md) recor
 actual operations and reports unknown phases when evidence is unavailable.
 Hosted multi-user access remains unfinished. No quality improvement or
 inference-cost saving is promised.
+
+An optional [Qwen intervention pilot](docs/language-model-pilot.md) is available
+as a separate experimental CLI. Its offline checks pass; pretrained checkpoint
+loading, GPU execution, and improvement remain unverified. It is not integrated
+into the browser or goal planner. The Modal runner requires explicit execution
+and a reviewed spending budget.
 
 ## Run an AI-guided experiment
 
