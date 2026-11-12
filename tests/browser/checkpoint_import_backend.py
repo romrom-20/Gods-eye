@@ -4,17 +4,19 @@ Requires the checkpoint import backend merge; never substitutes a successful rou
 Run with PYTHONPATH=. python tests/browser/checkpoint_import_backend.py, then
 run checkpoint_import_journey.cjs with ego-browser nodejs. No provider is configured.
 """
+import hashlib
 import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import numpy as np
 import uvicorn
 from fastapi import Request
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 
-from godseye.core import Store, digest
+from godseye.core import Store, digest, save_weights
+from godseye.export import export_demo
 from godseye.server import create_app
 
 
@@ -24,8 +26,9 @@ def main():
         store = Store(path / 'store')
         original = digest(store.weights('paper'))
         checkpoint = path / 'breakout.npz'
-        np.savez(checkpoint, **store.weights('paper'))
+        save_weights(checkpoint, store.weights('paper'))
         app = create_app(store)
+        app.mount('/recorded', StaticFiles(directory=export_demo(path / 'recorded')))
         assert sum(getattr(route, 'path', None) == '/api/v1/checkpoints/import'
                    for route in app.routes) == 1, 'Real import backend must be merged first'
         control = {'drop_ack': False, 'writes': 0}
@@ -50,9 +53,14 @@ def main():
 
         @app.get('/__fixture/state')
         async def state():
+            reloaded = Store(path / 'store')
             return {'file': str(checkpoint), 'writes': control['writes'],
                     'original_preserved': digest(store.weights('paper')) == original,
-                    'checkpoints': store.checkpoints()}
+                    'source_sha256': hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
+                    'checkpoints': reloaded.checkpoints(),
+                    'hashes': {c['id']: digest(reloaded.weights(c['id']))
+                               for c in reloaded.checkpoints()},
+                    'runs': [reloaded.read_run(r['id']) for r in reloaded.runs()]}
 
         with patch('urllib.request.urlopen', side_effect=AssertionError('External HTTP')), \
              patch('httpx.HTTPTransport.handle_request', side_effect=AssertionError('External HTTP')):
