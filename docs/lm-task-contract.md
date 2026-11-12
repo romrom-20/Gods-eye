@@ -267,3 +267,12 @@ Qwen quality, model compatibility, weight reload, RAM or latency was measured.
 Remaining integration: trusted admission/journal/freeze ordering, runtime-to-record
 mapping, real cached-model identity, verified delta artifacts/rollback, resource
 enforcement, browser review/start/status/cancel and user-authorized real execution.
+
+## Pre-execution clarification: prompt baseline scope (2026-11-13)
+
+Before the first real task run, the fixed prompt recipe now includes
+`scope: json_targets_only`. Its prefix applies only to extraction/classification
+JSON targets; exact-text regression controls receive their original prompts.
+The TaskSpec hash binds this scope. Dataset version/content, metrics, thresholds,
+edit candidates and all resource ceilings are unchanged. No earlier real task
+runs exist under the ambiguous recipe.

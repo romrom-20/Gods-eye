@@ -171,3 +171,27 @@ window/eager attention warning, retained in evidence; this pinned model's verifi
 config has `use_sliding_window=false`. No pretrained checkpoint or credentials
 were committed. Raw data and the usable numeric delta remain in the explicitly
 named local output directory.
+
+## Separately authorized fixed JSON task profile
+
+`Runtime(directory, task_spec=approved_spec)` now derives a separate finite profile
+from the validated fixed TaskSpec and rejects an unapproved model/tokenizer revision
+before loading or inference. It advertises exact weight/tokenizer hashes and
+capabilities for the trusted task adapter. Default construction and the old smoke
+CLI retain their original eight-attempt profile; no counter is reset to run a task.
+The task profile permits 126 attempts overall, 28 per variant, 512 input tokens,
+96 output tokens, 608 context tokens, 2048 prompt characters and 60 cooperative
+seconds per attempt. Only repetition penalties 1.0 and 1.1 are allowed; the adapter
+uses 1.1 only for the decoding arm. `prepare(prompt, max_new_tokens)` renders and
+tokenizes without generation, rejects overflow and never truncates.
+
+The task-only call is `generate(prompt, max_new_tokens=96, seconds=60,
+repetition_penalty=..., variant=...)`. Native failures consume task attempt slots.
+The adapter additionally durably reserves every attempted call before inference,
+including failures with unknown usage. Independent candidate edits are serialized
+from the original and exact rollback is checked. The task runner exports a selected
+delta only when the unchanged contract selects one; unused probe artifacts are
+explicitly labeled by variant. See [local-lm-task-validation.md](local-lm-task-validation.md)
+for the single authorized cached-model evaluation, journal/freeze rules, commands,
+evidence and limitations. This is a local CLI integration; browser/service work
+is still separate.

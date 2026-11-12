@@ -154,7 +154,7 @@ def _spec(revision, model_id=MODEL_ID):
                        'candidates': [{'column': 0, 'scale': 0.0}, {'column': 1, 'scale': 0.5}],
                        'max_changed_columns': 1, 'requires_verified_reload_and_rollback': True},
         'baselines': {'unchanged': {},
-                      'prompt': {'prefix': 'Return only the requested JSON. No markdown or explanation.\n'},
+                      'prompt': {'scope': 'json_targets_only', 'prefix': 'Return only the requested JSON. No markdown or explanation.\n'},
                       'decoding': {'repetition_penalty': 1.1}},
         'generation': {'do_sample': False, 'seed': 1729, 'num_beams': 1,
                        'repetition_penalty': 1.0, 'max_new_tokens': 96},

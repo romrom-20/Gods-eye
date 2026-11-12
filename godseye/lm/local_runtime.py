@@ -40,6 +40,35 @@ def plan():
                 download_max_bytes=1100000000, packages=VERSIONS)
 
 
+
+def task_profile(spec):
+    """Only the validated, approved fixed recipe can raise the smoke ceilings."""
+    from .task_contract import TaskSpec
+    if not isinstance(spec, TaskSpec):
+        raise ValueError('validated TaskSpec required')
+    data = spec.to_dict()
+    if data['model'] != dict(id=MODEL, revision=REVISION, tokenizer_revision=REVISION):
+        raise ValueError('task model/tokenizer revision is not approved')
+    limits = data['budgets']
+    return dict(name='json-task-v1', spec_sha256=spec.sha256, max_prompt_chars=2048,
+                max_input_tokens=limits['max_input_tokens_per_attempt'],
+                max_context_tokens=limits['max_input_tokens_per_attempt'] + limits['max_output_tokens_per_attempt'],
+                max_new_tokens=data['generation']['max_new_tokens'],
+                max_seconds=limits['max_seconds_per_attempt'],
+                max_generations=limits['max_attempts'], max_per_variant=limits['max_attempts_per_variant'],
+                repetition_penalties=[data['generation']['repetition_penalty'],
+                                      data['baselines']['decoding']['repetition_penalty']])
+
+
+def capabilities(profile=None):
+    return dict(model=MODEL, revision=REVISION, weight_sha256=WEIGHT_SHA256,
+                tokenizer_revision=REVISION, tokenizer_blobs=dict(BLOBS), device='cpu',
+                dtype='float32', threads=2, do_sample=False, num_beams=1, seed=1729,
+                profile=profile or dict(name='smoke', max_prompt_chars=512,
+                    max_input_tokens=128, max_context_tokens=160, max_new_tokens=32,
+                    max_seconds=30, max_generations=8, repetition_penalties=[1.0]))
+
+
 def file_hash(path):
     h = hashlib.sha256()
     with open(path, 'rb') as f:
@@ -165,7 +194,10 @@ def termination(tokens, eos, cap, elapsed, seconds):
 
 class Runtime:
     """One loaded CPU model per process. close() releases the instance ownership slot."""
-    def __init__(self, directory):
+    def __init__(self, directory, *, task_spec=None):
+        self.task_policy = task_profile(task_spec) if task_spec is not None else None
+        self.task_attempts = 0
+        self.variant_attempts = {}
         global _active
         with _slot_lock:
             if _active is not None and _active() is not None:
@@ -202,6 +234,9 @@ class Runtime:
                              load_seconds=time.monotonic() - start, loading_info=loading,
                              memory=memory(), installed_packages={d.metadata['Name']: d.version
                                           for d in importlib.metadata.distributions()})
+        if self.task_policy:
+            self.identity.update(self.task_policy, execution_deadline_seconds=1800, downloads=False)
+        self.identity['capabilities'] = capabilities(self.task_policy)
         _active = weakref.ref(self)
 
     def close(self):
@@ -211,27 +246,47 @@ class Runtime:
         if _active is not None and _active() is self:
             _active = None
 
-    def generate(self, prompt, max_new_tokens=32, seconds=20):
+    def prepare(self, prompt, max_new_tokens=32):
+        policy = getattr(self, 'task_policy', None) or capabilities()['profile']
+        if not isinstance(prompt, str) or not prompt or len(prompt) > policy['max_prompt_chars']:
+            raise ValueError('prompt character cap; no truncation permitted')
+        if type(max_new_tokens) is not int or not 1 <= max_new_tokens <= policy['max_new_tokens']:
+            raise ValueError('max_new_tokens exceeds finite profile')
+        rendered = self.tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True)
+        inputs = self.tokenizer(rendered, return_tensors='pt')
+        count = inputs.input_ids.shape[-1]
+        if count > policy['max_input_tokens'] or count + max_new_tokens > policy['max_context_tokens']:
+            raise ValueError('input/context token cap; no truncation permitted')
+        return rendered, inputs, count
+
+    def generate(self, prompt, max_new_tokens=32, seconds=20, *, repetition_penalty=1.0,
+                 variant=None):
         global _generations
         if self.model is None:
             raise RuntimeError('runtime is closed')
-        if not isinstance(prompt, str) or not prompt or len(prompt) > 512:
-            raise ValueError('prompt must contain 1..512 characters')
-        if type(max_new_tokens) is not int or not 1 <= max_new_tokens <= 32:
-            raise ValueError('max_new_tokens must be 1..32')
-        if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 < seconds <= 30:
-            raise ValueError('seconds must be finite in (0,30]')
-        if _generations >= 8:
+        policy = getattr(self, 'task_policy', None) or capabilities()['profile']
+        if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 < seconds <= policy['max_seconds']:
+            raise ValueError('seconds exceeds finite profile')
+        if type(repetition_penalty) not in (int, float) or repetition_penalty not in policy['repetition_penalties']:
+            raise ValueError('unsupported repetition penalty')
+        task = getattr(self, 'task_policy', None)
+        if task:
+            from .task_suite import VARIANTS
+            if variant not in VARIANTS:
+                raise ValueError('task variant required')
+            if self.task_attempts >= task['max_generations'] or self.variant_attempts.get(variant, 0) >= task['max_per_variant']:
+                raise RuntimeError('task attempt budget exhausted')
+        elif _generations >= 8:
             raise RuntimeError('process generation budget exhausted')
         import torch
         from transformers import GenerationConfig, StoppingCriteria, StoppingCriteriaList
         start = time.monotonic()
-        rendered = self.tokenizer.apply_chat_template(
-            [{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True)
-        inputs = self.tokenizer(rendered, return_tensors='pt')
-        input_count = inputs.input_ids.shape[-1]
-        if input_count > 128 or input_count + max_new_tokens > 160:
-            raise ValueError('input/context token cap')
+        rendered, inputs, input_count = self.prepare(prompt, max_new_tokens)
+        # The task reservation includes a preprocessing deadline stop, unlike the legacy smoke counter.
+        if task:
+            self.task_attempts += 1
+            self.variant_attempts[variant] = self.variant_attempts.get(variant, 0) + 1
         if time.monotonic() - start >= seconds:
             return dict(output='', prompt=prompt, rendered_prompt=rendered, input_tokens=input_count,
                         generated_tokens=0, generated_token_ids=[], latency_seconds=time.monotonic()-start,
@@ -240,9 +295,10 @@ class Runtime:
             def __call__(self, input_ids, scores, **kwargs):
                 return time.monotonic() - start >= seconds
         gc = GenerationConfig(do_sample=False, num_beams=1, max_new_tokens=max_new_tokens,
-                              repetition_penalty=1.0, eos_token_id=[151645, 151643],
+                              repetition_penalty=repetition_penalty, eos_token_id=[151645, 151643],
                               pad_token_id=151643, use_cache=True)
-        _generations += 1  # failed native attempts still consume a generation reservation
+        if not task:
+            _generations += 1  # legacy smoke counter; failed native attempts consume a slot
         with torch.inference_mode():
             out = self.model.generate(**inputs, generation_config=gc,
                                      stopping_criteria=StoppingCriteriaList([Deadline()]))

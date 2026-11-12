@@ -138,6 +138,37 @@ class NumericTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             d.target(self.model)
 
+    def test_task_profile_finite_counters_and_decoding(self):
+        import torch
+        from transformers import BatchEncoding
+        from godseye.lm.local_task_runner import approved_spec
+        runtime = r.Runtime.__new__(r.Runtime)
+        runtime.task_policy = r.task_profile(approved_spec())
+        runtime.task_attempts, runtime.variant_attempts = 0, {}
+        class Tokenizer:
+            def apply_chat_template(self, *args, **kwargs):
+                return 'synthetic rendered'
+            def __call__(self, *args, **kwargs):
+                return BatchEncoding({'input_ids': torch.ones((1, 512), dtype=torch.long)})
+            def decode(self, *args, **kwargs):
+                return 'synthetic'
+        runtime.tokenizer = Tokenizer()
+        def fail(**kwargs):
+            self.assertEqual(kwargs['generation_config'].repetition_penalty, 1.1)
+            self.assertEqual(kwargs['generation_config'].max_new_tokens, 96)
+            raise RuntimeError('synthetic task failure')
+        runtime.model = SimpleNamespace(generate=fail)
+        with self.assertRaisesRegex(RuntimeError, 'synthetic task failure'):
+            runtime.generate('fixture', max_new_tokens=96, seconds=60,
+                             repetition_penalty=1.1, variant='decoding')
+        self.assertEqual((runtime.task_attempts, runtime.variant_attempts['decoding']), (1, 1))
+        runtime.variant_attempts['decoding'] = 28
+        with self.assertRaisesRegex(RuntimeError, 'budget'):
+            runtime.generate('fixture', variant='decoding')
+        runtime.task_attempts = 126
+        with self.assertRaisesRegex(RuntimeError, 'budget'):
+            runtime.generate('fixture', variant='unchanged')
+
     def test_generation_limits_accounting_and_failure_reservation(self):
         import torch
         from transformers import BatchEncoding
