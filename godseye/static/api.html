@@ -1,156 +1,268 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Developers — God’s Eye</title>
-    <link rel="stylesheet" href="landing.css" />
-  </head>
-  <body>
-    <nav class="site-nav">
-      <a class="wordmark" href="./">god’s eye<span class="orange">.</span></a
-      ><a href="lab.html">Open the lab ↗</a>
-    </nav>
-    <main class="api-page">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Use the local God's Eye Python client or HTTP API to inspect, import, edit, and evaluate compatible Breakout checkpoints." />
+  <meta name="theme-color" content="#f3f1e9" />
+  <title>Developer guide — God’s Eye</title>
+  <link rel="icon" href="data:," />
+  <style>
+    /* Self-contained documentation styles: no dependency on landing.css. */
+    .guide { --paper:#f3f1e9; --ink:#202b30; --muted:#596461; --line:#d1d3c8; --mono:ui-monospace,SFMono-Regular,Consolas,monospace; margin:0; background:var(--paper); color:var(--ink); font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+    .guide *, .guide *::before, .guide *::after { box-sizing:border-box; }
+    .guide a { color:inherit; text-underline-offset:4px; }
+    .guide a:hover { text-decoration-thickness:2px; }
+    .guide :is(a,summary,pre,textarea):focus-visible { outline:3px solid #9e492d; outline-offset:4px; }
+    .guide .skip { position:fixed; top:8px; left:8px; z-index:3; transform:translateY(-160%); padding:12px; background:#dbe890; }
+    .guide .skip:focus { transform:none; }
+    .guide .shell { width:calc(100% - 96px); max-width:1160px; margin-inline:auto; }
+    .guide .header { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:96px; border-bottom:1px solid var(--line); }
+    .guide .brand { font-size:25px; font-weight:650; letter-spacing:-1.2px; text-decoration:none; }
+    .guide .header nav { display:flex; gap:25px; font-size:12px; }
+    .guide .header nav a { text-decoration:none; }
+    .guide .layout { display:grid; grid-template-columns:200px minmax(0,760px); gap:70px; padding-block:54px 72px; }
+    .guide .sidebar { position:sticky; top:24px; align-self:start; max-height:calc(100vh - 48px); overflow:auto; }
+    .guide .contents { border:0; }
+    .guide .contents summary { font:10px/1.6 var(--mono); text-transform:uppercase; letter-spacing:1.4px; cursor:pointer; padding-block:6px 16px; }
+    .guide .contents nav { display:flex; flex-direction:column; gap:5px; border-left:1px solid var(--line); padding-left:16px; }
+    .guide .contents nav a { padding:5px 0; font-size:12px; text-decoration:none; }
+    .guide .contents nav a:hover { text-decoration:underline; }
+    .guide .sidebar-note { font-size:11px; color:var(--muted); margin-top:27px; max-width:170px; }
+    .guide main { min-width:0; }
+    .guide h1, .guide h2, .guide h3, .guide p { margin:0; }
+    .guide .eyebrow { font:10px/1.6 var(--mono); letter-spacing:1.5px; color:var(--muted); }
+    .guide h1 { font:58px/1.07 Georgia,"Times New Roman",serif; font-weight:400; letter-spacing:-2.5px; margin-top:18px; max-width:700px; }
+    .guide .intro { font-size:18px; line-height:1.65; max-width:650px; margin-top:24px; }
+    .guide .intro-note { margin-top:18px; font-size:13px; color:var(--muted); }
+    .guide section { scroll-margin-top:24px; padding-top:42px; margin-top:42px; border-top:1px solid var(--line); }
+    .guide h2 { font:32px/1.2 Georgia,"Times New Roman",serif; font-weight:400; letter-spacing:-.8px; margin-bottom:18px; }
+    .guide h2 .number { display:block; font:10px/1.6 var(--mono); color:var(--muted); letter-spacing:1px; margin-bottom:10px; }
+    .guide h3 { font-size:16px; font-weight:600; margin-block:26px 10px; }
+    .guide p + p { margin-top:14px; }
+    .guide p, .guide li { overflow-wrap:anywhere; }
+    .guide ul { padding-left:21px; margin-block:14px; }
+    .guide li + li { margin-top:8px; }
+    .guide code { font: .85em/1.65 var(--mono); background:#e5e7da; padding:2px 4px; border-radius:2px; overflow-wrap:anywhere; }
+    .guide pre { min-width:0; max-width:100%; overflow:auto; padding:22px 24px; margin:20px 0; border:1px solid var(--line); background:#e9eadf; font:12px/1.9 var(--mono); border-radius:3px; tab-size:4; }
+    .guide pre code { font:inherit; padding:0; background:none; border-radius:0; overflow-wrap:normal; }
+    .guide .code-label { font:10px/1.6 var(--mono); letter-spacing:1px; color:var(--muted); margin-top:22px; }
+    .guide .code-label + pre { margin-top:8px; }
+    .guide .note { padding:17px 20px; border-left:3px solid #819254; background:#e5e7da; margin-top:20px; font-size:13px; }
+    .guide .caution { border-left-color:#a35a3a; background:#ede2d5; }
+    .guide .mode { display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:22px; }
+    .guide .mode h3 { margin-top:0; }
+    .guide .mode p { color:var(--muted); font-size:13px; }
+    .guide .brief { width:100%; height:470px; resize:vertical; display:block; margin-top:18px; border:1px solid #9da592; border-radius:3px; background:#e9eadf; color:var(--ink); padding:20px; font:12px/1.85 var(--mono); }
+    .guide .hint { font-size:12px; color:var(--muted); margin-top:10px; }
+    .guide .endpoints { margin-top:22px; }
+    .guide .endpoints details { border-bottom:1px solid var(--line); padding:17px 0; }
+    .guide .endpoints details:first-child { border-top:1px solid var(--line); }
+    .guide .endpoints summary { cursor:pointer; font-size:13px; font-weight:500; overflow-wrap:anywhere; }
+    .guide .verb { display:inline-block; min-width:43px; margin-right:8px; color:#4e6334; font:10px/1.6 var(--mono); }
+    .guide .endpoints summary code { background:none; padding:0; font-size:12px; }
+    .guide .endpoints details > p { font-size:13px; margin-top:14px; }
+    .guide .endpoints pre { font-size:11px; margin-bottom:4px; }
+    .guide .footer { padding-block:26px; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:20px; font-size:12px; color:var(--muted); }
+    @media(max-width:1000px) {
+      .guide .layout { grid-template-columns:160px minmax(0,1fr); gap:35px; }
+      .guide h1 { font-size:50px; }
+    }
+    @media(max-width:680px) {
+      .guide .shell { width:calc(100% - 40px); }
+      .guide .header { min-height:78px; gap:14px; }
+      .guide .brand { font-size:23px; }
+      .guide .header nav { gap:16px; font-size:11px; }
+      .guide .layout { grid-template-columns:minmax(0,1fr); gap:30px; padding-top:26px; }
+      .guide .sidebar { position:static; max-height:none; }
+      .guide .contents { border-bottom:1px solid var(--line); padding-bottom:12px; }
+      .guide .contents summary { padding-bottom:10px; }
+      .guide .contents nav { flex-direction:row; flex-wrap:wrap; column-gap:20px; row-gap:2px; padding-left:0; border:0; }
+      .guide .contents nav a { font-size:11px; }
+      .guide .sidebar-note { display:none; }
+      .guide h1 { font-size:43px; letter-spacing:-1.6px; }
+      .guide .intro { font-size:16px; }
+      .guide section { margin-top:32px; padding-top:32px; }
+      .guide h2 { font-size:29px; }
+      .guide pre { padding:17px 15px; font-size:11px; }
+      .guide .mode { grid-template-columns:1fr; gap:20px; }
+      .guide .brief { padding:15px; font-size:11px; height:540px; }
+      .guide .note { padding:15px; }
+      .guide .footer { flex-wrap:wrap; }
+    }
+  </style>
+</head>
+<body class="guide">
+  <a class="skip" href="#guide-main">Skip to guide</a>
+  <header class="header shell">
+    <a class="brand" href="./">god’s eye</a>
+    <nav aria-label="Site navigation"><a href="lab.html#workbench">Open workbench ↗</a><a href="https://github.com/romrom-20/Gods-eye">GitHub ↗</a></nav>
+  </header>
+  <div class="layout shell">
+    <aside class="sidebar" aria-label="Guide navigation">
+      <details class="contents" open>
+        <summary>On this page</summary>
+        <nav aria-label="Contents">
+          <a href="#setup">01 / Start locally</a><a href="#inspect">02 / Inspect &amp; import</a><a href="#edit">03 / Preview &amp; branch</a><a href="#evaluate">04 / Evaluate &amp; wait</a><a href="#coding-agent">05 / Bring a coding agent</a><a href="#http">HTTP reference</a><a href="#connection">Connection &amp; recovery</a><a href="#boundaries">Modes &amp; boundaries</a>
+        </nav>
+      </details>
+      <p class="sidebar-note">API v1<br />A local, single-user workbench. Currently compatible with Breakout only.</p>
+    </aside>
+    <main id="guide-main">
       <div class="eyebrow">DEVELOPER GUIDE / API v1</div>
-      <h1>Program an experiment.</h1>
-      <p>
-        Start the local server with <code>godseye serve</code>. The Python
-        client and website use the same versioned HTTP API. The static demo only
-        supports inspection and recorded playback.
-      </p>
-      <h2>Branch, then measure</h2>
-      <pre><code>from godseye.client import Client
+      <h1>Your checkpoint.<br />A traceable experiment.</h1>
+      <p class="intro">Use Python, HTTP, or your own coding agent to inspect weights, make an explicit edit, and measure the result. Keep the original and the evidence.</p>
+      <p class="intro-note">The current workbench supports the fixed Breakout architecture. The public website is recorded and read-only; run the local server for your own imports, edits, and evaluations.</p>
 
-lab = Client("http://127.0.0.1:8787")
-patch = "W3[0:8:2, 1] = 0"
-hypothesis = "Removing the left circuit reduces score."
-preview = lab.preview("paper", patch, hypothesis)
-branch = lab.patch("paper", patch, hypothesis,
-    expected_parent_sha256=preview["parent_sha256"])
-job = lab.evaluate("paper", branch["id"],
-    episodes=8, seed=1000, max_steps=3000,
-    idempotency_key="first-ablation")
-result = lab.wait(job["id"])
+      <section id="setup" aria-labelledby="setup-title">
+        <h2 id="setup-title"><span class="number">01 / SETUP</span>Start a local workbench.</h2>
+        <p>Requires Python 3.9–3.12. On macOS or Linux, install from the repository:</p>
+        <pre tabindex="0" aria-label="Installation commands"><code>git clone https://github.com/romrom-20/Gods-eye.git
+cd Gods-eye
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[server]'
+.venv/bin/python -m godseye serve</code></pre>
+        <p>Leave that terminal running. Open <code>http://127.0.0.1:8787/lab.html#overview</code> for the browser lab, or use the Python client in a separate terminal with <code>.venv/bin/python</code>. If the server prints another port, use that URL.</p>
+        <p class="note">This CPU workflow needs no GPU, Docker, provider key, or paid API call. Starting the server does not start an experiment.</p>
+        <p><a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/install.md">Full installation and troubleshooting ↗</a></p>
+      </section>
+
+      <section id="inspect" aria-labelledby="inspect-title">
+        <h2 id="inspect-title"><span class="number">02 / INSPECT &amp; IMPORT</span>Choose your starting point.</h2>
+        <p>Run the Python examples below in the same session. First read the server’s capabilities and a tensor from the bundled <code>paper</code> checkpoint.</p>
+        <pre tabindex="0" aria-label="Connect and inspect Python example"><code data-example="inspect">from godseye.client import Client
+
+lab = Client(url="http://127.0.0.1:8787")
+state = lab.state()
+print(state["capabilities"])
+base = "paper"
+tensor = lab.tensor(base, "W3")
+print(tensor["sha256"], tensor["values"])</code></pre>
+        <p><code>Client()</code> stores connection settings; only method calls contact the server. A writable compatible server advertises <code>checkpoint_import</code>.</p>
+        <h3>Use your own compatible checkpoint</h3>
+        <p>Optionally import a local <code>.npz</code> and use its ID as <code>base</code> in the remaining examples. The import creates an independent original. It does not evaluate the weights or start AI repair.</p>
+        <pre tabindex="0" aria-label="Optional checkpoint import Python example"><code data-example="import">record = lab.import_checkpoint(
+    "./weights.npz",
+    "My Breakout checkpoint",
+    "Author supplied; revision 2",
+)
+base = record["id"]
+print(base, record["sha256"])</code></pre>
+        <p>The accepted architecture is <code>600 → 32 → 32 → 6</code>, with exactly six finite little-endian float32 tensors and a maximum archive size of 128 KiB. Arbitrary architectures, language models, pickle, and executable model code are unsupported. Source notes are unverified metadata.</p>
+        <p><a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/checkpoint-import.md">Exact archive keys, shapes, and accepted format ↗</a></p>
+      </section>
+
+      <section id="edit" aria-labelledby="edit-title">
+        <h2 id="edit-title"><span class="number">03 / PREVIEW &amp; BRANCH</span>Write a hypothesis before a change.</h2>
+        <p>This example removes four left-action connections. It is a known harmful ablation of the bundled policy, not an improvement. For imported weights, the behavioral effect is unknown until evaluated.</p>
+        <pre tabindex="0" aria-label="Preview and branch Python example"><code data-example="edit">patch = "W3[0:8:2, 1] = 0"
+hypothesis = "Removing left-action connections reduces score."
+preview = lab.preview(base, patch, hypothesis)
+print(preview["changed"], preview["diff"])
+
+# Review the diff before running the following write.
+branch = lab.patch(
+    base, patch, hypothesis,
+    expected_parent_sha256=preview["parent_sha256"],
+)
+print(branch["id"], branch["parent"])</code></pre>
+        <p>Preview validates the edit without saving. A patch saves an immutable child and preserves the parent. The parent hash precondition rejects a mismatched starting point with HTTP 409.</p>
+        <p>Only bounded numeric assignments and slices with <code>=</code>, <code>+=</code>, <code>-=</code>, and <code>*=</code> are accepted. Function calls, imports, nonfinite values, shape changes, and no-op patches are rejected.</p>
+      </section>
+
+      <section id="evaluate" aria-labelledby="evaluate-title">
+        <h2 id="evaluate-title"><span class="number">04 / EVALUATE &amp; WAIT</span>Measure both versions.</h2>
+        <p>Start with two paired episodes capped at 100 steps each: at most 400 forward calls. This small smoke check tests the workflow; it cannot establish a general improvement.</p>
+        <pre tabindex="0" aria-label="Evaluate and wait Python example"><code data-example="evaluate">from uuid import uuid4
+
+# Save this key and the returned job ID before further work.
+key = "guide-" + uuid4().hex
+print("Evaluation key:", key)
+job = lab.evaluate(
+    base, branch["id"],
+    episodes=2, seed=1000, max_steps=100,
+    idempotency_key=key,
+)
+print("Job:", job["id"])
+result = lab.wait(job["id"], timeout=120)
 print(result["paired_mean_delta"], result["paired_se"])</code></pre>
-      <p>
-        Waiting times out after 120 seconds by default; this does not cancel the
-        job. Call <code>lab.cancel(job["id"])</code> explicitly to stop it.
-        Reusing an idempotency key returns the original evaluation job;
-        different settings with that key return 409.
-      </p>
-      <h2>The HTTP surface</h2>
-      <ul>
-        <li>
-          <span class="endpoint">GET /api/v1/state</span> — capabilities,
-          checkpoints, mode, and limits.
-        </li>
-        <li>
-          <span class="endpoint">GET /api/v1/tensor?id=paper&amp;name=W3</span>
-          — values, summaries, and checkpoint hash.
-        </li>
-        <li>
-          <span class="endpoint">POST /api/v1/patches/preview</span> — validate
-          an edit and return its diff without saving.
-        </li>
-        <li>
-          <span class="endpoint">POST /api/v1/checkpoints</span> — create a
-          branch. Send <code>base_id</code>, <code>patch</code>,
-          <code>hypothesis</code>, and optionally
-          <code>expected_parent_sha256</code>.
-        </li>
-        <li>
-          <span class="endpoint">POST /api/v1/jobs</span> — evaluate
-          <code>base_id</code> and <code>candidate_id</code>. Returns 202 and a
-          job ID.
-        </li>
-        <li>
-          <span class="endpoint">GET /api/v1/jobs/{id}</span> — status, episode
-          progress, and resulting run ID.
-        </li>
-        <li>
-          <span class="endpoint">POST /api/v1/jobs/{id}/cancel</span> — cancel
-          queued or running work. Send <code>{}</code>.
-        </li>
-        <li>
-          <span class="endpoint">GET /api/v1/runs/{id}</span> — complete
-          evidence, including replay traces.
-        </li>
-      </ul>
-      <p>
-        The local server exposes the machine-readable schema at
-        <code>/api/v1/openapi.json</code>. HTTP failures return
-        <code>{"error": "…"}</code>; validation failures also include
-        field-level <code>issues</code>.
-      </p>
-      <h2>A small, bounded language</h2>
-      <pre><code>W3[0:8:2, 1] = 0
-b3[1] += 0.25
-W2[:, 4] *= 0.5</code></pre>
-      <p>
-        Only numeric assignments, slices, and <code>+= -= *=</code> are
-        accepted. Function calls, imports, arbitrary Python execution, nonfinite
-        values, shape changes, and no-op patches are rejected. Each patch
-        applies to a copy; its parent stays intact.
-      </p>
-      <h2>Security and execution boundaries</h2>
-      <ul>
-        <li>
-          The writable server binds to loopback only. Host and Origin checks
-          protect against ordinary cross-origin requests and DNS rebinding. No
-          CORS wildcard is enabled.
-        </li>
-        <li>
-          Optional <code>GODSEYE_API_TOKEN</code> protects every API route with
-          a bearer token. The lab’s connection settings accept it in memory; the
-          client takes <code>token=…</code>.
-        </li>
-        <li>
-          Requests are limited to 64 KiB, patches to 200 statements, and
-          evaluations to 250,000 maximum forward calls. One worker runs at a
-          time, with four admitted jobs total.
-        </li>
-        <li>
-          Job states persist; unfinished work is marked interrupted on restart.
-          Cancellation is cooperative at forward-pass boundaries. Result
-          publication wins a late cancellation race.
-        </li>
-        <li>
-          A 256 MiB workspace admission limit stops new writes; an admitted run
-          can exceed it. This is not an OS disk quota.
-        </li>
-        <li>
-          This is a single-user research tool. Python plugins are trusted local
-          code, not sandboxed. Multi-tenant authorization, hardened worker
-          isolation, and durable distributed scheduling are future work.
-        </li>
-      </ul>
-      <h2>Publish without a compute service</h2>
-      <pre><code>godseye export-demo --output dist/demo
-python -m http.server 8080 --directory dist/demo</code></pre>
-      <p>
-        Upload the contents of <code>dist/demo</code> to a static host. Export
-        includes only bundled public examples, never your local workspace. The
-        demo is clearly labeled as recorded, and cannot create checkpoints or
-        run jobs.
-      </p>
-      <h2>What this establishes</h2>
-      <p>
-        The included network and known ablation demonstrate inspection,
-        branching, and measurement. They do not establish general-purpose model
-        repair or reproduce the paper’s benchmark. Use disjoint development and
-        held-out seeds before making improvement claims.
-      </p>
-      <p>
-        <a
-          href="https://github.com/romrom-20/Gods-eye/blob/main/docs/roadmap.md"
-          >Continue with the implementation roadmap ↗</a
-        >
-      </p>
+        <p><code>evaluate</code> returns a job immediately. <code>wait</code> polls and returns the complete recorded run when it succeeds. Inspect per-episode scores, truncation, settings, hashes, and replay traces; use disjoint development and held-out seeds before making improvement claims.</p>
+        <h3>Waiting and cancellation are separate</h3>
+        <pre tabindex="0" aria-label="Job status and cancellation Python example"><code>status = lab.job(job["id"])
+print(status["status"])
+# Run only when you intend to request cancellation:
+# lab.cancel(job["id"])</code></pre>
+        <p>A wait timeout does not cancel the job. Poll the saved ID again or explicitly call <code>lab.cancel(job["id"])</code>. Cancellation is cooperative; a published result wins a late cancellation race. Terminal states are <code>succeeded</code>, <code>cancelled</code>, <code>failed</code>, and <code>interrupted</code>.</p>
+        <p class="note">For an admitted evaluation, the same idempotency key and settings return the original job. Different settings with that key return 409. Import and patch writes do not have this evaluation idempotency guarantee.</p>
+      </section>
+
+      <section id="coding-agent" aria-labelledby="agent-title">
+        <h2 id="agent-title"><span class="number">05 / YOUR CODING AGENT</span>Bring a brief, not a credential.</h2>
+        <p>An external coding agent that can run Python on your machine can use this same client against your local server. This is a workflow you initiate in your own tool, not a built-in subscription or provider integration.</p>
+        <p>Start the server first. Replace the file path and goal below, then select and copy the brief into your coding tool. The guide itself executes nothing.</p>
+        <label class="code-label" for="agent-brief">COPYABLE LOCAL EXPERIMENT BRIEF</label>
+        <textarea class="brief" id="agent-brief" readonly spellcheck="false">Work in my local God's Eye repository using its Python environment.
+Server: http://127.0.0.1:8787 (confirm the printed port).
+Checkpoint: ./weights.npz (I will supply a compatible Breakout NPZ).
+Goal: inspect the checkpoint and test one explicit weight-edit hypothesis.
+
+Use godseye.client.Client; read state() before writes. Confirm writable mode and checkpoint_import capability. Import with import_checkpoint(path, name, provenance); save its ID and sha256. Inspect it with tensor(id, "W3") and any other needed tensors. Preserve the imported original.
+
+Propose one bounded numeric patch and a testable hypothesis. Call preview(base, patch, hypothesis); show the diff. Ask me to approve the exact edit before patch(base, patch, hypothesis, expected_parent_sha256=preview["parent_sha256"]). Never overwrite the original or change model architecture.
+
+After approval, evaluate the original and child once: episodes=2, seed=1000, max_steps=100. Generate and retain one unique idempotency key before evaluate(...). Save the returned job ID, then wait(job_id). If waiting times out, poll the saved job; ask before cancellation or additional evaluations.
+
+Report original/child IDs and hashes, exact patch, settings, per-episode scores, paired_mean_delta, paired_se, truncation, and limitations. Report failure or no improvement honestly; this tiny capped sample is not a benchmark.
+
+On TransportError, inspect uncertain_write. Never automatically repeat an import, patch, or uncertain evaluation. Reconcile saved state/jobs first and retain the original evaluation key.
+
+Keep API tokens out of this prompt, source files, URLs, output, and logs. Use only my approved local environment for authentication. Do not configure providers, call paid services, inspect hidden evaluation/admin files, deploy, or start unrelated experiments.</textarea>
+        <p class="hint">Focus the brief and press ⌘A / Ctrl+A, then ⌘C / Ctrl+C. Authentication, if enabled, belongs in the local environment—not in the brief.</p>
+      </section>
+
+      <section id="http" aria-labelledby="http-title">
+        <h2 id="http-title">The HTTP surface.</h2>
+        <p>All paths below are on your running local server. Send JSON for POST requests. The machine-readable schema is at <code>/api/v1/openapi.json</code>; it is not an API supplied by a static website.</p>
+        <div class="endpoints">
+          <details open><summary><span class="verb">GET</span><code>/api/v1/state</code> · capabilities and checkpoints</summary><p>Read mode, capabilities, limits, and saved checkpoints before choosing an operation. Use <code>GET /api/v1/tensor?id=CHECKPOINT_ID&amp;name=W3</code> for tensor values, summaries, and hash.</p></details>
+          <details><summary><span class="verb">POST</span><code>/api/v1/checkpoints/import</code> · import an original</summary><p>Returns 201. Only the writable built-in Breakout backend supports import. Use the client to bound the file read and encode canonical base64.</p><pre tabindex="0" aria-label="Import request JSON"><code>{"name":"My checkpoint","provenance":"Revision 2",
+ "npz_base64":"REPLACE_WITH_CANONICAL_BASE64"}</code></pre></details>
+          <details><summary><span class="verb">POST</span><code>/api/v1/patches/preview</code> · validate without saving</summary><p>Returns the parent hash, candidate hash, changed count, and diff. This payload also creates a child at <code>POST /api/v1/checkpoints</code> (201); include the preview’s <code>expected_parent_sha256</code> for the write.</p><pre tabindex="0" aria-label="Preview request JSON"><code>{"base_id":"paper","patch":"W3[0:8:2, 1] = 0",
+ "hypothesis":"Removing left connections reduces score."}</code></pre></details>
+          <details><summary><span class="verb">POST</span><code>/api/v1/jobs</code> · admit a comparison</summary><p>Returns 202 and a job ID. Send <code>Idempotency-Key</code> in the request header and retain it with the settings.</p><pre tabindex="0" aria-label="Evaluation request JSON"><code>{"base_id":"ORIGINAL_ID","candidate_id":"CHILD_ID",
+ "episodes":2,"seed":1000,"max_steps":100}</code></pre></details>
+          <details><summary><span class="verb">GET</span><code>/api/v1/jobs/{id}</code> · status and progress</summary><p>Poll a known job. List saved jobs with <code>GET /api/v1/jobs</code>. On success, read complete evidence at <code>GET /api/v1/runs/{run_id}</code> using the returned <code>run_id</code>.</p></details>
+          <details><summary><span class="verb">POST</span><code>/api/v1/jobs/{id}/cancel</code> · request cancellation</summary><p>Send an empty JSON object <code>{}</code>. A response is not proof that a running worker has already stopped; poll its status. Failed or interrupted work is not a successful measurement.</p></details>
+        </div>
+        <p class="hint">HTTP failures return an <code>error</code>; validation failures may also include field-level <code>issues</code>. The client raises <code>APIError</code> with <code>status</code> and <code>payload</code>. <a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/http-example.md">Complete raw HTTP example ↗</a></p>
+      </section>
+
+      <section id="connection" aria-labelledby="connection-title">
+        <h2 id="connection-title">Keep connection failures explicit.</h2>
+        <h3>Cannot reach the server?</h3>
+        <p>Keep <code>godseye serve</code> running in a separate terminal. Match the client’s URL and port to the server’s output. <code>TransportError</code> exposes a safe <code>reason</code>, <code>errno</code>, and <code>uncertain_write</code>; the client performs no automatic retries.</p>
+        <p class="note caution">A lost write response can mean the checkpoint or job was already saved. Inspect <code>lab.state()</code> and <code>GET /api/v1/jobs</code> before deciding whether to submit again. Retain the original evaluation key. A timeout or disconnected request does not prove execution stopped.</p>
+        <h3>Optional local authentication</h3>
+        <p>If you set <code>GODSEYE_API_TOKEN</code> for the server, every API route requires its bearer token. Supply the same token to the client through your approved local environment. Do not paste it into a coding-agent prompt, URL, source file, or log.</p>
+        <pre tabindex="0" aria-label="Environment-based client authentication"><code>import os
+from godseye.client import Client
+
+lab = Client(
+    url="http://127.0.0.1:8787",
+    token=os.environ.get("GODSEYE_API_TOKEN"),
+)</code></pre>
+        <p>The writable server is loopback-only, with Host and Origin checks and no CORS wildcard. It is a single-user research tool, not a public multi-tenant API. Local Python code and external coding tools are trusted code; their filesystem access is not sandboxed by this client.</p>
+      </section>
+
+      <section id="boundaries" aria-labelledby="boundaries-title">
+        <h2 id="boundaries-title">Know which mode you’re using.</h2>
+        <div class="mode"><div><h3>Recorded website</h3><p>Inspect bundled tensors and replay two saved comparisons. No imports, patch writes, jobs, provider calls, or live API. The static export contains only allowlisted public examples, not your private workspace.</p></div><div><h3>Writable local lab</h3><p>Import compatible Breakout checkpoints, inspect, preview, branch, and evaluate on CPU. Artifacts persist in the current directory’s <code>.godseye/</code>, or the configured <code>GODSEYE_DATA_DIR</code>.</p></div></div>
+        <h3>Bound the work</h3><p>One CPU worker runs at a time, with four admitted jobs total and a 250,000 maximum forward-call budget per job. Ordinary requests are capped at 64 KiB; the exact import POST permits up to 192 KiB of JSON for a decoded NPZ up to 128 KiB. Patches allow at most 200 statements. A 256 MiB workspace admission limit is not an OS disk quota. Unfinished jobs become interrupted on restart.</p>
+        <p>Using an external coding tool through this API does not configure the separate isolated AI repair service. No autonomous repair quality, cost saving, or general model support is established by the bundled known-circuit demonstration.</p>
+        <p><a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/security.md">Security contract ↗</a> · <a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/roadmap.md">Roadmap ↗</a></p>
+      </section>
     </main>
-    <footer class="site-footer">
-      <a href="./">← Back to God’s Eye</a
-      ><span>INSPECT → PREVIEW → BRANCH → EVALUATE</span>
-    </footer>
-  </body>
+  </div>
+  <footer class="footer shell"><a href="./">← Back to God’s Eye</a><span>Inspect → preview → branch → evaluate</span></footer>
+</body>
 </html>
