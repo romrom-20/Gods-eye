@@ -9,7 +9,7 @@ Python API, and isolated AI repair harness. Start with a tiny Breakout-playing
 network on your CPU. Preserve the original, make an explicit edit, and compare
 measured behavior.
 
-[Quick start](#try-a-real-experiment-no-api-key) · [Install a package](docs/install.md) · [Agent setup](docs/experiment-orchestration.md) ·
+[Recorded demo](https://romrom-20.github.io/Gods-eye/) · [Quick start](#try-a-real-experiment-no-api-key) · [Install a package](docs/install.md) · [Agent setup](docs/experiment-orchestration.md) ·
 [Roadmap](docs/roadmap.md) · [Report a problem](https://github.com/romrom-20/Gods-eye/issues)
 
 ## Try a real experiment — no API key
@@ -125,13 +125,11 @@ a subdirectory. No Python server or GPU is needed on that host. The export never
 reads your private `.godseye/` workspace and refuses to overwrite a nonempty folder.
 
 See [public demo preparation and approval steps](docs/public-demo.md) for the
-subdirectory preview, artifact audit and gated Pages workflow. Publication is
-disabled by default; no live hosted API is supplied.
+subdirectory preview, artifact audit and gated Pages workflow. The recorded demo is now deployed on GitHub Pages; no live hosted API is supplied.
 
 Alternatively, `godseye serve --demo` serves the bundled data read-only through
 Python. The GitHub Actions workflow tests the project and builds a downloadable
-`godseye-static-demo` artifact; deployment stays off unless explicitly enabled
-after user approval.
+`godseye-static-demo` artifact; deployment requires successful main CI and an environment review.
 
 ## Python API
 

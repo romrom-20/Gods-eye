@@ -1,8 +1,14 @@
 # Recorded public demo (0.3.0)
 
-The prepared GitHub Pages URL is `https://romrom-20.github.io/Gods-eye/`.
-It is a proposed destination, **not a claim that Pages is enabled or deployed**.
-The repository's CI artifact `godseye-static-demo` is usable without publication.
+The public recorded demo is [romrom-20.github.io/Gods-eye](https://romrom-20.github.io/Gods-eye/).
+First deployed on 2026-11-12 from verified main `8b1a544`, following the user's
+request for a shared testing site. Main-only environment restrictions and a
+required reviewer remain enabled. No live API or compute service is published.
+
+Public browser checks verified four checkpoint tensor selections, both recordings
+advancing, the developer guide, disabled mutations, and zero API traffic even with
+`?goalMode=mock#goal`. HTML uses content-versioned CSS and JavaScript URLs.
+Use [the tester handoff](test-the-product.md) for independent feedback.
 
 ## Reproduce the preview
 
@@ -94,5 +100,5 @@ The audited export is about 916 KiB and contains exactly 13 allowlisted files,
 including `.nojekyll` and network provenance/licenses. Automated export assertions
 check the file list, both runs, four checkpoints and absence of the goal form;
 controller tests prove neither live nor mock goal recovery can initialize in a
-static export. This verifies local preparation; Actions deployment and the
-public URL still need approval and a post-deployment check.
+static export. This records the original preparation; the verified first public
+deployment is recorded at the top of this document.
