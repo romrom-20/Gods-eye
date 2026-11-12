@@ -1,0 +1,7 @@
+# Isolated Python 3.12 CPU slice; no Modal/Accelerate dependency.
+torch==2.6.0
+transformers==4.51.3
+safetensors==0.5.3
+numpy==2.2.6
+huggingface-hub==0.30.2
+tokenizers==0.21.1
