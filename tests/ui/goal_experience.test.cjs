@@ -161,7 +161,7 @@ test('goal example opens simplified Start here without manual editing or executi
   nodes['goal-guided'].onclick();
   assert.deepEqual(views, ['overview']);
   assert.deepEqual(seen, ['intro', 'start button']);
-  assert.match(html, />Start here<span/);
+  assert.match(html, />Evidence<span/);
   assert.match(html, />Edit weights<span/);
   assert.match(html, />Compare<span/);
 });

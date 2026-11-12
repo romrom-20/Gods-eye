@@ -308,6 +308,7 @@ async function refresh() {
   }
   sidebarCheckpoints();
   renderImportMetadata();
+  renderExperimentBoard();
 }
 // Local checkpoint import: explicit writes only; uncertain writes require reconciliation.
 const checkpointImport = {supported: false, busy: false, uncertain: false, importedId: null};
@@ -484,6 +485,7 @@ function paintTensor() {
 let tensorRequest = 0;
 async function loadTensor(reset = false) {
   renderImportMetadata();
+  renderCheckpointDetail();
   const request = ++tensorRequest;
   try {
     const model = $("inspect-model").value,
@@ -836,6 +838,7 @@ function showRun(run) {
     $("episode-rows").append(row);
   });
   renderFrame();
+  renderExperimentBoard();
   message("overview-status", "");
 }
 let runRequest = 0;
@@ -931,6 +934,7 @@ async function loadHistory() {
   }
   if (state.run) $("overview-run").value = state.run.id;
   $("overview-empty").hidden = !!runs.length;
+  renderExperimentBoard();
   return runs;
 }
 function updateBudget() {
@@ -996,6 +1000,8 @@ async function followJob(job) {
 async function loadJobs() {
   try {
     const jobs = await api("/api/v1/jobs");
+    state.jobs = jobs;
+    renderExperimentBoard();
     $("recent-jobs").replaceChildren();
     for (const job of jobs.slice(0, 5)) {
       const row = document.createElement("div"),
@@ -1093,7 +1099,7 @@ $("quick-experiment").onclick = async () => {
 async function initialize() {
   drawArchitecture();
   updateLineNumbers();
-  showView(location.hash.slice(1) || "goal");
+  showView(location.hash.slice(1) || (staticDemo ? "overview" : "goal"));
   try {
     await refresh();
     await loadJobs();
@@ -1108,13 +1114,113 @@ async function initialize() {
             ?.patch?.includes("W3[0:8:2, 1] = 0"),
       ) || runs[0];
     if (featured) await openRun(featured.id);
+    fitExperimentBoard();
   } catch (e) {
+    renderExperimentBoard();
+    $("board-scope").textContent = "CONNECTION UNAVAILABLE";
     $("environment-label").textContent = "Local lab unavailable";
     $("connection-label").textContent = "Disconnected";
     $("execution-label").textContent = "Local engine unavailable";
     message("overview-status", "Cannot reach the local lab. Check the server and connection settings, then reload. The goal service may also be unavailable; your draft is preserved.", true);
   }
 }
+// Persisted-object board: rendering and selection never submit an experiment.
+let boardZoom = 1, selectedBoardObject = null;
+function boardElement(tag, className, text) {
+  const el = document.createElement(tag); el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+function renderExperimentBoard() {
+  const graph = $("board-graph"); if (!graph) return;
+  graph.replaceChildren(); $("board-list").replaceChildren();
+  const recorded = staticDemo || state.mode === "recorded-demo";
+  $("board-scope").textContent = recorded ? "RECORDED / READ ONLY" : "LOCAL / CPU";
+  $("board-request").textContent = recorded ? "Explore saved evidence ↗" : "Describe a goal ↗";
+  $("board-counts").textContent = `${state.checkpoints.length} checkpoints · ${state.runs.length} comparisons`;
+  const positions = new Map(), visiting = new Set();
+  function depth(c) {
+    if (!c.parent) return 0;
+    if (visiting.has(c.id)) return 0;
+    const parent = state.checkpoints.find(p => p.id === c.parent);
+    if (!parent) return 0;
+    visiting.add(c.id); const d = depth(parent) + 1; visiting.delete(c.id); return Math.min(d, 20);
+  }
+  const occupied = new Set();
+  const columns = new Map(), compact = $("board-viewport").clientWidth < 800;
+  for (const c of state.checkpoints) {
+    const d = depth(c), row = columns.get(d) || 0; columns.set(d,row+1);
+    const col=compact?d%2:d; let slot=compact?Math.floor(d/2)*2+row:row;
+    while(occupied.has(col+":"+slot))slot++;
+    occupied.add(col+":"+slot);
+    positions.set(c.id, {x:28+col*260,y:36+slot*170});
+  }
+  const maxDepth = Math.max(0, ...state.checkpoints.map(depth));
+  const bottomRow = Math.max(0,...[...positions.values()].map(p=>(p.y-36)/170));
+  let evidenceRow=bottomRow;
+  state.runs.forEach((r,i) => {while(occupied.has("1:"+evidenceRow))evidenceRow++;
+    positions.set("run:"+r.id,compact?{x:288,y:36+evidenceRow*170}:{x:28+(maxDepth+1)*260,y:36+i*170});evidenceRow++;});
+  const width = compact?540:Math.max(540,270+(maxDepth+1)*260), height = Math.max(350,...[...positions.values()].map(p=>p.y+155));
+  graph.style.width = width+"px"; graph.style.height = height+"px";
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("width",width); svg.setAttribute("height",height); svg.setAttribute("aria-hidden","true"); svg.classList.add("board-connections"); graph.append(svg);
+  function edge(from,to,kind) {
+    const a=positions.get(from),b=positions.get(to); if(!a||!b)return;
+    const path=document.createElementNS(svg.namespaceURI,"path");
+    if(a.x===b.x) path.setAttribute("d",`M ${a.x+109} ${a.y+126} C ${a.x+109} ${a.y+146}, ${b.x+109} ${b.y-20}, ${b.x+109} ${b.y}`);
+    else {const right=b.x>a.x,ax=a.x+(right?218:0),bx=b.x+(right?0:218),bend=right?26:-26;
+      path.setAttribute("d",`M ${ax} ${a.y+58} C ${ax+bend} ${a.y+58}, ${bx-bend} ${b.y+58}, ${bx} ${b.y+58}`); }
+    path.setAttribute("class",kind); svg.append(path);
+  }
+  function node(key,kind,title,description,select) {
+    const p=positions.get(key),button=boardElement("button","experiment-node "+kind);
+    button.dataset.objectId=key; button.setAttribute("aria-pressed",String(selectedBoardObject===key));
+    button.append(boardElement("span","node-kind",kind==="evidence"?"◉ EVALUATION / SAVED":kind==="edit"?"↳ CHECKPOINT / EDIT":"◇ CHECKPOINT / ROOT"),boardElement("strong","node-title",title),boardElement("span","node-description",description),boardElement("span","node-open",kind==="evidence"?"Inspect evidence →":"Inspect tensors →"));
+    button.style.left=p.x+"px";button.style.top=p.y+"px";
+    const choose=async()=>{selectedBoardObject=key; $("board-selection").textContent=title+" · "+description; await select(); renderExperimentBoard(); $("board-selection").focus({preventScroll:true});};
+    button.onclick=choose; graph.append(button);
+    const item=boardElement("button","board-list-item",title+" — "+description); item.onclick=choose;item.setAttribute("aria-pressed",String(selectedBoardObject===key));$("board-list").append(item);
+  }
+  for(const c of state.checkpoints){
+    if(c.parent) edge(c.parent,c.id,"lineage-edge");
+    const missing=c.parent&&!positions.has(c.parent);
+    let description=missing?"Parent unavailable · saved checkpoint":c.parent?"Parent: "+shortLabel(c.parent):c.source_sha256||c.provenance?"Imported original · source unverified":"Original · no parent";
+    if(!state.runs.some(r=>r.base_id===c.id||r.candidate_id===c.id))description+=" · no saved evaluation";
+    node(c.id,c.parent?"edit":"root",shortLabel(c.id),description,async()=>{
+      $("inspect-model").value=c.id;$("patch-base").value=c.id;
+      showView("workbench");await loadTensor(true);sidebarCheckpoints();
+
+    });
+  }
+  for(const r of state.runs){edge(r.base_id,"run:"+r.id,"evidence-edge"); if(r.candidate_id!==r.base_id)edge(r.candidate_id,"run:"+r.id,"evidence-edge");
+    node("run:"+r.id,"evidence",`${shortLabel(r.base_id)} → ${shortLabel(r.candidate_id)}`,`Δ ${fmt(r.paired_mean_delta)} · ${r.episodes} paired games · SE ${fmt(r.paired_se,2)}`,async()=>{await openRun(r.id);showView("overview");});
+  }
+  if(!state.checkpoints.length)graph.append(boardElement("p","board-empty","No saved checkpoints loaded. Check your local connection; no experiment has been inferred."));
+  $("board-activity").replaceChildren();
+  for(const r of state.runs.slice(0,3)){const b=boardElement("button","activity-record",`◉ Saved comparison · Δ ${fmt(r.paired_mean_delta)}`); b.onclick=()=>{const target=graph.querySelector(`[data-object-id="run:${CSS.escape(r.id)}"]`);target?.click();};$("board-activity").append(b);}
+  for(const job of (state.jobs||[]).filter(j=>j.status!=="completed").slice(0,3)){
+    const b=boardElement("button","activity-record",`${job.status} · ${job.completed}/${job.total} episodes · no completed evidence`);
+    b.onclick=()=>{showView("evaluate");$("board-selection").textContent=`Evaluation job ${job.id} · ${job.status}`;$("board-selection").focus();};$("board-activity").append(b);
+  }
+  if(!state.runs.length&&!(state.jobs||[]).length)$("board-activity").textContent="No saved comparisons yet. Job and agent status remain in their detail views.";
+  graph.style.transform=`scale(${boardZoom})`;graph.style.transformOrigin="top left";
+}
+function renderCheckpointDetail(){
+  $("board-checkpoint-metadata")?.remove();
+  const c=state.checkpoints.find(c=>c.id===$("inspect-model").value);if(!c)return;
+  const detail=boardElement("div","board-checkpoint-metadata");detail.id="board-checkpoint-metadata";
+  detail.append(boardElement("p","mono",c.id));
+  if(c.patch)detail.append(boardElement("pre","saved-patch",c.patch));
+  document.querySelector(".weights").prepend(detail);
+}
+function fitExperimentBoard(){const graph=$("board-graph");boardZoom=Math.min(1,($("board-viewport").clientWidth-12)/(parseFloat(graph.style.width)||520));graph.style.transform=`scale(${boardZoom})`;$("board-viewport").style.height=Math.max(240,(parseFloat(graph.style.height)||350)*boardZoom+15)+"px";}
+$("board-fit").onclick=fitExperimentBoard;
+$("board-zoom-in").onclick=()=>{boardZoom=Math.min(1.5,boardZoom+.15);renderExperimentBoard();};
+$("board-zoom-out").onclick=()=>{boardZoom=Math.max(.35,boardZoom-.15);renderExperimentBoard();};
+$("board-list-toggle").onclick=()=>{const list=$("board-list");list.hidden=!list.hidden;$("board-viewport").hidden=!list.hidden;$("board-list-toggle").setAttribute("aria-pressed",String(!list.hidden));};
+$("board-request").onclick=()=>{showView(staticDemo?"overview":"goal");$("board-selection").textContent=staticDemo?"Recorded evidence · select a saved comparison for paired playback.":"Request · review the supported goal and exact limits before Start."; (staticDemo?$("overview-run"):$("goal-draft")).focus();};
+$("copy-agent-brief").onclick=async()=>{try{await navigator.clipboard.writeText($("agent-brief").textContent);$("copy-brief-status").textContent=" Brief copied.";}catch{$("copy-brief-status").textContent=" Select and copy the brief above.";}};
+
 // Goal workflow: mock-only boundary. No api(), fetch(), provider profiles, or keys.
 (() => {
   if (typeof staticDemo !== "undefined" && staticDemo) return;
