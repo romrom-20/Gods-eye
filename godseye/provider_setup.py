@@ -1,10 +1,19 @@
-"""Loopback-only provider setup. Provider requests require explicit user actions."""
+"""Loopback-only provider setup. Provider requests require explicit user actions.
+
+HTTP/1.0 closes each connection. Before an early POST rejection, consume only a
+single unambiguous Content-Length of at most 64 KiB, with a one-second total
+deadline, so ordinary delayed request bodies do not cause a reset on close.
+Ambiguous framing, larger bodies, truncation or expiry deliberately close without
+promising graceful delivery to a peer that keeps sending. Never decode chunking
+or reuse a connection whose body was not completely consumed.
+"""
 import argparse
 import hmac
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import shlex
 import stat
@@ -15,6 +24,10 @@ import webbrowser
 from godseye.provider_discovery import DiscoveryError, ProviderDiscovery, validate
 
 STATIC = Path(__file__).parent / 'static'
+MAX_BODY = 8192
+MAX_REJECT_DRAIN = 65536
+REJECT_DRAIN_SECONDS = 1.0
+BODY_SECONDS = 5.0
 
 
 class ProviderSettings:
@@ -146,6 +159,48 @@ def create_server(settings=None, port=0, discovery=None):
             return not write or (origin == 'http://' + expected and hmac.compare_digest(
                 self.headers.get('X-Setup-Token', '').encode(), csrf.encode()))
 
+        def body_size(self):
+            lengths = self.headers.get_all('Content-Length', [])
+            if len(lengths) != 1 or self.headers.get_all('Transfer-Encoding') is not None:
+                return None
+            value = lengths[0].strip()
+            # No signs, comma lists, duplicate fields, or unbounded integer parsing.
+            if not re.fullmatch(r'[0-9]{1,20}', value):
+                return None
+            return int(value)
+
+        def read_body(self, size, seconds, keep=False):
+            deadline = time.monotonic() + seconds
+            previous_timeout = self.connection.gettimeout()
+            body = bytearray()
+            try:
+                while size:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise TimeoutError('Request body deadline exceeded')
+                    self.connection.settimeout(remaining)
+                    # read1 permits a total deadline even for a trickling sender;
+                    # BufferedReader.read(size) can issue many socket reads itself.
+                    chunk = self.rfile.read1(min(size, 8192))
+                    if not chunk:
+                        raise ValueError('Incomplete request body')
+                    size -= len(chunk)
+                    if keep:
+                        body.extend(chunk)
+            finally:
+                self.connection.settimeout(previous_timeout)
+            return bytes(body)
+
+        def reject_post(self, body, status):
+            self.close_connection = True
+            size = self.body_size()
+            if size is not None and size <= MAX_REJECT_DRAIN:
+                try:
+                    self.read_body(size, REJECT_DRAIN_SECONDS)
+                except (OSError, ValueError):
+                    pass  # Bounded best effort only; no request action is admitted.
+            return self.reply(body, status)
+
         def do_GET(self):
             if not self.allowed():
                 return self.reply({'error': 'Request rejected'}, 403)
@@ -163,16 +218,20 @@ def create_server(settings=None, port=0, discovery=None):
 
         def do_POST(self):
             if not self.allowed(write=True):
-                return self.reply({'error': 'Request rejected'}, 403)
+                return self.reject_post({'error': 'Request rejected'}, 403)
             if self.path not in ('/save', '/models', '/test-connection'):
-                return self.reply({'error': 'Not found'}, 404)
+                return self.reject_post({'error': 'Not found'}, 404)
             if self.headers.get_content_type() != 'application/json':
-                return self.reply({'error': 'Use JSON'}, 415)
+                return self.reject_post({'error': 'Use JSON'}, 415)
+            size = self.body_size()
+            if size is None or not 0 < size <= MAX_BODY:
+                return self.reject_post({'error': 'Invalid request size'}, 413)
             try:
-                size = int(self.headers.get('Content-Length', '0'))
-                if not 0 < size <= 8192 or self.headers.get('Transfer-Encoding'):
-                    return self.reply({'error': 'Invalid request size'}, 413)
-                data = json.loads(self.rfile.read(size))
+                raw = self.read_body(size, BODY_SECONDS, keep=True)
+            except (OSError, ValueError):
+                return self.reply({'error': 'Incomplete request body'}, 400)
+            try:
+                data = json.loads(raw)
                 fields = {'key', 'model', 'provider', 'routing'}
                 if self.path == '/test-connection':
                     fields.add('confirmed')
