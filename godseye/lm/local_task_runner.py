@@ -106,6 +106,10 @@ def validate_policy(runtime, spec):
 
 
 def to_record(raw, *, attempt_id, spec, case, variant):
+    if not isinstance(raw, dict):
+        raise ValueError('runtime result must be a dict')
+    if 'output' not in raw or not isinstance(raw['output'], str):
+        raise ValueError('runtime result must include an explicit string output')
     def count(key):
         value = raw.get(key)
         return value if type(value) is int and value >= 0 else None
@@ -128,7 +132,7 @@ def to_record(raw, *, attempt_id, spec, case, variant):
         status = 'budget_limited'
     record = dict(attempt_id=attempt_id, spec_sha256=spec.sha256, case_id=case['id'],
                   split=case['split'], variant=variant, status=status,
-                  output=raw.get('output', '') if isinstance(raw.get('output', ''), str) else '',
+                  output=raw['output'],
                   input_tokens=input_tokens, output_tokens=output_tokens, elapsed_seconds=seconds)
     return validate_record(record, spec)
 

@@ -12,7 +12,7 @@ from unittest.mock import patch
 from godseye.lm import local_task_runner as runner
 from godseye.lm.local_runtime import capabilities, task_profile, REVISION
 from godseye.lm.task_contract import TaskSpec, canonical
-from godseye.lm.task_suite import cases, VARIANTS
+from godseye.lm.task_suite import cases, VARIANTS, score_output
 from experiments.local_lm_task import supervise
 
 
@@ -181,6 +181,54 @@ assert 'torch' not in sys.modules and 'transformers' not in sys.modules
         record = runner.to_record(raw, attempt_id='unknown', spec=self.spec, case=case, variant='unchanged')
         self.assertEqual(record['status'], 'incomplete')
         self.assertIsNone(record['output_tokens'])
+
+    def test_conversion_requires_dict_and_explicit_string_output(self):
+        valid = dict(termination='eos', deadline_exceeded=False, input_tokens=10,
+                     generated_tokens=2, latency_seconds=.1)
+        for raw in (None, [], 'not a dict'):
+            with self.subTest(raw=raw), self.assertRaisesRegex(ValueError, 'must be a dict'):
+                runner.to_record(raw, attempt_id='malformed', spec=self.spec,
+                                 case=cases('dev')[0], variant='unchanged')
+        for raw in (valid, dict(valid, output=123), dict(valid, output=None)):
+            with self.subTest(raw=raw), self.assertRaisesRegex(ValueError, 'explicit string output'):
+                runner.to_record(raw, attempt_id='malformed', spec=self.spec,
+                                 case=cases('dev')[0], variant='unchanged')
+        record = runner.to_record(dict(valid, output=''), attempt_id='empty', spec=self.spec,
+                                  case=cases('dev')[0], variant='unchanged')
+        self.assertEqual(record['output'], '')
+        self.assertEqual(record['status'], 'complete')
+        self.assertFalse(score_output(cases('dev')[0], record['output'])['correct'])
+
+    def test_malformed_payload_retained_as_failed_with_no_heldout(self):
+        payloads = [dict(termination='eos', deadline_exceeded=False, input_tokens=10,
+                         generated_tokens=2, latency_seconds=.1),
+                    dict(output=123, termination='eos', deadline_exceeded=False,
+                         input_tokens=10, generated_tokens=2, latency_seconds=.1),
+                    ['not', 'a', 'dict']]
+        for index, payload in enumerate(payloads):
+            with self.subTest(payload=payload):
+                output = Path(self.temp.name) / f'malformed-{index}'
+                runtime = FakeRuntime(output)
+                generate = runtime.generate
+                def malformed_once(**opts):
+                    result = generate(**opts)
+                    return payload if len(runtime.calls) == 1 else result
+                runtime.generate = malformed_once
+                report = runner.run_task(runtime, self.spec, output, editor_factory=FakeEditor)
+                self.assertEqual(report['attempt_count'], 70)
+                self.assertEqual(report['status'], 'incomplete')
+                self.assertIsNone(report['persisted_freeze'])
+                self.assertFalse((output / 'freeze.json').exists())
+                first = report['records'][0]
+                self.assertEqual(first['status'], 'failed')
+                for key in ('input_tokens', 'output_tokens', 'elapsed_seconds'):
+                    self.assertIsNone(first[key])
+                events = runner.inspect_journal(output / 'journal.jsonl')['events']
+                result = next(e for e in events if e['kind'] == 'result')
+                self.assertEqual(result['runtime_result'], payload)
+                self.assertEqual(result['error']['type'], 'ValueError')
+                self.assertTrue(all(e['split'] == 'dev' for e in events
+                                    if e['kind'] == 'reservation'))
 
     def test_crash_journal_retains_interrupted_reservation(self):
         self.output.mkdir()

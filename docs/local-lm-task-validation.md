@@ -118,3 +118,22 @@ is read-only after the run; an existing output directory is rejected and there i
 no automatic resume. Do not rerun/tune this fixture to erase the first capped
 result. Browser review/start/status/cancel, a local control service and hosted
 security boundaries remain separate work, not implemented by this CLI slice.
+
+## Review correction: explicit runtime output required
+
+A follow-up review found that missing or non-string runtime `output` could be
+silently converted to an empty successful response. `to_record` now rejects a
+non-dict payload or absent/non-string output with a useful `ValueError`; the
+runner retains that raw payload, records a failed attempt with unknown usage and
+forbids heldout when development is incomplete. An explicitly returned empty
+string remains actual output and is scored normally. All 13 focused task-runner
+tests pass, including direct rejection, explicit empty output and malformed raw
+payload retention through the runner.
+
+Read-only revalidation of the first-run journal confirmed that all 70 actual
+responses contain explicit string output, and the corrected converter reproduces
+every historical record exactly. The journal SHA256 remains
+`d547e3fe7dd238662e188c1d9b1d15022ba7f06788946898f2b925321e35d924`,
+matching the committed validation artifact. No historical artifact was rewritten;
+its source hashes describe the code used for that run. No inference was rerun,
+no candidate was tuned and the incomplete/not-evaluated verdict is unchanged.
