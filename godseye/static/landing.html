@@ -1,247 +1,62 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta
-      name="description"
-      content="An open-source workbench for weight-space programming. Inspect tensors, branch a network, and measure what changes. Start on a CPU."
-    />
-    <meta name="theme-color" content="#f5f4ef" />
-    <title>God’s Eye — Program the weights.</title>
-    <link rel="stylesheet" href="landing.css" />
-    <script src="landing.js" defer></script>
-  </head>
-  <body>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a class="wordmark" href="./"
-        ><span class="eye">◉</span> god’s eye<span class="orange">.</span></a
-      >
-      <div class="nav-middle">
-        <a href="#how">How it works</a><a href="api.html">Developers</a
-        ><a href="#compute">Compute</a>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="An open-source workbench to inspect, edit, and evaluate open weights. Start with a real Breakout policy on your CPU, or explore the recorded example." />
+  <meta name="theme-color" content="#f3f1e9" />
+  <title>God’s Eye — A closer look at the weights.</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Cpath d='M2 18Q18-2 34 18Q18 38 2 18Z' fill='none' stroke='%23202b30' stroke-width='2'/%3E%3Ccircle cx='18' cy='18' r='6' fill='%23202b30'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="landing.css" />
+  <script src="landing.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-nav wrap">
+    <a class="wordmark" href="./" aria-label="God’s Eye home"><svg viewBox="0 0 36 24" aria-hidden="true"><path d="M1 12Q18-9 35 12Q18 33 1 12Z"/><circle cx="18" cy="12" r="6"/><circle cx="18" cy="12" r="1"/></svg>god’s eye</a>
+    <nav aria-label="Main navigation"><a href="#method">The workbench</a><a href="api.html">API guide</a><a href="https://github.com/romrom-20/Gods-eye">GitHub <span aria-hidden="true">↗</span></a></nav>
+    <a class="nav-install" href="#start">Run locally <span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="eyebrow"><span class="signal" aria-hidden="true"></span> OPEN WEIGHTS. OPEN QUESTIONS.</div>
+      <div class="hero-intro">
+        <h1 id="hero-title">A closer look<br />at <em>the weights.</em></h1>
+        <div class="hero-copy"><p class="lede">Inspect. Edit. Evaluate.</p><p>An open-source workbench for open weights. Make a precise change to a neural network, then measure what happens.</p><p class="scope">Currently compatible with Breakout only.<br />20,486 parameters. Your CPU is enough.</p><div class="actions"><a class="button primary" href="lab.html#overview">Recorded example <span aria-hidden="true">↗</span></a><a class="text-link" href="#start">Run locally <span aria-hidden="true">↓</span></a></div></div>
       </div>
-      <a class="nav-cta" href="lab.html#overview">Watch recorded demo <span>↗</span></a>
-    </nav>
-    <main>
-      <section class="hero">
-        <div class="hero-copy">
-          <div class="eyebrow">
-            <i></i> WEIGHT-SPACE PROGRAMMING <span>/</span> OPEN SOURCE
-          </div>
-          <h1>The network is<br />your <em>source code.</em></h1>
-          <p class="lede">
-            Read the weights. Write a change.<br />Let behavior tell you what
-            you built.
-          </p>
-          <p class="hero-detail">
-            Explore two saved Breakout comparisons and four inspectable checkpoints.
-            Replay the evidence here; install the local CPU lab to change weights
-            and run your own experiments without an API key.
-          </p>
-          <div class="hero-actions">
-            <a class="button primary" href="lab.html#overview"
-              >Replay the recorded example <span>↗</span></a
-            ><a class="text-link" href="#start"
-              >Run it locally <span>↓</span></a
-            >
-          </div>
-          <div class="hero-foot">
-            <span class="live-dot"></span> A real 20,486-parameter network. A
-            CPU is enough.
-          </div>
-        </div>
-        <div
-          class="specimen"
-          aria-label="Illustration of a four-connection weight intervention"
-        >
-          <div class="specimen-top">
-            <span>SPECIMEN 001</span><span>MINATAR / BREAKOUT</span>
-          </div>
-          <div class="network-art" aria-hidden="true">
-            <svg viewBox="0 0 520 320" id="hero-network"></svg
-            ><span class="art-label label-input">OBSERVATION</span
-            ><span class="art-label label-output">ACTION</span>
-          </div>
-          <div class="patch-card">
-            <div>
-              <span class="live-dot"></span> INTERVENTION.EDITS
-              <span class="patch-count">4 weights</span>
+      <figure class="evidence" aria-labelledby="evidence-title">
+        <figcaption class="evidence-top"><span id="evidence-title">FIELD NOTE 001 <span class="faint">/</span> A FOUR-WEIGHT ABLATION</span><span class="recorded">RECORDED DATA · READ ONLY</span></figcaption>
+        <div class="evidence-body">
+          <div class="playback">
+            <div class="boards">
+              <div class="board"><div class="board-label"><span>01 / Original</span><code>paper</code></div><svg id="board-base" viewBox="0 0 100 100" role="img" aria-label="Original Breakout policy, recorded frame 5"><rect x="1" y="11" width="8" height="8" fill="#809a9b"/><rect x="11" y="11" width="8" height="8" fill="#809a9b"/><rect x="21" y="11" width="8" height="8" fill="#809a9b"/><rect x="31" y="11" width="8" height="8" fill="#809a9b"/><rect x="41" y="11" width="8" height="8" fill="#809a9b"/><rect x="51" y="11" width="8" height="8" fill="#809a9b"/><rect x="61" y="11" width="8" height="8" fill="#809a9b"/><rect x="71" y="11" width="8" height="8" fill="#809a9b"/><rect x="81" y="11" width="8" height="8" fill="#809a9b"/><rect x="91" y="11" width="8" height="8" fill="#809a9b"/><rect x="1" y="21" width="8" height="8" fill="#809a9b"/><rect x="11" y="21" width="8" height="8" fill="#809a9b"/><rect x="21" y="21" width="8" height="8" fill="#809a9b"/><rect x="31" y="21" width="8" height="8" fill="#809a9b"/><rect x="41" y="21" width="8" height="8" fill="#809a9b"/><rect x="51" y="21" width="8" height="8" fill="#809a9b"/><rect x="61" y="21" width="8" height="8" fill="#809a9b"/><rect x="71" y="21" width="8" height="8" fill="#809a9b"/><rect x="81" y="21" width="8" height="8" fill="#809a9b"/><rect x="91" y="21" width="8" height="8" fill="#809a9b"/><rect x="1" y="31" width="8" height="8" fill="#809a9b"/><rect x="11" y="31" width="8" height="8" fill="#809a9b"/><rect x="21" y="31" width="8" height="8" fill="#809a9b"/><rect x="31" y="31" width="8" height="8" fill="#809a9b"/><rect x="41" y="31" width="8" height="8" fill="#809a9b"/><rect x="51" y="31" width="8" height="8" fill="#809a9b"/><rect x="61" y="31" width="8" height="8" fill="#809a9b"/><rect x="71" y="31" width="8" height="8" fill="#809a9b"/><rect x="81" y="31" width="8" height="8" fill="#809a9b"/><rect x="91" y="31" width="8" height="8" fill="#809a9b"/><rect x="51" y="71" width="8" height="8" fill="#647c84"/><rect x="41" y="91" width="8" height="8" fill="#dbe890"/><rect x="41" y="81" width="8" height="8" fill="#f4f1df"/></svg><div class="board-foot"><span>Mean score <strong>186.375</strong></span><span>SE 26.226</span></div></div>
+              <div class="board"><div class="board-label"><span>02 / Ablated</span><code>4 weights → 0</code></div><svg id="board-candidate" viewBox="0 0 100 100" role="img" aria-label="Ablated Breakout policy, recorded frame 5"><rect x="1" y="11" width="8" height="8" fill="#809a9b"/><rect x="11" y="11" width="8" height="8" fill="#809a9b"/><rect x="21" y="11" width="8" height="8" fill="#809a9b"/><rect x="31" y="11" width="8" height="8" fill="#809a9b"/><rect x="41" y="11" width="8" height="8" fill="#809a9b"/><rect x="51" y="11" width="8" height="8" fill="#809a9b"/><rect x="61" y="11" width="8" height="8" fill="#809a9b"/><rect x="71" y="11" width="8" height="8" fill="#809a9b"/><rect x="81" y="11" width="8" height="8" fill="#809a9b"/><rect x="91" y="11" width="8" height="8" fill="#809a9b"/><rect x="1" y="21" width="8" height="8" fill="#809a9b"/><rect x="11" y="21" width="8" height="8" fill="#809a9b"/><rect x="21" y="21" width="8" height="8" fill="#809a9b"/><rect x="31" y="21" width="8" height="8" fill="#809a9b"/><rect x="41" y="21" width="8" height="8" fill="#809a9b"/><rect x="51" y="21" width="8" height="8" fill="#809a9b"/><rect x="61" y="21" width="8" height="8" fill="#809a9b"/><rect x="71" y="21" width="8" height="8" fill="#809a9b"/><rect x="81" y="21" width="8" height="8" fill="#809a9b"/><rect x="91" y="21" width="8" height="8" fill="#809a9b"/><rect x="1" y="31" width="8" height="8" fill="#809a9b"/><rect x="11" y="31" width="8" height="8" fill="#809a9b"/><rect x="21" y="31" width="8" height="8" fill="#809a9b"/><rect x="31" y="31" width="8" height="8" fill="#809a9b"/><rect x="41" y="31" width="8" height="8" fill="#809a9b"/><rect x="51" y="31" width="8" height="8" fill="#809a9b"/><rect x="61" y="31" width="8" height="8" fill="#809a9b"/><rect x="71" y="31" width="8" height="8" fill="#809a9b"/><rect x="81" y="31" width="8" height="8" fill="#809a9b"/><rect x="91" y="31" width="8" height="8" fill="#809a9b"/><rect x="51" y="71" width="8" height="8" fill="#647c84"/><rect x="1" y="91" width="8" height="8" fill="#dbe890"/><rect x="41" y="81" width="8" height="8" fill="#f4f1df"/></svg><div class="board-foot"><span>Mean score <strong>0</strong></span><span>SE 0</span></div></div>
             </div>
-            <code
-              ><span class="code-comment"
-                ># What happens without the left circuit?</span
-              ><br /><b>W3</b>[0:8:2, 1] <span class="orange">=</span> 0</code
-            >
+            <div class="scrubber" id="scrubber" hidden><label for="recorded-frame">Saved gameplay <output id="frame-label" for="recorded-frame">step 5</output></label><input id="recorded-frame" type="range" min="0" max="13" value="5" aria-describedby="trace-note" /></div>
+            <p class="trace-note" id="trace-note">Seed 1000 · selected saved frames. Ablated episode ends after 6 steps; its final frame stays visible.</p>
           </div>
-          <div class="specimen-bottom">
-            <span>INSPECT → BRANCH → EVALUATE</span><span>001 — 006</span>
-          </div>
+          <div class="intervention"><div class="eyebrow">THE CHANGE</div><h2>Four numbers.<br />A broken behavior.</h2><p>Remove four left-action connections. The score drops in this saved comparison.</p><div class="patch"><code>W3[0:8:2, 1] = 0</code><span>4 of 20,486 parameters changed</span></div><p class="negative">Paired mean difference <strong>−186.375</strong><br />SE 26.226 · a harmful edit, not an improvement.</p><a href="lab.html#overview">Inspect the full recorded comparison <span aria-hidden="true">↗</span></a></div>
         </div>
-      </section>
-      <div class="proof-strip">
-        <div><strong>20,486</strong><span>parameters to inspect</span></div>
-        <div><strong>6 tensors</strong><span>directly addressable</span></div>
-        <div><strong>0 GPUs</strong><span>required for this lab</span></div>
-        <div>
-          <strong>Every edit</strong><span>traceable to its parent</span>
-        </div>
+        <div class="evidence-bottom"><span>8 paired episodes · seeds 1000–1007 · 3,000-step cap</span><span>7/8 original episodes hit the cap</span></div>
+      </figure>
+      <p class="evidence-context">A known-circuit demonstration, not AI-discovered repair or a new research result. <a href="https://github.com/romrom-20/Gods-eye/blob/main/godseye/data/demo/run-3ed8cc40701c4335.json">View the source recording ↗</a></p>
+    </section>
+    <section class="method wrap section" id="method" aria-labelledby="method-title">
+      <div class="section-heading"><div class="eyebrow">01 / THE WORKBENCH</div><h2 id="method-title">Keep the question.<br />Keep the evidence.</h2><p>A tensor edit is a hypothesis. Follow it from the exact numbers to the measured behavior, without losing the original.</p></div>
+      <div class="method-rows">
+        <article><span class="index">01</span><div><h3>Look inside.</h3><p>Inspect real tensor values and understand the connections you’re changing.</p></div><a href="lab.html#workbench">Inspect saved tensors ↗</a></article>
+        <article><span class="index">02</span><div><h3>Change a copy.</h3><p>Preview a bounded numeric patch. Save an immutable branch with its parent, hash, and hypothesis.</p></div><code>W3[0:8:2, 1] = 0</code></article>
+        <article><span class="index">03</span><div><h3>Let behavior answer.</h3><p>Evaluate both versions on paired seeds. Keep per-episode scores, uncertainty, and replays—even when an edit fails.</p></div><a href="api.html">Explore the local API ↗</a></article>
       </div>
-      <section class="how section" id="how">
-        <div class="section-heading">
-          <div class="eyebrow">01 / THE EXPERIMENT LOOP</div>
-          <h2>Small changes.<br />Visible consequences.</h2>
-          <p>
-            A weight difference is a hypothesis. A paired evaluation is how you
-            investigate it.
-          </p>
-        </div>
-        <div class="steps">
-          <article>
-            <span class="step-number">01</span>
-            <h3>Read the computation.</h3>
-            <p>
-              Inspect a tensor, follow the input mapping, and find the
-              connections you want to understand.
-            </p>
-            <code>client.tensor("paper", "W3")</code>
-          </article>
-          <article>
-            <span class="step-number">02</span>
-            <h3>Make it explicit.</h3>
-            <p>
-              Preview the affected weights. Write your hypothesis. Create an
-              immutable branch with the exact patch.
-            </p>
-            <code>W3[0:8:2, 1] = 0</code>
-          </article>
-          <article>
-            <span class="step-number">03</span>
-            <h3>Keep the evidence.</h3>
-            <p>
-              Compare on paired seeds. Replay decisions. Keep scores,
-              uncertainty, hashes, and failed experiments.
-            </p>
-            <code>client.evaluate("paper", branch["id"])</code>
-          </article>
-        </div>
-      </section>
-      <section class="developer section" id="developers">
-        <div>
-          <div class="eyebrow">02 / BUILT FOR PEOPLE & AGENTS</div>
-          <h2>Your ideas.<br />A precise interface.</h2>
-          <p>
-            Use the visual lab, the CLI, or the Python client. The same local
-            engine validates the edit and runs the measurement.
-          </p>
-          <a class="text-link" href="api.html"
-            >Read the API guide <span>↗</span></a
-          >
-        </div>
-        <div class="code-window">
-          <div class="window-bar">
-            <span>experiment.py</span><span>PYTHON</span>
-          </div>
-          <pre><code><span class="code-comment"># No optimizer. No training loop.</span>
-from godseye.client import Client
-
-lab = Client()
-branch = lab.patch(
-    base="paper",
-    patch="W3[0:8:2, 1] = 0",
-    hypothesis="Ablating the left circuit reduces score.",
-)
-job = lab.evaluate("paper", branch["id"], episodes=8)
-result = lab.wait(job["id"])
-print(result["paired_mean_delta"])</code></pre>
-          <div class="window-footer">
-            <span class="live-dot"></span> Runs against your local lab
-          </div>
-        </div>
-      </section>
-      <section class="section compute" id="compute">
-        <div class="eyebrow">03 / START WITH WHAT YOU HAVE</div>
-        <h2>A lab before a cluster.</h2>
-        <p class="section-lede">
-          The first useful experiment should fit on your laptop.
-        </p>
-        <div class="compute-grid">
-          <article>
-            <span class="pill">AVAILABLE NOW</span>
-            <h3>Explore the evidence</h3>
-            <p>
-              The static demo contains recorded runs and real tensor values.
-              Host it as ordinary files. Playback and inspection need no compute
-              service.
-            </p>
-            <a href="lab.html#overview">Open the lab ↗</a>
-          </article>
-          <article>
-            <span class="pill">AVAILABLE NOW</span>
-            <h3>Run your own edits</h3>
-            <p>
-              Install the local CPU lab to create branches, evaluate patches,
-              cancel jobs, and keep your artifacts on your machine.
-            </p>
-            <a href="#start">Get started ↓</a>
-          </article>
-          <article>
-            <span class="pill">OPERATOR SETUP REQUIRED</span>
-            <h3>Ask an AI to propose edits</h3>
-            <p>
-              Review a supported Breakout goal, select a programmer and limits,
-              then explicitly start an isolated experiment. Requires Docker, a
-              private evaluation suite, and a provider key. Public multi-user
-              hosting and editable language models are still being built.
-            </p>
-            <a
-              href="https://github.com/romrom-20/Gods-eye/blob/main/docs/experiment-orchestration.md"
-              >Read the setup guide ↗</a
-            >
-          </article>
-        </div>
-      </section>
-      <section class="research-note">
-        <span>RESEARCH, WITH CONTEXT</span>
-        <p>
-          Inspired by
-          <a href="https://rikiyat.github.io/blog/weight-space-programming/"
-            >Sparks of Weight-Space Programming</a
-          >
-          and
-          <a href="https://thinkingmachines.ai/tinker/"
-            >Tinker’s developer experience</a
-          >. The demo uses the authors’ released Breakout network. Ablation and
-          restoration demonstrate the workflow; they are not a new scientific
-          result. No LLM is called automatically.
-        </p>
-      </section>
-      <section class="section start" id="start">
-        <div>
-          <div class="eyebrow">YOUR FIRST EXPERIMENT</div>
-          <h2>Open the hood.</h2>
-          <p>Python 3.9–3.12. No API key required.</p>
-          <a class="text-link" href="https://github.com/romrom-20/Gods-eye"
-            >View source on GitHub ↗</a
-          >
-        </div>
-        <div class="install">
-          <pre><code>git clone https://github.com/romrom-20/Gods-eye.git
+    </section>
+    <section class="bring-section" aria-labelledby="bring-title"><div class="bring wrap"><div class="eyebrow">02 / YOUR OWN STARTING POINT</div><div><h2 id="bring-title">Bring a checkpoint.<br />Leave a paper trail.</h2><p>Import your compatible Breakout <code>.npz</code> in the local lab. Preserve it as an original, edit a copy, and compare the two.</p><p class="detail">Fixed 600 → 32 → 32 → 6 architecture · finite float32 values · up to 128 KiB. Importing starts no experiment. Arbitrary models and language-model editing are not supported.</p><a class="text-link" href="https://github.com/romrom-20/Gods-eye/blob/main/docs/checkpoint-import.md">Accepted checkpoint format <span aria-hidden="true">↗</span></a></div><div class="lineage" aria-label="Checkpoint workflow"><div><span class="node original"></span><span>YOUR CHECKPOINT<small>Preserved original</small></span></div><div><span class="node"></span><span>YOUR EDIT<small>Exact patch + parent hash</small></span></div><div><span class="node result"></span><span>YOUR EVIDENCE<small>Paired scores + saved replay</small></span></div></div></div></section>
+    <section class="start wrap section" id="start" aria-labelledby="start-title"><div><div class="eyebrow">03 / LOCAL BY DEFAULT</div><h2 id="start-title">Small model.<br />Real experiment.</h2><p>Start with the bundled Breakout policy. The local CPU example needs no GPU, Docker, or API key.</p><p class="detail">Python 3.9–3.12 · macOS / Linux<br />Install directly from the source.</p><a class="text-link" href="https://github.com/romrom-20/Gods-eye/blob/main/docs/install.md">Full installation guide <span aria-hidden="true">↗</span></a></div><div class="install"><div class="install-bar"><span>TERMINAL</span><button id="copy-install" type="button">Copy commands</button></div><pre tabindex="0" aria-label="Local installation commands"><code id="install-commands">git clone https://github.com/romrom-20/Gods-eye.git
 cd Gods-eye
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -e '.[server]'
-godseye serve</code></pre>
-          <button id="copy-install" class="copy-button">Copy commands</button>
-          <p>Then open <code>http://127.0.0.1:8787/lab.html#overview</code></p>
-          <span id="copy-status" role="status"></span>
-        </div>
-      </section>
-    </main>
-    <footer class="site-footer">
-      <a class="wordmark" href="./">god’s eye<span class="orange">.</span></a
-      ><span>A WORKSPACE FOR WEIGHT-SPACE PROGRAMMING</span
-      ><a href="api.html">API & security ↗</a>
-    </footer>
-  </body>
+.venv/bin/python -m pip install -e '.[server]'
+.venv/bin/python -m godseye serve</code></pre><p>Then open <code>http://127.0.0.1:8787/lab.html#overview</code> and choose <strong>Try the four-number change</strong>.</p><span id="copy-status" role="status" aria-live="polite"></span></div></section>
+    <aside class="research wrap"><span class="eyebrow">A RESEARCH TOOL, WITH CONTEXT</span><p>The bundled policy comes from <a href="https://rikiyat.github.io/blog/weight-space-programming/">Sparks of Weight-Space Programming</a>. Explore two recorded comparisons and four checkpoints in the public example. Creating edits and running evaluations requires the local lab. <a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/roadmap.md">See what’s next ↗</a></p></aside>
+  </main>
+  <footer class="site-footer wrap"><a class="wordmark" href="./">god’s eye</a><span>Look closely. Change deliberately.</span><div><a href="api.html">API guide</a><a href="https://github.com/romrom-20/Gods-eye">Source ↗</a><a href="https://github.com/romrom-20/Gods-eye/blob/main/LICENSE">MIT license ↗</a></div></footer>
+</body>
 </html>
