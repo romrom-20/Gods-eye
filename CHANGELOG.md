@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Make experiment cards draggable with live connectors, browser-local layout
+  persistence, keyboard movement and reset; moving cards never changes weights.
 - Version UI asset URLs by content to avoid mixed cached layouts, increase board
   text contrast, and observe external local-API edits and job results without reload.
 - Add a connected checkpoint/evidence workspace with contextual tensor and replay

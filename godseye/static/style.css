@@ -3528,3 +3528,10 @@ main :is(.overline,.eyebrow,.mono,.tag,label,summary),
 }
 
 .detail-inspector :is(#base-se,#candidate-se,#paired-se,#run-time,.replay-caption,.stat > span) { color:#465b60; font-size:12px; }
+
+/* Move presentation objects without changing their saved lineage. */
+.experiment-node { touch-action:none; cursor:grab; user-select:none; }
+.experiment-node.dragging { cursor:grabbing; z-index:3; box-shadow:0 8px 24px #142a362b; }
+.board-toolbar { flex-wrap:wrap; }
+.board-toolbar > div { display:flex; flex-wrap:wrap; gap:3px; }
+#board-layout-status:empty { display:none; }

@@ -3,19 +3,20 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../../godseye/static/app.js'),'utf8');
-function setup(checkpoints,runs=[],jobs=[]){
-  const nodes=new Map(), calls=[];
+function setup(checkpoints,runs=[],jobs=[],saved=null){
+  const nodes=new Map(), calls=[], storage=new Map();
+  if(saved!==null)storage.set("godseye.board-layout.v1:local:/",saved);
   function el(tag='div'){return {tag,children:[],style:{},dataset:{},attrs:{},clientWidth:640,hidden:false,
-    classList:{add(){}},setAttribute(k,v){this.attrs[k]=v;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},focus(){this.focused=true;},prepend(v){this.children.unshift(v);},remove(){},
+    classList:{add(){},remove(){}},setPointerCapture(){},hasPointerCapture(){return false;},scrollLeft:0,scrollTop:0,setAttribute(k,v){this.attrs[k]=v;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},focus(){this.focused=true;},prepend(v){this.children.unshift(v);},remove(){},
     set innerHTML(v){throw Error('Unsafe HTML '+v);}};}
   const $=id=>{if(!nodes.has(id))nodes.set(id,el());return nodes.get(id);};
   const ctx={$,state:{checkpoints,runs,jobs,mode:'local'},staticDemo:false,fmt:v=>v==null?'n/a':String(v),shortLabel:id=>checkpoints.find(c=>c.id===id)?.name||id,
     location:{origin:"http://127.0.0.1:8787"},document:{createElement:el,createElementNS:(_,tag)=>el(tag),querySelector:()=>el()},
     showView:v=>calls.push(['view',v]),loadTensor:async()=>calls.push(['tensor']),sidebarCheckpoints(){},openRun:async id=>calls.push(['run',id]),
-    CSS:{escape:s=>s},navigator:{},api(){throw Error('Selection must not mutate');}};
+    localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},CSS:{escape:s=>s},navigator:{},api(){throw Error('Selection must not mutate');}};
   vm.createContext(ctx);
   vm.runInContext(source.slice(source.indexOf('// Persisted-object board:'),source.indexOf('// Goal workflow:')),ctx);
-  ctx.renderExperimentBoard();return {...ctx,nodes,calls};
+  ctx.renderExperimentBoard();return {...ctx,nodes,calls,storage,context:ctx};
 }
 const roots=[{id:'paper',name:'Original',parent:null},{id:'zero',name:'Zero',parent:null}];
 test('only persisted ancestry and actual paired runs create graph objects and edges',async()=>{
@@ -54,4 +55,38 @@ test('saved successful jobs are represented by evidence, pending jobs connect to
 test('workspace observer is inert for static exports',()=>{
  const x=setup(roots); x.state.mode="recorded-demo";
  x.startWorkspaceWatch(); // no timer or API available in this context
+});
+
+test('drag follows zoom, moves connectors, persists layout and never selects or writes model data',async()=>{
+ const cps=[...roots,{id:'a',name:'Child',parent:'paper'}],x=setup(cps);
+ vm.runInContext('boardZoom = 0.5',x.context);
+ const graph=x.$('board-graph'),card=graph.children.find(e=>e.dataset.objectId==='paper');
+ const edge=graph.children[0].children[0],before=edge.attrs.d;
+ card.onpointerdown({button:0,pointerId:1,clientX:10,clientY:10});
+ card.onpointermove({pointerId:1,clientX:60,clientY:40});
+ assert.equal(card.style.left,'128px');assert.equal(card.style.top,'96px');
+ assert.notEqual(edge.attrs.d,before);
+ card.onpointerup({pointerId:1});await card.onclick();
+ assert.deepEqual(x.calls,[]);
+ const saved=x.storage.get('godseye.board-layout.v1:local:/');
+ const reloaded=setup(cps,[],[],saved);
+ assert.equal(reloaded.$('board-graph').children.find(e=>e.dataset.objectId==='paper').style.left,'128px');
+ reloaded.$('board-reset').onclick();
+ assert.equal(reloaded.$('board-graph').children.find(e=>e.dataset.objectId==='paper').style.left,'28px');
+ assert.equal(reloaded.storage.size,0);
+});
+test('cancelled drag restores position; keyboard movement is bounded and does not inspect',()=>{
+ const x=setup(roots),card=x.$('board-graph').children.find(e=>e.dataset.objectId==='paper');
+ card.onpointerdown({button:0,pointerId:3,clientX:10,clientY:10});
+ card.onpointermove({pointerId:3,clientX:80,clientY:80});
+ card.onpointercancel({pointerId:3});assert.equal(card.style.left,'28px');
+ let prevented=false;
+ card.onkeydown({altKey:true,key:'ArrowLeft',shiftKey:true,preventDefault(){prevented=true;}});
+ assert.equal(card.style.left,'0px');assert.ok(prevented);assert.deepEqual(x.calls,[]);
+});
+test('malformed and unbounded saved layout cannot break automatic layout',()=>{
+ for(const saved of ['null','{',JSON.stringify({version:1,positions:{paper:{x:-1,y:2},zero:{x:1e9,y:0}}})]){
+  const x=setup(roots,[],[],saved);
+  assert.equal(x.$('board-graph').children.find(e=>e.dataset.objectId==='paper').style.left,'28px');
+ }
 });

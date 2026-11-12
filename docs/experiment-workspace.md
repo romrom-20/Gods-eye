@@ -25,7 +25,19 @@ goal, or import. Node and list buttons work with Tab and Enter; selection moves
 focus to the inspector summary. Fit and zoom support the bounded, scrollable board.
 Narrow layouts stack the inspector beneath the board and offer the same List view.
 The board changes between two-column and wider ancestry layouts to keep objects
-readable; it is not an infinite canvas and requires no dragging.
+readable. Drag any card with a mouse or touch to arrange it; connectors follow its
+position without changing saved parentage. A focused card also supports Alt +
+arrow keys (20 layout pixels, or 60 with Shift). Click or Enter still inspects it.
+Reset layout restores automatic placement; Fit changes the display scale.
+
+Only presentation positions are stored in browser localStorage, scoped by origin,
+lab path and recorded/local mode. No weights, credentials or evaluation settings
+are stored there. Saved positions are bounded and validated; blocked storage
+leaves the layout usable for the current visit. Positions are not shared between
+researchers or included in checkpoint artifacts. Dragging never submits an edit,
+changes an edge's meaning, or schedules an evaluation. The List view remains an
+alternative to spatial navigation. This is an experiment map, not a general
+drag-to-connect execution engine.
 
 The prominent request action opens the existing supported goal form. Exact review,
 consent, admission identity, uncertain-start reconciliation, reload recovery and

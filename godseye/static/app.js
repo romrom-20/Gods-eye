@@ -1129,12 +1129,46 @@ async function initialize() {
 }
 // Persisted-object board: rendering and selection never submit an experiment.
 let boardZoom = 1, selectedBoardObject = null;
+let boardDragging = false, boardRenderPending = false, boardLayoutKey = null;
+let boardPositions = new Map();
+const boardPositionLimit = 6000;
+function boardLayoutStorageKey() {
+  return "godseye.board-layout.v1:" + (staticDemo || state.mode === "recorded-demo" ? "recorded:" : "local:") + (location.pathname || "/").replace(/lab(?:\.html)?$/, "");
+}
+function readBoardLayout() {
+  const key = boardLayoutStorageKey();
+  if (boardLayoutKey === key) return;
+  boardLayoutKey = key; boardPositions = new Map();
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw || raw.length > 65536) return;
+    const saved = JSON.parse(raw);
+    if (saved.version !== 1 || !saved.positions || typeof saved.positions !== "object" || Array.isArray(saved.positions)) return;
+    const entries = Object.entries(saved.positions);
+    if (entries.length > 256) return;
+    for (const [id,p] of entries) {
+      if (/^[a-zA-Z0-9_:-]{1,100}$/.test(id) && p && Number.isFinite(p.x) && Number.isFinite(p.y)
+          && p.x >= 0 && p.y >= 0 && p.x <= boardPositionLimit && p.y <= boardPositionLimit)
+        boardPositions.set(id,{x:p.x,y:p.y});
+    }
+  } catch { /* Layout storage is optional; inspection remains usable. */ }
+}
+function saveBoardLayout() {
+  try {
+    while (boardPositions.size > 256) boardPositions.delete(boardPositions.keys().next().value);
+    localStorage.setItem(boardLayoutKey,JSON.stringify({version:1,positions:Object.fromEntries(boardPositions)}));
+    $("board-layout-status").textContent = "Layout saved in this browser. Model weights are unchanged.";
+  } catch { $("board-layout-status").textContent = "Layout kept for this visit; browser storage is unavailable. Model weights are unchanged."; }
+}
+
 function boardElement(tag, className, text) {
   const el = document.createElement(tag); el.className = className;
   if (text !== undefined) el.textContent = text;
   return el;
 }
 function renderExperimentBoard() {
+  if (boardDragging) { boardRenderPending = true; return; }
+  readBoardLayout();
   const graph = $("board-graph"); if (!graph) return;
   graph.replaceChildren(); $("board-list").replaceChildren();
   const recorded = staticDemo || state.mode === "recorded-demo";
@@ -1168,17 +1202,34 @@ function renderExperimentBoard() {
     positions.set("run:"+r.id,compact?{x:288,y:36+evidenceRow*170}:{x:28+(maxDepth+1)*260,y:36+i*170});evidenceRow++;});
   const jobStart = Math.max(0,...[...positions.values()].map(p=>(p.y-36)/170))+1;
   pendingJobs.forEach((j,i)=>positions.set("job:"+j.id,{x:compact?288:28+(maxDepth+1)*260,y:36+(jobStart+i)*170}));
-  const width = compact?540:Math.max(540,270+(maxDepth+1)*260), height = Math.max(350,...[...positions.values()].map(p=>p.y+155));
+  for (const [key,p] of boardPositions) if (positions.has(key)) positions.set(key,{...p});
+  const width = Math.max(540,...[...positions.values()].map(p=>p.x+248)), height = Math.max(350,...[...positions.values()].map(p=>p.y+185));
   graph.style.width = width+"px"; graph.style.height = height+"px";
   const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
   svg.setAttribute("width",width); svg.setAttribute("height",height); svg.setAttribute("aria-hidden","true"); svg.classList.add("board-connections"); graph.append(svg);
-  function edge(from,to,kind) {
+  const edges = [];
+  function paintEdge({from,to,path}) {
     const a=positions.get(from),b=positions.get(to); if(!a||!b)return;
-    const path=document.createElementNS(svg.namespaceURI,"path");
-    if(a.x===b.x) path.setAttribute("d",`M ${a.x+109} ${a.y+126} C ${a.x+109} ${a.y+146}, ${b.x+109} ${b.y-20}, ${b.x+109} ${b.y}`);
+    const fromNode=[...graph.children].find(e=>e.dataset?.objectId===from);
+    const h=fromNode?.offsetHeight || 140;
+    if(a.x===b.x) path.setAttribute("d",`M ${a.x+109} ${a.y+h} C ${a.x+109} ${a.y+h+20}, ${b.x+109} ${b.y-20}, ${b.x+109} ${b.y}`);
     else {const right=b.x>a.x,ax=a.x+(right?218:0),bx=b.x+(right?0:218),bend=right?26:-26;
       path.setAttribute("d",`M ${ax} ${a.y+58} C ${ax+bend} ${a.y+58}, ${bx-bend} ${b.y+58}, ${bx} ${b.y+58}`); }
+  }
+  function edge(from,to,kind) {
+    if(!positions.has(from)||!positions.has(to))return;
+    const path=document.createElementNS(svg.namespaceURI,"path");
     path.setAttribute("class",kind); svg.append(path);
+    const entry={from,to,path}; edges.push(entry); paintEdge(entry);
+  }
+  function moveNode(key,button,x,y) {
+    const p={x:Math.round(Math.max(0,Math.min(boardPositionLimit,x))),y:Math.round(Math.max(0,Math.min(boardPositionLimit,y)))};
+    positions.set(key,p);boardPositions.set(key,p);
+    button.style.left=p.x+"px";button.style.top=p.y+"px";
+    const w=Math.max(540,...[...positions.values()].map(p=>p.x+248));
+    const h=Math.max(350,...[...positions.values()].map(p=>p.y+185));
+    graph.style.width=w+"px";graph.style.height=h+"px";svg.setAttribute("width",w);svg.setAttribute("height",h);
+    edges.forEach(paintEdge);
   }
   function node(key,kind,title,description,select) {
     const p=positions.get(key),button=boardElement("button","experiment-node "+kind);
@@ -1186,7 +1237,44 @@ function renderExperimentBoard() {
     button.append(boardElement("span","node-kind",kind==="job"?"◷ EVALUATION / JOB":kind==="evidence"?"◉ EVALUATION / SAVED":kind==="edit"?"↳ CHECKPOINT / EDIT":"◇ CHECKPOINT / ROOT"),boardElement("strong","node-title",title),boardElement("span","node-description",description),boardElement("span","node-open",kind==="job"?"View progress →":kind==="evidence"?"Inspect evidence →":"Inspect tensors →"));
     button.style.left=p.x+"px";button.style.top=p.y+"px";
     const choose=async()=>{selectedBoardObject=key; $("board-selection").textContent=title+" · "+description; await select(); renderExperimentBoard(); focusBoardInspector();};
-    button.onclick=choose; graph.append(button);
+    button.setAttribute("aria-describedby","board-layout-help");
+    let drag=null, suppressClick=false;
+    button.onpointerdown=e=>{
+      if(e.button!==0 || e.isPrimary===false) return;
+      const p=positions.get(key),viewport=$("board-viewport");
+      drag={id:e.pointerId,x:e.clientX,y:e.clientY,original:{...p},scrollX:viewport.scrollLeft,scrollY:viewport.scrollTop,moved:false};
+      suppressClick=false;boardDragging=true;
+      button.setPointerCapture(e.pointerId);
+    };
+    button.onpointermove=e=>{
+      if(!drag || e.pointerId!==drag.id) return;
+      const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+      if(!drag.moved && Math.hypot(dx,dy)<6) return;
+      drag.moved=true;suppressClick=true;button.classList.add("dragging");
+      const viewport=$("board-viewport");
+      moveNode(key,button,drag.original.x+(dx+viewport.scrollLeft-drag.scrollX)/boardZoom,drag.original.y+(dy+viewport.scrollTop-drag.scrollY)/boardZoom);
+    };
+    const finishDrag=(e,cancel=false)=>{
+      if(!drag || e.pointerId!==drag.id) return;
+      const moved=drag.moved,original=drag.original,id=drag.id;drag=null;
+      if(cancel && moved) moveNode(key,button,original.x,original.y);
+      button.classList.remove("dragging");
+      if(button.hasPointerCapture(id))button.releasePointerCapture(id);
+      boardDragging=false;
+      if(moved)saveBoardLayout();
+      if(boardRenderPending){boardRenderPending=false;renderExperimentBoard();}
+    };
+    button.onpointerup=e=>finishDrag(e);
+    button.onpointercancel=e=>finishDrag(e,true);
+    button.onlostpointercapture=e=>finishDrag(e,true);
+    button.onclick=()=>{if(suppressClick){suppressClick=false;return;}return choose();};
+    button.onkeydown=e=>{
+      const delta={ArrowLeft:[-20,0],ArrowRight:[20,0],ArrowUp:[0,-20],ArrowDown:[0,20]}[e.key];
+      if(!e.altKey || !delta)return;
+      e.preventDefault();const p=positions.get(key),speed=e.shiftKey?3:1;
+      moveNode(key,button,p.x+delta[0]*speed,p.y+delta[1]*speed);saveBoardLayout();
+    };
+    graph.append(button);
     const item=boardElement("button","board-list-item",title+" — "+description); item.onclick=choose;item.setAttribute("aria-pressed",String(selectedBoardObject===key));$("board-list").append(item);
   }
   for(const c of state.checkpoints){
@@ -1262,6 +1350,13 @@ function renderCheckpointDetail(){
   document.querySelector(".weights").prepend(detail);
 }
 function fitExperimentBoard(){const graph=$("board-graph");boardZoom=Math.min(1,($("board-viewport").clientWidth-12)/(parseFloat(graph.style.width)||520));graph.style.transform=`scale(${boardZoom})`;$("board-viewport").style.height=Math.max(240,(parseFloat(graph.style.height)||350)*boardZoom+15)+"px";}
+$("board-reset").onclick=()=>{
+  if(boardDragging)return;
+  boardPositions.clear();
+  try{localStorage.removeItem(boardLayoutKey);}catch{}
+  renderExperimentBoard();fitExperimentBoard();
+  $("board-layout-status").textContent="Automatic layout restored. Model weights are unchanged.";
+};
 $("board-fit").onclick=fitExperimentBoard;
 $("board-zoom-in").onclick=()=>{boardZoom=Math.min(1.5,boardZoom+.15);renderExperimentBoard();};
 $("board-zoom-out").onclick=()=>{boardZoom=Math.max(.35,boardZoom-.15);renderExperimentBoard();};
