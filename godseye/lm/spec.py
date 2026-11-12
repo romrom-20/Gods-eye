@@ -6,7 +6,7 @@ from pathlib import Path
 MODEL = 'Qwen/Qwen3.5-0.8B'
 REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 VERSIONS = {'torch': '2.15.0', 'transformers': '5.22.2', 'safetensors': '0.8.0',
-            'modal': '1.6.4', 'numpy': '2.2.6'}
+            'modal': '1.6.4', 'numpy': '2.2.6', 'accelerate': '1.12.0'}
 PARAMETER = 'model.layers.0.mlp.down_proj.weight'
 ARMS = ('unchanged', 'prompt', 'decoding', 'weight')
 

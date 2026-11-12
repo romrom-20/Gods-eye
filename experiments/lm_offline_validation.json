@@ -3,8 +3,8 @@
   "date": "2026-11-12",
   "dedicated_tests": {
     "command": "python -m unittest discover -s tests -p test_lm_pilot.py -v",
-    "passed": 7,
-    "run": 7,
+    "passed": 9,
+    "run": 9,
     "skipped": 0
   },
   "interpretation": "Synthetic fixtures verify numerics and evidence protocol only; no model quality or GPU compatibility established.",
@@ -13,7 +13,12 @@
     "both CLI dry runs (standard library only, also tested with -S)",
     "py_compile",
     "git diff --check",
-    "installed Modal SDK signature inspection only"
+    "installed pinned SDK source inspection",
+    "native tiny from_pretrained(device_map=\"cpu\") with pinned Accelerate",
+    "same native placement API rejects missing Accelerate (mocked absence)",
+    "CUDA device map normalization only (no CUDA allocations)",
+    "SDK worker serialization/deserialization and actual evaluator fixture run in isolated Python -I process with only image source allowlist and blocked socket connections",
+    "token_cap dev eligibility/complete fixture and global budget_exhausted incomplete fixture"
   ],
   "pilot_plan": {
     "arms": [
@@ -49,7 +54,7 @@
       "repetition_penalty": 1.0
     },
     "gpu": "L4",
-    "harness_digest": "7400ffc28542d3d2ea622c88ad96aa8ee5acf27c7b2969424f9ea524352a6a5b",
+    "harness_digest": "7a733e01c5b4abc1e61a6ef9764e2c95b08261a53fba7b9a9877700cf4b03fb3",
     "invocation_timeout": 600,
     "max_containers": 1,
     "max_generations": 36,
@@ -70,6 +75,7 @@
     "retries": 0,
     "revision": "2fc06364715b967f1860aea9cf38778875588b17",
     "runtime": {
+      "accelerate": "1.12.0",
       "modal": "1.6.4",
       "numpy": "2.2.6",
       "safetensors": "0.8.0",
@@ -81,8 +87,32 @@
     "startup_timeout": 180,
     "tokenizer_revision": "2fc06364715b967f1860aea9cf38778875588b17"
   },
+  "preflight": {
+    "accelerate_pin": "1.12.0",
+    "accelerate_required_for_device_map": true,
+    "cpu_placement_native_tiny_verified": true,
+    "cuda_placement_executed": false,
+    "installed_source_sha256": {
+      "modal.FunctionSourceInfo.serialized_function": "77e4e0288a25c44998970b6212c94218ea7321f8545aa3bde9ded50517321f98",
+      "modal.serialize": "22e75e39468cfbc2c8c692ae5a737acaac20e7a6dced18082a3e9649ebd198ea",
+      "transformers.check_and_set_device_map": "db357c9a225aaa8c59b1a3adfae2355080fc8cf81b7960bda9ba341cc104804d"
+    },
+    "isolated_worker_fixture_case_records": 18,
+    "launcher_module_imported_in_isolated_worker": false,
+    "missing_dependency_error": "Using a `device_map`, `tp_plan`, `torch.device` context manager or setting `torch.set_default_device(device)` requires `accelerate`. You can install it with `pip install accelerate`",
+    "modal_serialized_source_files": 6,
+    "remaining_uncertainty": [
+      "real checkpoint load",
+      "CUDA placement and Qwen hybrid kernels",
+      "remote Modal bootstrap/image build/execution",
+      "actual GPU resource use and billing"
+    ],
+    "sdk_serializer_entrypoint": "modal._utils.function_utils.FunctionSourceInfo.serialized_function -> modal._serialization.serialize"
+  },
+  "preflight_base_commit": "5c0774b",
   "python": "3.12.14",
   "runtime_pins_installed": {
+    "accelerate": "1.12.0",
     "modal": "1.6.4",
     "numpy": "2.2.6",
     "safetensors": "0.8.0",
@@ -124,7 +154,7 @@
       "repetition_penalty": 1.0
     },
     "gpu": "L4",
-    "harness_digest": "7400ffc28542d3d2ea622c88ad96aa8ee5acf27c7b2969424f9ea524352a6a5b",
+    "harness_digest": "7a733e01c5b4abc1e61a6ef9764e2c95b08261a53fba7b9a9877700cf4b03fb3",
     "invocation_timeout": 600,
     "max_containers": 1,
     "max_generations": 18,
@@ -145,6 +175,7 @@
     "retries": 0,
     "revision": "2fc06364715b967f1860aea9cf38778875588b17",
     "runtime": {
+      "accelerate": "1.12.0",
       "modal": "1.6.4",
       "numpy": "2.2.6",
       "safetensors": "0.8.0",

@@ -15,7 +15,7 @@ class Runtime:
         # Never use implicit locally saved HF tokens or download executable Hub kernels.
         os.environ['HF_HUB_DISABLE_IMPLICIT_TOKEN'] = '1'
         os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-        for package in ('torch', 'transformers', 'safetensors', 'numpy'):
+        for package in ('torch', 'transformers', 'safetensors', 'numpy', 'accelerate'):
             if importlib.metadata.version(package).split('+')[0] != VERSIONS[package]:
                 raise RuntimeError(f'{package} version must equal {VERSIONS[package]}')
         import torch
