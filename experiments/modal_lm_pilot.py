@@ -6,30 +6,16 @@ from pathlib import Path
 from godseye.lm.spec import plan, VERSIONS
 
 
-def execute(output, profile):
-    # Create destination before touching Modal; refuse overwrite/resume.
-    destination = Path(output)
-    destination.mkdir(parents=True, exist_ok=False)
-    (destination/'launch-plan.json').write_text(json.dumps(plan(profile), indent=2))
-    import importlib.metadata
-    if importlib.metadata.version('modal') != VERSIONS['modal']:
-        raise RuntimeError('install the pinned optional Modal SDK')
-    import modal
-    # Explicit allowlist: upload only trusted pilot .py files, never repository data,
-    # environment, credentials, homes, arbitrary user modules, or the workspace tree.
+def image_sources():
+    """Exact source upload allowlist, shared with offline staging tests."""
     source = Path(__file__).resolve().parents[1]/'godseye'/'lm'
-    image = modal.Image.debian_slim(python_version='3.12').pip_install(
-        *[f'{k}=={v}' for k,v in VERSIONS.items() if k != 'modal'])
-    image = image.env({'HF_HUB_DISABLE_IMPLICIT_TOKEN': '1', 'HF_HOME': '/tmp/lm-hf'})
-    image = image.add_local_file(str(source.parent/'__init__.py'), '/root/godseye/__init__.py')
-    for name in ('__init__.py', 'spec.py', 'delta.py', 'runtime.py', 'evaluate.py'):
-        image = image.add_local_file(str(source/name), '/root/godseye/lm/'+name)
-    app = modal.App('godseye-lm-bounded-pilot', include_source=False)
+    return [(source.parent/'__init__.py', '/root/godseye/__init__.py')] + [
+        (source/name, '/root/godseye/lm/'+name)
+        for name in ('__init__.py', 'spec.py', 'delta.py', 'runtime.py', 'evaluate.py')]
 
-    @app.function(image=image, gpu='L4', cpu=(2, 2), memory=(16384, 16384),
-                  serialized=True, include_source=False, single_use_containers=True,
-                  max_containers=1, min_containers=0, buffer_containers=0,
-                  scaledown_window=2, timeout=600, startup_timeout=180, retries=0)
+
+def make_worker():
+    """Return code serialized by value without capturing this launcher module."""
     def worker(profile):
         import tempfile
         from pathlib import Path
@@ -42,6 +28,32 @@ def execute(output, profile):
             error = type(exc).__name__+': '+str(exc)[:2000]
         files = {p.name: p.read_text() for p in folder.glob('*') if p.is_file()}
         return dict(files=files, error=error)
+
+    return worker
+
+
+def execute(output, profile):
+    # Create destination before touching Modal; refuse overwrite/resume.
+    destination = Path(output)
+    destination.mkdir(parents=True, exist_ok=False)
+    (destination/'launch-plan.json').write_text(json.dumps(plan(profile), indent=2))
+    import importlib.metadata
+    if importlib.metadata.version('modal') != VERSIONS['modal']:
+        raise RuntimeError('install the pinned optional Modal SDK')
+    import modal
+    # Explicit allowlist: upload only trusted pilot .py files, never repository data,
+    # environment, credentials, homes, arbitrary user modules, or the workspace tree.
+    image = modal.Image.debian_slim(python_version='3.12').pip_install(
+        *[f'{k}=={v}' for k,v in VERSIONS.items() if k != 'modal'])
+    image = image.env({'HF_HUB_DISABLE_IMPLICIT_TOKEN': '1', 'HF_HOME': '/tmp/lm-hf'})
+    for local_path, remote_path in image_sources():
+        image = image.add_local_file(str(local_path), remote_path)
+    app = modal.App('godseye-lm-bounded-pilot', include_source=False)
+
+    worker = app.function(image=image, gpu='L4', cpu=(2, 2), memory=(16384, 16384),
+                  serialized=True, include_source=False, single_use_containers=True,
+                  max_containers=1, min_containers=0, buffer_containers=0,
+                  scaledown_window=2, timeout=600, startup_timeout=180, retries=0)(make_worker())
 
     # run context is ephemeral; no deployment, endpoint, Volume, or secrets.
     with app.run():

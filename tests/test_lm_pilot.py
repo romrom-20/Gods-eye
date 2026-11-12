@@ -1,6 +1,8 @@
 """Offline evidence only; synthetic matching module is never a model-quality result."""
 import copy
 import json
+import inspect
+import textwrap
 from pathlib import Path
 import subprocess
 import sys
@@ -97,7 +99,7 @@ class NumericalTests(unittest.TestCase):
                 if 'elm' in prompt: answer='elm'
                 if '5 + 5' in prompt: answer='10'
                 output = answer if (dev and edited) or (not dev and not edited) else 'wrong'
-                return dict(output=output,generated_tokens=1,latency_seconds=0.01,termination='eos')
+                return dict(output=output,generated_tokens=1,latency_seconds=0.01,termination='token_cap')
         self_outer=self
         with tempfile.TemporaryDirectory() as root:
             out=Path(root)/'run'
@@ -126,17 +128,99 @@ class NumericalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             config.save_pretrained(folder)
             save_file(weights, str(Path(folder)/'model.safetensors'))
+            # Exact native device_map API on CPU, including the missing-dependency failure.
+            with patch('transformers.integrations.accelerate.is_accelerate_available', return_value=False):
+                with self.assertRaisesRegex(ValueError, 'requires `accelerate`'):
+                    Qwen3_5ForCausalLM.from_pretrained(
+                        folder, config=config, local_files_only=True, token=False,
+                        trust_remote_code=False, use_safetensors=True, device_map='cpu')
+            from transformers.integrations.accelerate import check_and_set_device_map
+            with patch('transformers.integrations.accelerate.os.environ', {'LOCAL_RANK':'0'}):
+                self.assertEqual(check_and_set_device_map('cuda'), {'':torch.device('cuda:0')})
             loaded, info = Qwen3_5ForCausalLM.from_pretrained(
                 folder, config=config, local_files_only=True, token=False,
                 trust_remote_code=False, use_safetensors=True, dtype=torch.float32,
-                attn_implementation='eager', output_loading_info=True,
+                attn_implementation='eager', device_map='cpu', output_loading_info=True,
                 key_mapping={r'^model\.language_model\.':'model.'})
+            self.assertEqual(next(loaded.parameters()).device.type, 'cpu')
             self.assertFalse(info['missing_keys'])
             self.assertFalse(info['unexpected_keys'])
             for name, value in original.state_dict().items():
                 self.assertTrue(torch.equal(value,loaded.state_dict()[name]),name)
             with torch.inference_mode():
                 self.assertTrue(torch.isfinite(loaded(torch.tensor([[1,2,3]])).logits).all())
+
+    def test_global_budget_exhaustion_is_incomplete_and_ineligible(self):
+        class Uncalled:
+            def __init__(self, config): self.model=fixture(); self.identity={'fixture':True}
+            def generate(self,*args,**kwargs): raise AssertionError('budget must prevent generation')
+        config=plan('smoke')
+        config['max_generations']=0
+        with tempfile.TemporaryDirectory() as root, patch('godseye.lm.evaluate.plan', return_value=config):
+            out=Path(root)/'run'
+            result=run(out,'smoke',Uncalled)
+            self.assertEqual(result['status'],'incomplete')
+            self.assertIsNone(result['frozen']['selected_candidate'])
+            rows=[json.loads(line) for line in (out/'cases.jsonl').read_text().splitlines()]
+            self.assertEqual(len(rows),18)
+            self.assertTrue(all(r['termination']=='budget_exhausted' and r['score']==0 for r in rows))
+
+    def test_modal_serialized_worker_with_only_allowlisted_sources(self):
+        try:
+            from modal._serialization import serialize
+        except ImportError:
+            self.skipTest('optional pinned Modal SDK required')
+        from experiments.modal_lm_pilot import make_worker, image_sources
+        worker=make_worker()
+        self.assertIsNone(worker.__closure__)
+        self.assertEqual(inspect.getclosurevars(worker).globals,{})
+        payload=serialize(worker)  # Same SDK serializer used by FunctionSourceInfo.serialized_function.
+        with tempfile.TemporaryDirectory() as root:
+            root=Path(root)
+            stage=root/'image'
+            stage.mkdir()
+            for local_path, remote_path in image_sources():
+                destination=stage/Path(remote_path).relative_to('/root')
+                destination.parent.mkdir(parents=True,exist_ok=True)
+                destination.write_bytes(local_path.read_bytes())
+            (root/'worker.bin').write_bytes(payload)
+            script=textwrap.dedent("""
+                import sys, json, importlib.util, socket
+                from pathlib import Path
+                from unittest.mock import patch
+                root=Path(sys.argv[1])
+                sys.path.insert(0,str(root/'image'))
+                assert importlib.util.find_spec('experiments') is None
+                def no_network(*args,**kwargs): raise AssertionError('network forbidden in offline preflight')
+                with patch.object(socket.socket,'connect',no_network), patch.object(socket.socket,'connect_ex',no_network):
+                    from modal._serialization import deserialize
+                    import torch
+                    import godseye.lm.runtime as runtime
+                    class FixtureRuntime:
+                        def __init__(self,config):
+                            self.identity={'fixture':True}
+                            self.model=torch.nn.Module()
+                            self.model.model=torch.nn.Module()
+                            self.model.model.layers=torch.nn.ModuleList([torch.nn.Module()])
+                            self.model.model.layers[0].mlp=torch.nn.Module()
+                            self.model.model.layers[0].mlp.down_proj=torch.nn.Linear(3584,1024,bias=False)
+                        def generate(self,*args,**kwargs):
+                            return dict(output='wrong',generated_tokens=1,latency_seconds=0,termination='token_cap')
+                    worker=deserialize((root/'worker.bin').read_bytes(),None)
+                    with patch.object(runtime,'Runtime',FixtureRuntime), patch('tempfile.mkdtemp',return_value=str(root/'work')):
+                        result=worker('smoke')
+                    assert result['error'] is None,result['error']
+                    summary=json.loads(result['files']['summary.json'])
+                    assert summary['status']=='complete' and summary['per_case_records']==18
+                    assert not summary['real_model_execution']
+                    assert 'experiments.modal_lm_pilot' not in sys.modules
+                    assert 'experiments' not in sys.modules
+                    print('ALLOWLIST_DESERIALIZE_AND_FIXTURE_RUN_OK')
+            """)
+            completed=subprocess.run([sys.executable,'-I','-c',script,str(root)],cwd=stage,
+                                     capture_output=True,text=True,timeout=60)
+            self.assertEqual(completed.returncode,0,completed.stderr)
+            self.assertIn('ALLOWLIST_DESERIALIZE_AND_FIXTURE_RUN_OK',completed.stdout)
 
     def test_all_error_outcomes_preserved(self):
         class Broken:

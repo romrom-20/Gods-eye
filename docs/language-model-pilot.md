@@ -2,7 +2,7 @@
 
 This independent CLI pilot is based on main `8694007`. It does not integrate with
 Store, the Breakout API, backend protocol, or UI. **Real pretrained model/GPU
-execution and the Modal image are unverified.** No model weights, provider calls,
+execution and the Modal image are unverified.** No pretrained model weights, provider calls,
 credentials, Modal run/deploy/image build, or Volumes were accessed for development.
 Only public metadata/configuration/source retrieval and local dependency installs
 were used. Offline synthetic numerics cannot establish model quality or GPU compatibility.
@@ -30,12 +30,14 @@ DeltaNet uses the slower reference Torch path; short limits do not guarantee
 completion. There is no fallback model or automatic retry if loading is unsupported.
 
 Direct runtime pins are in `requirements-lm-optional.txt`: Python 3.12,
-Torch 2.15.0, Transformers 5.22.2, safetensors 0.8.0, Modal 1.6.4, NumPy 2.2.6.
+Torch 2.15.0, Transformers 5.22.2, safetensors 0.8.0, Modal 1.6.4, NumPy 2.2.6,
+and Accelerate 1.12.0.
 Transitive dependencies are resolved during installation and every installed
 version is recorded in `runtime.json`; this is not a hash-locked supply-chain file.
 [Qwen's pinned license](https://huggingface.co/Qwen/Qwen3.5-0.8B/blob/2fc06364715b967f1860aea9cf38778875588b17/LICENSE)
 is Apache-2.0. Transformers and safetensors are Apache-2.0; Torch is BSD-3-Clause,
-NumPy BSD-3-Clause, Modal SDK Apache-2.0 (see upstream package license metadata).
+NumPy BSD-3-Clause, Modal SDK and Accelerate Apache-2.0 (see upstream package
+license metadata).
 Repository code remains under the repository MIT license; the tiny authored
 fixture in `spec.py` is offered under CC0-1.0.
 
@@ -57,9 +59,9 @@ not a discovered repetition neuron or a published neuron-edit replication.
 No Beaker/article neuron finding is claimed or transferred across architectures.
 
 Select the highest exact-match dev mean only if it strictly exceeds unchanged
-and all relevant generations terminate normally; ties use the lowest candidate
-index. Otherwise the weight arm explicitly keeps the original. Save every
-candidate and dev outcome, then write `frozen.json` containing configuration,
+and all relevant generations terminate with `eos` or `token_cap`; ties use the
+lowest candidate index. Otherwise the weight arm explicitly keeps the original.
+Save every candidate and dev outcome, then write `frozen.json` containing configuration,
 data digest, selection rule and selected-delta hash **before** any heldout call.
 Heldout cannot select, revise, or retry candidates. The prompt and decoding
 baselines are fixed in advance. Raw text is scored by whitespace-stripped exact
@@ -71,9 +73,15 @@ The CLI refuses an existing output directory. It persists plan/runtime identity,
 every output and exact prompt/answer, generation settings, seed, errors,
 termination, token counts, latency, GPU allocated/reserved peak memory, frozen
 selection, all candidate artifacts and aggregate heldout paired differences,
-improvement/regression counts. Errors and cap exhaustion score zero and mark the
-run incomplete; they are retained rather than silently discarded. Tiny samples
-always receive an inconclusive verdict. No significance, quality, inference
+improvement/regression counts. `token_cap` means the planned per-case
+`max_new_tokens` limit was reached: the returned text is scored normally, remains
+eligible for dev selection, and can be part of a complete run. It does not mean
+the global generation or evaluation-time budget was exhausted. `budget_exhausted`
+means a case was skipped because a global budget had run out; skipped cases and
+generation errors score zero and make the run incomplete. Per-case `walltime`
+termination also makes the run incomplete and is ineligible for dev selection;
+any partial returned text retains its exact-match score. All outcomes are retained.
+Tiny samples always receive an inconclusive verdict. No significance, quality, inference
 speedup, price improvement, or laptop support is inferred.
 
 Each `godseye-lm-column-v1` JSON artifact contains the base model revision, exact
@@ -194,7 +202,7 @@ approval for a revised pinned runtime or different model; never substitute silen
 ## Development validation (2026-11-12)
 
 An isolated local Python 3.12 environment with the exact optional pins passed
-**7 dedicated offline tests**. This includes real Torch column arithmetic and
+**9 dedicated offline tests**. This includes real Torch column arithmetic and
 hash restoration, artifact tampering/precondition rejection, a native tiny
 Qwen text model safetensors reload with exact key/tensor equality and finite
 forward logits, a frozen dev selection followed by two synthetic heldout
@@ -202,9 +210,46 @@ regressions, and 18 retained synthetic generation failures. These are fixture
 outcomes only. Both CLI dry runs, Python compilation and `git diff --check` passed.
 The system Python 3.9 standard-library suite also passes its planning/scoring
 checks, skipping optional numerical tests. The pinned Modal SDK's actual callable
-signatures were inspected locally; no app or image was constructed or executed.
+signatures and serializer were inspected and exercised locally; no app or image
+was constructed or executed.
 
 Validation metadata is recorded in `experiments/lm_offline_validation.json`.
 Pretrained weights, CUDA execution, Modal image/build/run, billing and full-model
 runtime behavior remain unverified. This work implements the reproducibility
 harness, not completion of the roadmap's measured small-model acceptance gate.
+
+## Preflight corrections after initial implementation
+
+The pinned Transformers 5.22.2 implementation of
+`transformers.integrations.accelerate.check_and_set_device_map` explicitly
+requires Accelerate for **every** non-null `device_map`, including `"cuda"`. The
+original optional requirements omitted it. Accelerate 1.12.0 is now pinned in the
+requirements and resource-plan runtime identity, checked by the real loader and
+included in the image's pip dependencies. An offline test reproduces the exact
+missing-dependency error through tiny native `from_pretrained(device_map="cpu")`,
+then loads the same synthetic safetensors successfully with the pinned dependency,
+verifies CPU placement, exact weights and finite logits. The installed helper also
+normalizes `"cuda"` to `{"": torch.device("cuda:0")}` without allocating CUDA
+memory. The native CPU placement path is verified; CUDA dispatch and the actual
+full checkpoint remain unexecuted.
+
+The Modal worker is created by `make_worker()` as a nested function with no
+closure cells or captured launcher globals. `image_sources()` is the single
+source of truth for the six allowed Python uploads. The pinned SDK's
+`FunctionSourceInfo.serialized_function()` uses
+`modal._serialization.serialize` on the raw worker function. A new offline test uses that serializer, stages **only**
+those six files in a temporary image root, and launches Python with `-I` outside
+the repository. The child confirms that `experiments` cannot be imported,
+deserializes with the SDK's `deserialize(..., client=None)`, and runs the real
+worker/evaluator using an explicitly synthetic CPU runtime; socket connection
+methods are blocked. It checks 18 returned case records and complete fixture
+evidence, with no import of the launcher module. This proves that serializing
+the worker does not require uploading the launcher or its imports; it does not
+validate Modal's remote bootstrap or image build. No App, Image, client, billing
+call, cloud authentication or credential access was performed.
+
+The dev-selection fixture now returns `token_cap` rather than EOS and still
+selects the improving edit before reporting heldout regressions. A separate test
+sets the global generation budget to zero, confirms generation is never called,
+retains all 18 skipped `budget_exhausted` records with zero scores, and reports
+an incomplete run with no selected edit.
