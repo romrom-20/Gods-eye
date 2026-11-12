@@ -283,8 +283,8 @@ function sidebarCheckpoints() {
     $("checkpoint-list").append(b);
   }
 }
-async function refresh() {
-  const data = await api(staticDemo ? "/api/state" : "/api/v1/state");
+async function refresh(data = null) {
+  data = data || await api(staticDemo ? "/api/state" : "/api/v1/state");
   state.checkpoints = data.checkpoints;
   configureMode(data);
   configureImport(data);
@@ -887,8 +887,8 @@ $("download").onclick = () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
-async function loadHistory() {
-  const runs = await api("/api/runs");
+async function loadHistory(runs = null) {
+  runs = runs || await api("/api/runs");
   state.runs = runs;
   $("watch-example").disabled = !runs.length;
   $("history").replaceChildren();
@@ -957,6 +957,8 @@ async function followJob(job) {
   $("cancel-job").disabled = false;
   try {
     while (true) {
+      state.jobs = [job, ...(state.jobs || []).filter(j => j.id !== job.id)];
+      renderExperimentBoard();
       $("job-progress").max = job.total;
       $("job-progress").value = job.completed;
       message(
@@ -997,9 +999,9 @@ async function followJob(job) {
     await loadJobs();
   }
 }
-async function loadJobs() {
+async function loadJobs(jobs = null) {
   try {
-    const jobs = await api("/api/v1/jobs");
+    jobs = jobs || await api("/api/v1/jobs");
     state.jobs = jobs;
     renderExperimentBoard();
     $("recent-jobs").replaceChildren();
@@ -1115,6 +1117,7 @@ async function initialize() {
       ) || runs[0];
     if (featured) await openRun(featured.id);
     fitExperimentBoard();
+    startWorkspaceWatch();
   } catch (e) {
     renderExperimentBoard();
     $("board-scope").textContent = "CONNECTION UNAVAILABLE";
@@ -1137,7 +1140,10 @@ function renderExperimentBoard() {
   const recorded = staticDemo || state.mode === "recorded-demo";
   $("board-scope").textContent = recorded ? "RECORDED / READ ONLY" : "LOCAL / CPU";
   $("board-request").textContent = recorded ? "Explore saved evidence ↗" : "Describe a goal ↗";
+  $("agent-brief").textContent = (recorded ? "First clone and install God's Eye using the API guide, then start godseye serve. Open the local lab URL it prints. " : "Use my running local God's Eye API at " + location.origin + ". ") + "Read /api/v1/state and /api/v1/openapi.json. Target: fixed MinAtar Breakout (600 → 32 → 32 → 6). Inspect the paper checkpoint (or my supplied compatible NPZ), propose one numeric edit and show its preview. Ask me to approve the edit before saving a child. Preserve the original. After approval compare original and child once, 2 episodes per version, max_steps=100, seed=1000, with a unique saved idempotency key. Retain the job ID; reconcile uncertain writes without automatic resubmission. Report hashes, exact patch, paired scores, uncertainty and regressions. Do not read provider keys or hidden evaluation files, call paid services, or claim improvement without evidence. I can watch saved changes in the local browser board.";
+
   $("board-counts").textContent = `${state.checkpoints.length} checkpoints · ${state.runs.length} comparisons`;
+  const pendingJobs = (state.jobs || []).filter(j => !j.run_id || !state.runs.some(r => r.id === j.run_id));
   const positions = new Map(), visiting = new Set();
   function depth(c) {
     if (!c.parent) return 0;
@@ -1160,6 +1166,8 @@ function renderExperimentBoard() {
   let evidenceRow=bottomRow;
   state.runs.forEach((r,i) => {while(occupied.has("1:"+evidenceRow))evidenceRow++;
     positions.set("run:"+r.id,compact?{x:288,y:36+evidenceRow*170}:{x:28+(maxDepth+1)*260,y:36+i*170});evidenceRow++;});
+  const jobStart = Math.max(0,...[...positions.values()].map(p=>(p.y-36)/170))+1;
+  pendingJobs.forEach((j,i)=>positions.set("job:"+j.id,{x:compact?288:28+(maxDepth+1)*260,y:36+(jobStart+i)*170}));
   const width = compact?540:Math.max(540,270+(maxDepth+1)*260), height = Math.max(350,...[...positions.values()].map(p=>p.y+155));
   graph.style.width = width+"px"; graph.style.height = height+"px";
   const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -1175,9 +1183,9 @@ function renderExperimentBoard() {
   function node(key,kind,title,description,select) {
     const p=positions.get(key),button=boardElement("button","experiment-node "+kind);
     button.dataset.objectId=key; button.setAttribute("aria-pressed",String(selectedBoardObject===key));
-    button.append(boardElement("span","node-kind",kind==="evidence"?"◉ EVALUATION / SAVED":kind==="edit"?"↳ CHECKPOINT / EDIT":"◇ CHECKPOINT / ROOT"),boardElement("strong","node-title",title),boardElement("span","node-description",description),boardElement("span","node-open",kind==="evidence"?"Inspect evidence →":"Inspect tensors →"));
+    button.append(boardElement("span","node-kind",kind==="job"?"◷ EVALUATION / JOB":kind==="evidence"?"◉ EVALUATION / SAVED":kind==="edit"?"↳ CHECKPOINT / EDIT":"◇ CHECKPOINT / ROOT"),boardElement("strong","node-title",title),boardElement("span","node-description",description),boardElement("span","node-open",kind==="job"?"View progress →":kind==="evidence"?"Inspect evidence →":"Inspect tensors →"));
     button.style.left=p.x+"px";button.style.top=p.y+"px";
-    const choose=async()=>{selectedBoardObject=key; $("board-selection").textContent=title+" · "+description; await select(); renderExperimentBoard(); $("board-selection").focus({preventScroll:true});};
+    const choose=async()=>{selectedBoardObject=key; $("board-selection").textContent=title+" · "+description; await select(); renderExperimentBoard(); focusBoardInspector();};
     button.onclick=choose; graph.append(button);
     const item=boardElement("button","board-list-item",title+" — "+description); item.onclick=choose;item.setAttribute("aria-pressed",String(selectedBoardObject===key));$("board-list").append(item);
   }
@@ -1195,15 +1203,55 @@ function renderExperimentBoard() {
   for(const r of state.runs){edge(r.base_id,"run:"+r.id,"evidence-edge"); if(r.candidate_id!==r.base_id)edge(r.candidate_id,"run:"+r.id,"evidence-edge");
     node("run:"+r.id,"evidence",`${shortLabel(r.base_id)} → ${shortLabel(r.candidate_id)}`,`Δ ${fmt(r.paired_mean_delta)} · ${r.episodes} paired games · SE ${fmt(r.paired_se,2)}`,async()=>{await openRun(r.id);showView("overview");});
   }
+  for(const job of pendingJobs) {
+    const key="job:"+job.id;
+    edge(job.settings?.base_id,key,"evidence-edge");
+    edge(job.settings?.candidate_id,key,"evidence-edge");
+    node(key,"job",`Evaluation · ${job.status}`,`${job.completed}/${job.total} episodes · ${job.status==="succeeded"?"loading saved evidence":"no completed result"}`,async()=>showView("evaluate"));
+  }
   if(!state.checkpoints.length)graph.append(boardElement("p","board-empty","No saved checkpoints loaded. Check your local connection; no experiment has been inferred."));
   $("board-activity").replaceChildren();
   for(const r of state.runs.slice(0,3)){const b=boardElement("button","activity-record",`◉ Saved comparison · Δ ${fmt(r.paired_mean_delta)}`); b.onclick=()=>{const target=graph.querySelector(`[data-object-id="run:${CSS.escape(r.id)}"]`);target?.click();};$("board-activity").append(b);}
-  for(const job of (state.jobs||[]).filter(j=>j.status!=="completed").slice(0,3)){
-    const b=boardElement("button","activity-record",`${job.status} · ${job.completed}/${job.total} episodes · no completed evidence`);
+  for(const job of pendingJobs.slice(0,3)){
+    const b=boardElement("button","activity-record",`${job.status} · ${job.completed}/${job.total} episodes · ${job.status === "succeeded" ? "loading saved evidence" : "no completed evidence"}`);
     b.onclick=()=>{showView("evaluate");$("board-selection").textContent=`Evaluation job ${job.id} · ${job.status}`;$("board-selection").focus();};$("board-activity").append(b);
   }
   if(!state.runs.length&&!(state.jobs||[]).length)$("board-activity").textContent="No saved comparisons yet. Job and agent status remain in their detail views.";
   graph.style.transform=`scale(${boardZoom})`;graph.style.transformOrigin="top left";
+}
+function focusBoardInspector() {
+  $("board-selection").focus({preventScroll:true});
+  if (typeof matchMedia === "function" && matchMedia("(max-width: 1150px)").matches)
+    $("board-selection").scrollIntoView({block:"start",behavior:"auto"});
+}
+// Observe local API changes only. Never submit a write or initialize in an export.
+function startWorkspaceWatch() {
+  if (staticDemo || state.mode === "recorded-demo") return;
+  let delay = 4000;
+  const tick = async () => {
+    try {
+      if (!document.hidden && !pollingJob && !checkpointImport.busy) {
+        const [data,runs,jobs] = await Promise.all([api("/api/v1/state"),api("/api/runs"),api("/api/v1/jobs")]);
+        const focused = document.activeElement;
+        const key = focused?.dataset?.objectId;
+        if (JSON.stringify(data.checkpoints) !== JSON.stringify(state.checkpoints)) await refresh(data);
+        if (JSON.stringify(runs) !== JSON.stringify(state.runs)) await loadHistory(runs);
+        if (JSON.stringify(jobs) !== JSON.stringify(state.jobs)) await loadJobs(jobs);
+        if (key && !focused.isConnected) {
+          const replacement = [...$("board-graph").querySelectorAll("[data-object-id]")].find(e=>e.dataset.objectId===key);
+          replacement?.focus({preventScroll:true});
+        }
+        $("board-sync").textContent = "Watching local changes · every 4s";
+        delay = 4000;
+      }
+    } catch {
+      $("board-sync").textContent = "Updates paused · retrying connection";
+      delay = Math.min(delay * 2, 30000);
+    }
+    setTimeout(tick, delay);
+  };
+  $("board-sync").textContent = "Watching local changes · every 4s";
+  setTimeout(tick, delay);
 }
 function renderCheckpointDetail(){
   $("board-checkpoint-metadata")?.remove();

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Version UI asset URLs by content to avoid mixed cached layouts, increase board
+  text contrast, and observe external local-API edits and job results without reload.
 - Add a connected checkpoint/evidence workspace with contextual tensor and replay
   inspection, keyboard list navigation, and preserved local editing workflows.
 - Redesign the landing page around real recorded comparisons and rebuild the API

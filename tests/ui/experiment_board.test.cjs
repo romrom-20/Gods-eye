@@ -10,7 +10,7 @@ function setup(checkpoints,runs=[],jobs=[]){
     set innerHTML(v){throw Error('Unsafe HTML '+v);}};}
   const $=id=>{if(!nodes.has(id))nodes.set(id,el());return nodes.get(id);};
   const ctx={$,state:{checkpoints,runs,jobs,mode:'local'},staticDemo:false,fmt:v=>v==null?'n/a':String(v),shortLabel:id=>checkpoints.find(c=>c.id===id)?.name||id,
-    document:{createElement:el,createElementNS:(_,tag)=>el(tag),querySelector:()=>el()},
+    location:{origin:"http://127.0.0.1:8787"},document:{createElement:el,createElementNS:(_,tag)=>el(tag),querySelector:()=>el()},
     showView:v=>calls.push(['view',v]),loadTensor:async()=>calls.push(['tensor']),sidebarCheckpoints(){},openRun:async id=>calls.push(['run',id]),
     CSS:{escape:s=>s},navigator:{},api(){throw Error('Selection must not mutate');}};
   vm.createContext(ctx);
@@ -38,4 +38,20 @@ test('imported roots, missing parents, unevaluated checkpoints and cancelled job
 });
 test('list is a keyboard-operable alternative and Fit does not issue requests',()=>{
  const x=setup(roots);x.$('board-list').hidden=true;x.$('board-list-toggle').onclick();assert.equal(x.$('board-list').hidden,false);assert.equal(x.$('board-viewport').hidden,true);x.fitExperimentBoard();assert.deepEqual(x.calls,[]);
+});
+
+test('saved successful jobs are represented by evidence, pending jobs connect to their actual inputs',()=>{
+ const checkpoints=[...roots,{id:'child',name:'Edit',parent:'paper'}];
+ const pending={id:'job',status:'running',completed:1,total:4,settings:{base_id:'paper',candidate_id:'child'}};
+ const x=setup(checkpoints,[],[pending]);
+ assert.ok(x.$('board-graph').children.some(n=>n.dataset.objectId==='job:job'));
+ const run={id:'result',base_id:'paper',candidate_id:'child',episodes:2,paired_mean_delta:-1,paired_se:0};
+ const y=setup(checkpoints,[run],[{...pending,status:'succeeded',run_id:'result',completed:4}]);
+ assert.ok(!y.$('board-graph').children.some(n=>n.dataset.objectId==='job:job'));
+ assert.equal(y.$('board-activity').children.length,1);
+ assert.match(y.$('board-activity').children[0].textContent,/Saved comparison/);
+});
+test('workspace observer is inert for static exports',()=>{
+ const x=setup(roots); x.state.mode="recorded-demo";
+ x.startWorkspaceWatch(); // no timer or API available in this context
 });

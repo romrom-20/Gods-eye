@@ -7,14 +7,15 @@ existing controllers, not an additional execution service.
 
 ## Objects and evidence
 
-Only loaded checkpoint records and saved comparison records become board objects.
+Loaded checkpoints, persisted evaluation jobs and saved comparisons become board objects.
 A root has `parent: null`; imported roots remain independent originals with
 unverified provenance. A child is linked only to its saved parent ID. Missing
 parents are labeled unavailable and receive no invented edge. Checkpoints without
 saved comparisons say so. A comparison connects only its actual baseline and
 candidate IDs; it displays paired difference, sample count and standard error.
-Failed or cancelled jobs appear as status observations in the rail, not successful
-evaluation nodes. Job details remain in Compare; agent activity remains in the
+Pending, failed or cancelled jobs remain visibly labeled job objects, not successful
+evaluation evidence. Once a job's saved result is loaded, the comparison replaces
+its job card. Job details remain in Compare; agent activity remains in the
 existing observed-activity inspector.
 
 Selecting a root or edit opens the existing tensor inspector, selected checkpoint,
@@ -38,6 +39,19 @@ the UI adds no inferred causal explanations or invented model internals.
 
 The external-agent affordance links to the API guide and copies a non-secret task
 brief. It neither connects a provider nor discovers subscriptions or models.
+The brief on a local server includes that server's actual origin. A coding agent
+must have access to the same computer (or its own locally installed lab).
+
+While a writable local lab is visible, it checks checkpoint, run and job metadata
+every four seconds. It issues reads only, skips hidden tabs and active import/job
+controllers, and backs off to 30 seconds on errors. New external-client edits and
+results appear without reloading; unchanged records do not rebuild the board.
+This is periodic observation, not a streaming agent connection. Static exports
+never start this observer. Browser selection does not authorize an experiment.
+
+HTML now references CSS and JavaScript by content revision in both local serving
+and static exports, preventing old cached scripts from being reused after an
+update. The local server also sends `Cache-Control: no-cache` for UI files.
 
 ## Compatibility and safety
 
@@ -54,7 +68,7 @@ playback. Existing static asset allowlisting and export file sets are unchanged.
 
 ## Verification
 
-Run the UI suite with `node --test tests/ui/*.test.cjs` (75 passing), the bundled
+Run the UI suite with `node --test tests/ui/*.test.cjs`, the bundled
 contract check with `python -m unittest discover -s tests/browser -p
 test_ui_contract.py` (1 passing), and static platform/allowlist checks with
 `python -m unittest discover -s tests -p test_platform.py` (10 passing).

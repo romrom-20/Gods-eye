@@ -11,7 +11,8 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from .web_assets import page_html
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 from .checkpoint_import import MAX_JSON, compatible, request_payload
@@ -347,18 +348,18 @@ def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orche
 
     @app.get('/', include_in_schema=False)
     def home():
-        return FileResponse(STATIC / 'landing.html')
+        return HTMLResponse(page_html('landing.html', STATIC), headers={'Cache-Control': 'no-cache'})
 
     @app.get('/lab', include_in_schema=False)
     @app.get('/lab.html', include_in_schema=False)
     def lab():
-        return FileResponse(STATIC / 'index.html')
+        return HTMLResponse(page_html('index.html', STATIC), headers={'Cache-Control': 'no-cache'})
 
     @app.get('/{asset}', include_in_schema=False)
     def asset(asset: str):
         if asset not in {'app.js', 'style.css', 'landing.css', 'landing.js', 'api.html'}:
             raise HTTPException(404, 'Not found')
-        return FileResponse(STATIC / asset)
+        return FileResponse(STATIC / asset, headers={'Cache-Control': 'no-cache'})
 
     return app
 

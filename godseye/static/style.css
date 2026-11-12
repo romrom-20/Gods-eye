@@ -3499,3 +3499,32 @@ footer {
     flex:0 0 auto
   }
 }
+
+/* Readable evidence: reserve pale greens for surfaces, not essential text. */
+:root { --muted:#526168; }
+main :is(.overline,.eyebrow,.mono,.tag,label,summary),
+.detail-inspector :is(p,small,.metric-note,.metric-label,.tensor-label,.history-checkpoints span,.history-scores span),
+.board-footnote,.board-legend-text,.node-kind,.node-description,.node-open {
+  color:#465b60;
+}
+.detail-inspector :is(.history-checkpoints strong,.history-scores) { color:#193642; }
+.detail-inspector :is(p,summary,label) { font-size:13px; }
+.detail-inspector :is(.overline,.mono,.metric-note,.metric-label),
+.board-toolbar,.board-footnote,.board-legend-text,.node-kind,.node-open { font-size:11px; }
+.node-description { font-size:11px; line-height:1.45; }
+.experiment-node { min-height:140px; }
+.node-title { font-size:14px; }
+.board-toolbar button { min-width:32px; min-height:32px; }
+.board-viewport { max-height:calc(100vh - 365px); min-height:310px; }
+.board-sync { font-size:12px; color:#465b60; margin:6px 0; }
+.agent-entry { font-size:13px; }
+.agent-entry p { line-height:1.65; }
+.agent-entry #agent-brief { white-space:pre-wrap; background:#e9ece5; padding:14px; color:#193642; }
+#board-selection { scroll-margin-top:80px; }
+.experiment-node.job { border-top-color:#436f92; background:#edf3f7; }
+@media(max-width:700px) {
+  .board-viewport { max-height:460px; min-height:280px; }
+  .detail-inspector .page-heading { padding:20px 16px; }
+}
+
+.detail-inspector :is(#base-se,#candidate-se,#paired-se,#run-time,.replay-caption,.stat > span) { color:#465b60; font-size:12px; }

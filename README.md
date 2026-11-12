@@ -39,6 +39,7 @@ comparisons. Select a checkpoint to inspect its tensors and saved patch; select 
 comparison to replay both versions. **List** provides keyboard-friendly navigation.
 Lines represent recorded parentage and comparisons, not inferred model circuits.
 See [workspace behavior and limitations](docs/experiment-workspace.md).
+For a repeatable tester or coding-agent handoff, use [Try the product](docs/test-the-product.md).
 
 ## Bring your own Breakout checkpoint
 

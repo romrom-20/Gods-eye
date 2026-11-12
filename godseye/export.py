@@ -5,6 +5,7 @@ import shutil
 
 from .backends import DATA_DIR
 from .core import Store, digest, tensor_summary
+from .web_assets import page_html
 
 
 def export_demo(destination):
@@ -16,8 +17,8 @@ def export_demo(destination):
     static = Path(__file__).parent / 'static'
     for name in ('app.js', 'style.css', 'landing.css', 'landing.js', 'api.html', 'LICENSE.txt', 'THIRD_PARTY_NOTICES.md'):
         shutil.copyfile(static / name, destination / name)
-    shutil.copyfile(static / 'landing.html', destination / 'index.html')
-    lab = (static / 'index.html').read_text().replace('<html lang="en">', '<html lang="en" data-static-demo="true">')
+    (destination / 'index.html').write_text(page_html('landing.html', static))
+    lab = page_html('index.html', static).replace('<html lang="en">', '<html lang="en" data-static-demo="true">')
     lab = lab.replace('<title>God’s Eye — Describe an experiment</title>',
                       '<title>God’s Eye — Recorded demo</title>')
     start = lab.index('        <section data-view="goal"')
