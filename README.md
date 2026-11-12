@@ -34,6 +34,17 @@ Use **Edit weights** for your own numeric changes, **Compare** for paired
 evaluations, and **History** to revisit results. The known four-weight edit tests
 the mechanics; it is not an AI-discovered improvement or a new research result.
 
+## Bring your own Breakout checkpoint
+
+In **Edit weights**, choose **Import checkpoint** and select a compatible `.npz`.
+Give it a name and optional source/license notes. The app preserves it as an
+imported original; edit a copy, compare both, and revisit the saved results.
+Importing does not run a model or start AI repair.
+
+This supports the fixed 600 → 32 → 32 → 6 Breakout architecture and the documented
+finite float32 archive format, up to 128 KiB. It does not load arbitrary language
+models. See [accepted format, CLI and API](docs/checkpoint-import.md).
+
 ## What works today
 
 - **CPU workbench:** inspect tensors, preview numeric patches, save immutable

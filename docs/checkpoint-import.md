@@ -7,6 +7,19 @@ inference, select a provider, or start an experiment. Imported weights are untes
 until you explicitly evaluate them. Finite tensors alone do not establish useful
 behavior or numerical stability during evaluation.
 
+## Browser workflow
+
+Start the local server, open the lab, and choose **Import checkpoint** from
+**Edit weights** or **Saved versions**. Select your NPZ, enter a name and optional
+source/license notes, then explicitly submit. Source notes are user-provided,
+unverified metadata. The imported original is selected for inspection and editing.
+Create a child edit, then select the original and child in **Compare** to evaluate.
+The bundled original remains available. Reload preserves both versions and results.
+
+If an upload loses its response, refresh saved versions and inspect the list before
+submitting again: the import may already have succeeded. No automatic retry occurs.
+Recorded demos disable import; servers without the capability show it as unsupported.
+
 ## Local CLI and client
 
 ```sh
