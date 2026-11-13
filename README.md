@@ -64,7 +64,7 @@ models. See [accepted format, CLI and API](docs/checkpoint-import.md).
   OpenAI, OpenRouter, and Hugging Face; real-provider compatibility and repair
   quality are not established by scripted tests.
 
-The current planner recognizes a small set of Breakout phrases, including
+The browser planner recognizes a small set of Breakout phrases, including
 “Improve Breakout score.” It does not understand arbitrary requests or edit Qwen.
 Completed trusted runs support [checkpoint download and verified reload](docs/checkpoint-export.md),
 with rollback to the original. [Observed activity](docs/agent-activity.md) records
@@ -72,11 +72,20 @@ actual operations and reports unknown phases when evidence is unavailable.
 Hosted multi-user access remains unfinished. No quality improvement or
 inference-cost saving is promised.
 
-An optional [Qwen intervention pilot](docs/language-model-pilot.md) is available
-as a separate experimental CLI. Its offline checks pass; pretrained checkpoint
-loading, GPU execution, and improvement remain unverified. It is not integrated
-into the browser or goal planner. The Modal runner requires explicit execution
-and a reviewed spending budget.
+An optional [local Qwen2.5-0.5B CPU experiment](docs/local-language-model.md)
+now runs actual pretrained weights, applies bounded column edits, and verifies
+delta reload and exact rollback. It is a separate source-checkout CLI with
+optional dependencies; the browser and Python HTTP client remain Breakout-only.
+Its [first JSON-task evaluation](docs/local-lm-task-validation.md) made 70
+development attempts in 40.74 seconds on one Mac, with about 2.73 GB peak process
+memory. Both hand edits scored below unchanged weights; one decoding baseline
+hit its token cap, so the run stopped without selection or held-out evaluation.
+This establishes local execution, not useful repair or general laptop performance.
+
+The separate [Qwen3.5 GPU/Modal pilot](docs/language-model-pilot.md) still has only
+offline validation: its pretrained loading and GPU execution remain unverified.
+Modal execution requires a reviewed spending budget. Neither experimental CLI
+accepts arbitrary natural-language model-editing requests.
 
 ## Run an AI-guided experiment
 

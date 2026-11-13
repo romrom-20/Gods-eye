@@ -70,9 +70,12 @@ Release acceptance:
 
 ### Following release: one editable small language model
 
-Select one fixed, licensed model revision after measuring local memory and runtime.
-Qwen is a candidate, not a committed compatibility promise. Implement the backend
-and regression evaluation described below. Support one narrow goal with examples
+The first measured local target is a pinned Qwen2.5-0.5B-Instruct revision,
+implemented as a separate CPU CLI. Its [JSON-task evaluation](local-lm-task-validation.md)
+was incomplete after a development token cap; neither fixed edit improved the
+observed counts. General model compatibility and useful repair remain unproven.
+Connect this runtime and regression evaluator to the local service and browser.
+Support one narrow goal with examples
 and a held-out test set. Preserve original weights, tokenizer/model revisions,
 patches, and sampling settings. Export a usable model or delta with a verified
 reload path; a text explanation alone is not the model artifact.
@@ -153,7 +156,8 @@ clearly distinguished. None is a universal replacement for the others.
   Static visitors can inspect and replay; they cannot execute experiments.
 - Automated core, API, security-boundary, queue, and export tests. CI builds
   a wheel and a static website artifact. An approval-gated Pages workflow is
-  prepared but disabled by default; see [public demo](public-demo.md).
+  deployed for this repository's recorded demo, with environment approval required;
+  see [public demo](public-demo.md).
 
 Also implemented: a separate restricted tool-calling programmer harness; validated
 Docker evaluator isolation; provider profiles, model discovery, and confirmed
@@ -162,8 +166,10 @@ The simplified local UI includes a guided fixed four-weight experiment.
 
 A constrained browser goal review/start/status/cancel journey and operator service
 are implemented with scripted acceptance evidence; real-provider discovery and
-repair quality remain unproven. There is no editable Qwen backend,
-remote GPU worker, account system, paid service, or production multi-tenant
+repair quality remain unproven. A separate local Qwen2.5 CPU runner now supports
+fixed column edits, verified rollback/reload and a public JSON fixture. It is not
+connected to the browser or HTTP service and has not demonstrated improvement.
+There is no verified remote GPU execution, account system, paid service, or production multi-tenant
 isolation. Real-agent repair quality and cost savings remain unproven. Docker
 boundary tests with a scripted provider do not establish intelligent repair.
 
@@ -208,8 +214,12 @@ ablation/restoration recipe.
 
 ## Milestone 2: one small language-model backend
 
-Implement a trusted local `Backend` in `godseye/backends.py`, initially for one
-small model and fixed architecture. Prefer a safe tensor format; never accept
+The first runtime lives in `godseye/lm/local_runtime.py`, separate from the
+Breakout-specific Store/backend protocol. Follow the
+[local-first backend boundaries](lm-backend-architecture.md) when connecting it
+to a trusted control service; do not force language-model weights through the
+Breakout archive format. Support one small model and fixed architecture first.
+Prefer a safe tensor format; never accept
 pickle or enable remote model code for public jobs. Verify model source,
 license, revision, tensor schema, dtype, hashes, and parameter count.
 

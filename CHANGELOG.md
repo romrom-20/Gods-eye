@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add a measured local Qwen2.5-0.5B CPU runtime, reversible numeric delta and
+  verified reload, plus a bounded JSON-task runner with durable attempt records
+  and development-selection gates. The first real run was budget-limited with
+  no held-out evaluation or demonstrated improvement; browser integration is pending.
 - Make experiment cards draggable with live connectors, browser-local layout
   persistence, keyboard movement and reset; moving cards never changes weights.
 - Version UI asset URLs by content to avoid mixed cached layouts, increase board
