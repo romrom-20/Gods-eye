@@ -74,7 +74,9 @@ The first measured local target is a pinned Qwen2.5-0.5B-Instruct revision,
 implemented as a separate CPU CLI. Its [JSON-task evaluation](local-lm-task-validation.md)
 was incomplete after a development token cap; neither fixed edit improved the
 observed counts. General model compatibility and useful repair remain unproven.
-Connect this runtime and regression evaluator to the local service and browser.
+The [local service and browser](lm-browser-workspace.md) now connect this runtime
+and evaluator; a real browser run reproduced the incomplete result without retry.
+Next, improve the editing method and setup experience, then test with outside users.
 Support one narrow goal with examples
 and a held-out test set. Preserve original weights, tokenizer/model revisions,
 patches, and sampling settings. Export a usable model or delta with a verified
@@ -167,8 +169,9 @@ The simplified local UI includes a guided fixed four-weight experiment.
 A constrained browser goal review/start/status/cancel journey and operator service
 are implemented with scripted acceptance evidence; real-provider discovery and
 repair quality remain unproven. A separate local Qwen2.5 CPU runner now supports
-fixed column edits, verified rollback/reload and a public JSON fixture. It is not
-connected to the browser or HTTP service and has not demonstrated improvement.
+fixed column edits, verified rollback/reload and a public JSON fixture. It is
+connected to an operator-configured local browser/HTTP service, with real
+budget-limited integration evidence, and has not demonstrated improvement.
 There is no verified remote GPU execution, account system, paid service, or production multi-tenant
 isolation. Real-agent repair quality and cost savings remain unproven. Docker
 boundary tests with a scripted provider do not establish intelligent repair.

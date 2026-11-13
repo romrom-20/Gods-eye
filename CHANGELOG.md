@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+- Connect the fixed local Qwen task to a full-width browser workspace and durable
+  local service: reviewed starts, cancellation, history, response comparison and
+  directly loadable selected-delta exports. A real browser run verified the
+  budget-limited outcome and evidence download; useful repair remains unproven.
 - Add a measured local Qwen2.5-0.5B CPU runtime, reversible numeric delta and
   verified reload, plus a bounded JSON-task runner with durable attempt records
   and development-selection gates. The first real run was budget-limited with
-  no held-out evaluation or demonstrated improvement; browser integration is pending.
+  no held-out evaluation or demonstrated improvement.
 - Make experiment cards draggable with live connectors, browser-local layout
   persistence, keyboard movement and reset; moving cards never changes weights.
 - Version UI asset URLs by content to avoid mixed cached layouts, increase board

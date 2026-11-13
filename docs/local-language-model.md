@@ -193,5 +193,6 @@ from the original and exact rollback is checked. The task runner exports a selec
 delta only when the unchanged contract selects one; unused probe artifacts are
 explicitly labeled by variant. See [local-lm-task-validation.md](local-lm-task-validation.md)
 for the single authorized cached-model evaluation, journal/freeze rules, commands,
-evidence and limitations. This is a local CLI integration; browser/service work
-is still separate.
+evidence and limitations. The [local service](local-lm-service.md) now connects
+this task to the [Qwen browser workspace](lm-browser-workspace.md), with separate
+optional-runtime configuration and a verified budget-limited browser run.

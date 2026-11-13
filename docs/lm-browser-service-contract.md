@@ -1,7 +1,8 @@
-# Local Qwen browser contract v1 — implementation target
+# Local Qwen browser contract v1
 
-This document freezes the coordinator's interface for the next service/UI slice.
-It describes assigned work, not deployed capabilities. The existing Breakout
+This interface is implemented by the [local service](local-lm-service.md) and
+[browser workspace](lm-browser-workspace.md), with real integration evidence.
+It requires an operator-configured local source checkout. The existing Breakout
 routes, static export and operator harness keep their contracts. No remote compute,
 paid provider, arbitrary model/dataset or general-language editing is added.
 
@@ -131,8 +132,8 @@ Static export shows a clear local-only setup explanation for this entry, perform
 zero /api requests even with mock query flags, and exposes no Start/Cancel/export
 execution actions. No new recorded Qwen fixture is fabricated or silently added.
 
-Backend and UI workers test against this exact contract. Mock transport is only
-for labeled deterministic tests. Coordinator then verifies real service/browser
-integration on a dedicated port, preserving the earlier experiment evidence.
+Backend and UI tests use this exact contract. Mock transport is only
+for labeled deterministic tests. Real service/browser integration was verified
+on a dedicated port, preserving the earlier experiment evidence.
 Future sandbox/remote workers implement the same lifecycle behind an adapter;
 this phase neither provisions infrastructure nor grants paid-execution authority.

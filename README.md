@@ -64,8 +64,9 @@ models. See [accepted format, CLI and API](docs/checkpoint-import.md).
   OpenAI, OpenRouter, and Hugging Face; real-provider compatibility and repair
   quality are not established by scripted tests.
 
-The browser planner recognizes a small set of Breakout phrases, including
-“Improve Breakout score.” It does not understand arbitrary requests or edit Qwen.
+The Breakout planner recognizes a small set of phrases, including
+“Improve Breakout score.” The separate Qwen workspace supports a fixed JSON task;
+neither planner understands arbitrary model-editing requests.
 Completed trusted runs support [checkpoint download and verified reload](docs/checkpoint-export.md),
 with rollback to the original. [Observed activity](docs/agent-activity.md) records
 actual operations and reports unknown phases when evidence is unavailable.
@@ -74,8 +75,14 @@ inference-cost saving is promised.
 
 An optional [local Qwen2.5-0.5B CPU experiment](docs/local-language-model.md)
 now runs actual pretrained weights, applies bounded column edits, and verifies
-delta reload and exact rollback. It is a separate source-checkout CLI with
-optional dependencies; the browser and Python HTTP client remain Breakout-only.
+delta reload and exact rollback. A configured local source checkout now exposes
+it at **`/lab#language-model`**: request, review, explicit Start, observed progress,
+response comparison and evidence download. Follow the
+[local Qwen service setup](docs/local-lm-service.md); it uses optional dependencies
+and an existing pinned model cache. The Python convenience client remains
+Breakout-only. The [real browser integration](docs/lm-browser-workspace.md)
+verified one admitted run, exact response/download identities and reload without
+re-execution. Cancellation and selected-artifact paths have synthetic process tests.
 Its [first JSON-task evaluation](docs/local-lm-task-validation.md) made 70
 development attempts in 40.74 seconds on one Mac, with about 2.73 GB peak process
 memory. Both hand edits scored below unchanged weights; one decoding baseline

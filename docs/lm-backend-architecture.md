@@ -3,7 +3,9 @@
 Decision: build one narrow, auditable JSON task journey before accepting arbitrary
 natural-language model edits. The implemented planning/scoring slice is described
 in [lm-task-contract.md](lm-task-contract.md); the interfaces below are a proposed
-integration architecture, not existing LM browser routes or runner support.
+integration architecture. The [local service](local-lm-service.md) and
+[browser workspace](lm-browser-workspace.md) now implement the fixed-task path;
+remote workers and hosted isolation below remain future work.
 Keep the Qwen3.5 CUDA toy pilot separate from the Qwen2.5 local task.
 
 ## Four boundaries
