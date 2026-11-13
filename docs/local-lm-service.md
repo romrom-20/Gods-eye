@@ -176,7 +176,7 @@ the user's existing service ports.
 
 Core server/platform tests: 10 passed. Existing local-runner/runtime tests: 24
 collected, 16 passed and eight optional Torch numeric tests skipped in the base
-server environment. Focused service tests: 15 passed (including all seven evaluation fixture modes).
+server environment. Focused service tests: 18 passed (including all seven evaluation fixture modes).
 Lint and `git diff --check` passed. The server environment emits a pre-existing Starlette
 HTTPX deprecation warning; no environment modifications were made.
 
@@ -184,3 +184,26 @@ Remaining integration: the coordinator must merge the independent UI slice and
 perform its separately labeled browser/service integration check on a dedicated
 port. This slice establishes control-plane behavior with synthetic evidence; it
 does not rerun, improve or replace the earlier incomplete Qwen quality experiment.
+
+
+## Atomic publication regression
+
+A quota scan can enumerate a journal/report temporary filename immediately before
+`atomic_json` renames it. Previously the following `stat` raised `FileNotFoundError`
+and the monitor interrupted an otherwise healthy worker, sometimes misreporting a
+selected-reload test as `worker_failed`. The scan now tolerates only disappeared
+names and counts the published file on its next pass, within the existing quota
+reservation. Permission errors and other storage failures still fail closed.
+Deterministic Python 3.9 tests force this rename-before-stat interleaving: the old
+code reproduces `failed/worker_failed`; the fix lets both owned processes finish
+and still rejects corrupt independent reload evidence as `failed/invalid_evidence`.
+A separate two-job regression verifies that complete retained budget-limited
+history and evidence survive two service restarts and HTTP list/result reads,
+without spawning workers, resuming inference or changing the task budgets.
+
+The regression and final 18-test service suite passed with the existing Python
+3.9.6 environment, without changing its dependencies:
+
+```sh
+/Users/samanseshadri/orca/Gods-eye/.venv/bin/python -m unittest discover -s tests -p test_lm_service.py -v
+```

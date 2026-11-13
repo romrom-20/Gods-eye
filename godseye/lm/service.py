@@ -406,8 +406,14 @@ class LMService:
             dirs[:] = [d for d in dirs if not (Path(root) / d).is_symlink()]
             for name in files:
                 path = Path(root) / name
-                if not path.is_symlink():
-                    total += path.stat().st_size
+                try:
+                    if not path.is_symlink():
+                        total += path.stat().st_size
+                except FileNotFoundError:
+                    # atomic_json publishes with rename while the monitor scans.
+                    # A listed temporary name may disappear before stat; count the
+                    # published name on the next scan, within the reserved quota.
+                    continue
         return total
 
     def start(self, plan_id, spec_hash, key):

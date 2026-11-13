@@ -1,6 +1,7 @@
 """Explicitly SYNTHETIC HTTP/service acceptance worker. Never loads a model."""
 import contextlib
 import json
+import os
 from pathlib import Path
 import signal
 import sys
@@ -89,6 +90,10 @@ elif mode in ('hold', 'crash'):
     while True:
         time.sleep(.1)
 else:
+    # Test-only barrier ensures the quota monitor sees an in-flight leaf worker.
+    if os.environ.get('GODSEYE_SYNTHETIC_QUOTA_GATE') == '1':
+        while not (output / 'release-quota-gate').exists():
+            time.sleep(.01)
     report = run_task(Runtime(), approved_spec(), output / 'run', editor_factory=Editor)
     if mode == 'malformed':
         (output / 'run/report.json').write_text('[]')

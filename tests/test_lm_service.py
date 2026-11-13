@@ -318,6 +318,86 @@ time.sleep(30)
         self.assertEqual(len(self.client.get(BASE + '/jobs').json()['jobs']), 20)
         self.assertEqual(self.post('/jobs', **pending).status_code, 507)
 
+    def test_failed_budget_history_survives_restarts_and_http_reads(self):
+        self.worker.mode = 'incomplete'
+        job_ids = []
+        for _ in range(2):
+            job_id, _ = self.start()
+            job = self.terminal(job_id)
+            self.assertEqual((job['status'], job['reason']), ('failed', 'budget_limited'))
+            self.assertEqual(job['progress'], dict(reserved_attempts=70,
+                             finished_attempts=70, max_attempts=126))
+            job_ids.append(job_id)
+        expected = self.client.get(BASE + '/jobs').json()
+        self.assertEqual([job['id'] for job in expected['jobs']], list(reversed(job_ids)))
+        self.service.close()
+        for _ in range(2):
+            adapter = ScriptedAdapter()
+            recovered = self.new_service(adapter)
+            with TestClient(app_for(recovered)) as client:
+                self.assertEqual(client.get(BASE + '/jobs').json(), expected)
+                for job_id in job_ids:
+                    result = client.get(BASE + '/jobs/' + job_id + '/result').json()
+                    self.assertEqual(len(result['attempts']), 70)
+                    self.assertTrue(all(a['split'] == 'dev' for a in result['attempts']))
+                    self.assertEqual(result['report']['verdict'], 'not_evaluated')
+                    self.assertFalse(result['job']['selected_delta_available'])
+            self.assertEqual(adapter.children, [])
+            recovered.close()
+
+    def test_quota_scan_tolerates_atomic_publication_before_stat(self):
+        # A worker atomic_json rename can invalidate a name returned by os.walk.
+        # Preserve that exact interleaving instead of relying on scheduler timing.
+        output = self.service.directory / 'synthetic-publication'
+        output.mkdir()
+        temporary = output / 'report.json.tmp'
+        published = output / 'report.json'
+        temporary.write_bytes(b'{}')
+        def stale_listing(*args, **kwargs):
+            published_before_stat = [temporary.name]
+            temporary.replace(published)
+            yield str(output), [], published_before_stat
+        with patch('godseye.lm.service.os.walk', side_effect=stale_listing):
+            self.assertEqual(self.service._bytes(), 0)
+        self.assertGreaterEqual(self.service._bytes(), published.stat().st_size)
+        original_stat = Path.stat
+        def permission_failure(path, *args, **kwargs):
+            if path == published:
+                raise PermissionError('synthetic evidence permission failure')
+            return original_stat(path, *args, **kwargs)
+        with patch.object(Path, 'stat', permission_failure):
+            with self.assertRaises(PermissionError):
+                self.service._bytes()
+
+    def test_selected_bad_quota_publication_race_does_not_abort_worker(self):
+        self.worker.mode = 'selected-bad'
+        original_walk = os.walk
+        interleaved = threading.Event()
+        def stale_listing(*args, **kwargs):
+            for root, dirs, files in original_walk(*args, **kwargs):
+                if self.worker.children and not interleaved.is_set():
+                    # Enumerate a temporary file just before the worker publishes it.
+                    temporary = Path(root) / 'synthetic-quota-publication.tmp'
+                    temporary.write_bytes(b'{}')
+                    stale_files = files + [temporary.name]
+                    temporary.replace(Path(root) / 'synthetic-quota-publication.json')
+                    interleaved.set()
+                    (self.service.directory / self.service.active / 'release-quota-gate').touch()
+                    yield root, dirs, stale_files
+                else:
+                    yield root, dirs, files
+        with patch.dict(os.environ, {'GODSEYE_SYNTHETIC_QUOTA_GATE': '1'}), \
+                patch('godseye.lm.service.os.walk', side_effect=stale_listing):
+            job_id, _ = self.start()
+            job = self.terminal(job_id)
+        self.assertTrue(interleaved.is_set())
+        self.assertEqual((job['status'], job['reason']), ('failed', 'invalid_evidence'))
+        self.assertEqual(len(self.worker.children), 2)  # Task AND independent reload finished.
+        self.assertTrue(all(child.wait(timeout=0) == 0 for child in self.worker.children))
+        self.assertEqual(job['progress']['finished_attempts'], 126)
+        self.assertFalse(job['selected_delta_available'])
+        self.assertEqual(self.post('/jobs/' + job_id + '/export', kind='selected_delta').status_code, 409)
+
     def test_evaluation_complete_negative_incomplete_selected_and_fail_closed(self):
         for mode, status, reason, delta_available in [
             ('complete', 'completed', None, False),
