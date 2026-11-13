@@ -3595,3 +3595,6 @@ body.lm-active :is(.rail-activity,.sidebar-section,.paper-link) { display:none; 
 .lm-workspace .primary { background:#193642; border-color:#193642; color:#fffef8; }
 .lm-workspace .primary:hover { background:#294b57; }
 body.lm-active .project-switch,body.lm-active .local-status > div > span { display:none; }
+
+/* Task availability must remain readable alongside long custom requests. */
+.lm-card #lm-task { width:100%; max-width:100%; padding:12px; font:inherit; color:#193742; background:#fffef8; border:1px solid #82999c; border-radius:4px; }

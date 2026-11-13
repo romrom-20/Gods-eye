@@ -86,6 +86,39 @@ Acceptance: a targeted change can be inspected, applied, reversed, reloaded, and
 compared on both target and unrelated capabilities within documented resources.
 Do not promise laptop execution until that exact model/configuration is measured.
 
+### Next behavioral task: verifiable math, then simulator policies
+
+User requests such as “solve math problems better” are the intended product
+experience, but are not supported by the fixed JSON recipe. Do not route them
+into that recipe or count schema validity as mathematical improvement.
+
+Start with one narrow math task: one-variable linear equations with exact
+rational answers. Define a separately versioned task contract and data-only
+answer scorer (no execution of model output), deterministic disjoint development
+and heldout templates, and control tasks that detect lost capabilities. Give
+users concrete example inputs and expected outputs before reviewing a plan.
+Preserve the existing JSON specification and historical evidence identities.
+
+Reuse the pinned local runtime, immutable originals, admission/cancellation,
+evidence journal and verified delta reload. Separate the task/evaluator from
+the execution backend so a later sandbox worker can implement the same bounded
+protocol. Compare unchanged, prompt-only and weight-edit alternatives using
+identical conditions. A fixed column ablation is a baseline, not a general
+editing algorithm; useful candidate generation and a demonstrated heldout gain
+are still missing. Keep all failed candidates and count total work. First prove
+one useful local task before adding hosted workers or a general-language planner.
+
+Acceptance: a browser request selects this explicit math task, reviews cases,
+metrics and limits, runs the real evaluator, and returns correct-answer counts,
+control regressions and a reloadable selected delta only when justified. A
+negative result is valid. No math execution or quality result exists yet.
+
+Driving-policy requests require a separate compatible policy architecture and
+simulator adapter, observation/action contracts, scenario splits, collision and
+task-completion metrics, and regression evaluation. Qwen text results cannot
+validate vehicle behavior. Keep this as simulator research, not a claimed
+real-vehicle deployment path.
+
 ### Then: demonstrate value before expanding infrastructure
 
 Compare against the unchanged model, improved prompting, and an appropriate

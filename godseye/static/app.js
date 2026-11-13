@@ -1997,11 +1997,13 @@ function createLmWorkspace(env) {
   }
   function stop() { if (timer !== null) clock.clearTimeout(timer); timer = null; }
   function controls() {
+    const taskSupported = !$('lm-task').value || $('lm-task').value === 'json';
     const usable = cap?.available && !cap.readonly && !staticMode;
     $('lm-controls').hidden = !usable && !pending;
-    $('lm-plan').disabled = busy || !usable || !!pending || !!job && !terminal(job);
+    $('lm-plan').disabled = busy || !usable || !taskSupported || !!pending || !!job && !terminal(job);
+    $('lm-task').disabled = busy || !!pending || !!job && !terminal(job);
     $('lm-request').disabled = busy || !!pending;
-    $('lm-sample').disabled = busy || !!pending;
+    $('lm-sample').disabled = busy || !!pending || !taskSupported;
     $('lm-start').disabled = busy || !usable || !plan || !!pending || !$('lm-consent').checked;
     $('lm-resolve').disabled = busy;
     $('lm-retry').hidden = !retryAllowed;
@@ -2081,6 +2083,7 @@ function createLmWorkspace(env) {
     return JSON.stringify(v).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
   }
   async function review() {
+    if ($('lm-task').value && $('lm-task').value !== 'json' || pending || job && !terminal(job)) return;
     invalidatePlan();
     const v = await request('/plan',{schema_version:1,request:$('lm-request').value});
     if (!['ready','unsupported','clarification_required'].includes(v.outcome) || typeof v.message !== 'string') invalid();
@@ -2275,6 +2278,16 @@ function createLmWorkspace(env) {
     if (saved?.job_id && id(saved.job_id)) job = {id:saved.job_id};
   } catch { say('Saved identity could not be read. Check session storage before starting.'); $('lm-setup').hidden = false; busy = true; }
   $('lm-sample').onclick = () => { $('lm-request').value = cap?.sample_request || 'Improve JSON schema adherence'; invalidatePlan(); $('lm-request').focus(); };
+  $('lm-task').onchange = () => {
+    invalidatePlan();
+    const messages = {
+      json:'The JSON experiment uses bundled examples and two fixed weight edits. It does not discover edits from an arbitrary request.',
+      math:'Not implemented: a math experiment needs example problems with verified answers, a separate heldout set, and a scorer for mathematical correctness. The current JSON score does not measure math ability. Your request is kept below; no experiment has started.',
+      driving:'Not implemented: a driving experiment needs a compatible policy model, simulator, observations/actions, and tests for collisions and task completion. This Qwen text runtime cannot evaluate a vehicle controller. Your request is kept below; no experiment has started.'
+    };
+    $('lm-task-help').textContent = messages[$('lm-task').value] || 'Unsupported task. No experiment has started.';
+    say($('lm-task').value === 'json' ? 'JSON benchmark selected. Review the request before Start.' : 'This task is not executable yet. See what is missing below.');
+  };
   $('lm-request').oninput = invalidatePlan;
   $('lm-consent').onchange = controls;
   $('lm-plan').onclick = () => perform(review);

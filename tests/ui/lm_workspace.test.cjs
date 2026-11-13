@@ -139,3 +139,34 @@ test('malformed attempt identity cannot become visible evidence',async()=>{
  x.queue.push(response(wrap(r.job)),response(r));await x.start(null);
  assert.equal(x.$('lm-result').hidden,true);assert.match(x.$('lm-notice').textContent,/unsupported response/);
 });
+
+test('unavailable tasks preserve the request, revoke consent and never submit a substitute experiment',async()=>{
+ const x=setup();await x.ready();await x.review();
+ x.$('lm-consent').checked=true;x.$('lm-consent').onchange();
+ x.$('lm-request').value='Solve linear equations better';
+ const before=x.calls.length;
+ for(const task of ['math','driving']) {
+  x.$('lm-task').value=task;x.$('lm-task').onchange();
+  assert.equal(x.$('lm-request').value,'Solve linear equations better');
+  assert.equal(x.$('lm-review').hidden,true);assert.equal(x.$('lm-consent').checked,false);
+  assert.equal(x.$('lm-plan').disabled,true);assert.equal(x.$('lm-start').disabled,true);
+  assert.match(x.$('lm-task-help').textContent,/Not implemented/);
+  await x.click('lm-plan');await x.click('lm-start');
+  assert.equal(x.calls.length,before);
+ }
+ x.$('lm-task').value='json';x.$('lm-task').onchange();
+ assert.equal(x.$('lm-request').value,'Solve linear equations better');
+ assert.equal(x.$('lm-plan').disabled,false);assert.equal(x.$('lm-start').disabled,true);
+ await x.click('lm-sample');assert.equal(x.$('lm-request').value,'Improve JSON schema adherence');
+ assert.equal(x.calls.length,before);
+});
+test('unsupported free text keeps the original request and exposes no execution plan',async()=>{
+ const x=setup();await x.ready();await x.review();
+ const request='Update the policy when driving the car';x.$('lm-request').value=request;
+ x.queue.push(response({schema_version:1,outcome:'unsupported',message:'Driving-policy editing is not implemented. No experiment started.',plan_id:null,spec:null,spec_sha256:null,expires_at:null}));
+ await x.click('lm-plan');
+ assert.equal(x.calls.at(-1).body.request,request);assert.equal(x.$('lm-request').value,request);
+ assert.equal(x.$('lm-review').hidden,true);assert.equal(x.$('lm-start').disabled,true);
+ assert.match(x.$('lm-notice').textContent,/Driving-policy/);
+ assert.equal(x.calls.filter(c=>c.url.endsWith('/jobs')&&c.body).length,0);
+});

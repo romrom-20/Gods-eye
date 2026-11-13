@@ -67,6 +67,22 @@ class ContractTests(unittest.TestCase):
             TaskSpec(canonical(value))
         self.assertEqual(digest(spec().to_dict()), spec().sha256)
 
+    def test_behavior_requests_get_relevant_guidance_without_a_substitute_plan(self):
+        for text, explanation in [
+            ('Make Qwen better at math problems', 'mathematical correctness'),
+            ('Improve JSON for algebra equations', 'mathematical correctness'),
+            ('Update the policy when driving the car', 'simulator'),
+            ('Improve JSON car steering decisions', 'simulator'),
+            ('Change its biology knowledge', 'outside the fixed JSON benchmark'),
+        ]:
+            with self.subTest(text=text):
+                result = preview(text, revision=REVISION)
+                self.assertNotEqual(result['outcome'], 'ready')
+                self.assertIsNone(result['spec'])
+                self.assertIsNone(result['spec_sha256'])
+                self.assertIn(explanation, result['message'])
+                self.assertIn('No experiment started', result['message'])
+
     def test_strict_json_adversaries(self):
         for raw in ('```json\n{}\n```', 'Here: {}', '{} {}', '{"x":1,"x":2}',
                     '{"x":{"a":1,"a":2}}', '{"x":NaN}', '{"x":Infinity}',

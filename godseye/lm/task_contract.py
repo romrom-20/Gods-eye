@@ -187,10 +187,24 @@ def preview(text, *, revision, model_id=MODEL_ID):
     normalized = ' '.join(text.casefold().split()).removesuffix('.')
     if normalized not in PHRASES:
         clarification = any(word in normalized for word in ('json', 'schema', 'format'))
+        # Guidance only: these words must never admit a different executable task.
+        words = set(re.findall(r'[a-z]+', normalized))
+        if words & {'car', 'driving', 'vehicle', 'autonomous', 'steering'}:
+            message = ('Driving-policy editing is not implemented. It requires a compatible policy '
+                       'model, a simulator, observations/actions, and collision and task-completion '
+                       'checks. This Qwen text experiment cannot evaluate a vehicle controller.')
+        elif words & {'math', 'maths', 'mathematics', 'algebra', 'arithmetic', 'equation', 'equations'}:
+            message = ('Math-task editing is not implemented. It requires example problems with '
+                       'verified answers, a separate heldout set, and a mathematical correctness '
+                       'scorer. The current JSON benchmark does not measure math ability.')
+        else:
+            message = ('This request is outside the fixed JSON benchmark. Only bundled JSON '
+                       'examples and two predefined weight edits are currently executable. '
+                       'Choose “Use JSON benchmark goal” only if you want that different experiment.')
+        message += ' No experiment started and no substitute goal was selected.'
         return {'outcome': 'clarification_required' if clarification else 'unsupported',
                 'spec': None, 'spec_sha256': None,
-                'message': 'Supported goal: return correct JSON matching the specified bounded schema. '
-                           'Use: Improve JSON schema adherence. Arbitrary edits and schemas are unsupported.'}
+                'message': message}
     spec = TaskSpec(canonical(_spec(revision, model_id)))
     return {'outcome': 'ready', 'spec': spec.to_dict(), 'spec_sha256': spec.sha256,
             'message': 'Preview only; no model load, experiment, download or charge.'}
