@@ -53,6 +53,8 @@ def lm_router(service=None, *, readonly=False):
             raw = canonical(result).encode()
             if len(raw) > MAX_RESPONSE:
                 raise ServiceError('internal', 'Local LM response exceeds its safe bound; inspect evidence locally.')
+            if attachment and body['kind'] == 'selected_delta':
+                attachment = 'selected-delta'
             headers = {'Content-Disposition': f'attachment; filename="lm-{attachment}.json"'} if attachment else None
             return Response(raw, status_code=status, media_type='application/json', headers=headers)
         except ServiceError as exc:

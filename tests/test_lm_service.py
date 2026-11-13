@@ -187,7 +187,8 @@ class ServiceTests(unittest.TestCase):
         self.assertIsNone(result['report'])
         exported = self.post('/jobs/' + job_id + '/export', kind='evidence')
         self.assertEqual(exported.status_code, 200)
-        self.assertIn('attachment;', exported.headers['content-disposition'])
+        self.assertEqual(exported.headers['content-disposition'],
+                         'attachment; filename="lm-evidence.json"')
         self.assertEqual(exported.json()['interrupted_attempts'], 1)
         self.assertEqual(self.post('/jobs/' + job_id + '/export', kind='selected_delta').status_code, 409)
         self.assertEqual(self.post('/jobs/' + job_id + '/cancel').json()['job'], terminal)
@@ -345,8 +346,10 @@ time.sleep(30)
                     self.assertEqual(len(result['attempts']), 126)
                     download = self.post('/jobs/' + job_id + '/export', kind='selected_delta')
                     self.assertEqual(download.status_code, 200)
-                    self.assertEqual(download.json()['delta']['column'], 0)
-                    self.assertIn('local_delta.applied', download.json()['instructions'])
+                    self.assertEqual(download.json()['column'], 0)
+                    self.assertNotIn('delta', download.json())
+                    self.assertEqual(download.headers['content-disposition'],
+                                     'attachment; filename="lm-selected-delta.json"')
                 else:
                     self.assertEqual(self.post('/jobs/' + job_id + '/export', kind='selected_delta').status_code, 409)
                 self.assertNotIn(str(self.root), json.dumps(result))
@@ -421,6 +424,60 @@ time.sleep(30)
         self.assertFalse(self.service.capabilities()['available'])
         self.assertIsNone(self.service.result(job_id)['report'])
         self.assertEqual(self.post('/plan', request='Improve JSON schema adherence').status_code, 503)
+
+    def test_real_http_selected_delta_download_loads_without_unwrapping(self):
+        from godseye.lm.local_delta import load_delta
+        sock = socket.socket()
+        sock.bind(('127.0.0.1', 0))
+        port = sock.getsockname()[1]
+        server = uvicorn.Server(uvicorn.Config(app_for(self.service), log_level='error', lifespan='off'))
+        thread = threading.Thread(target=server.run, kwargs={'sockets':[sock]}, daemon=True)
+        thread.start()
+        try:
+            wait_for(lambda: server.started)
+            with httpx.Client(base_url=f'http://127.0.0.1:{port}', trust_env=False) as client:
+                for mode in ('complete', 'selected', 'selected-bad', 'incomplete'):
+                    with self.subTest(mode=mode):
+                        self.worker.mode = mode
+                        job_id, _ = self.start()
+                        job = self.terminal(job_id)
+                        route = BASE + '/jobs/' + job_id
+                        response = client.post(route + '/export',
+                                               json=dict(schema_version=1, kind='selected_delta'))
+                        if mode != 'selected':
+                            self.assertFalse(job['selected_delta_available'])
+                            self.assertEqual(response.status_code, 409)
+                            self.assertNotIn('content-disposition', response.headers)
+                            continue
+                        self.assertEqual(response.status_code, 200, response.text)
+                        self.assertEqual(response.headers['content-disposition'],
+                                         'attachment; filename="lm-selected-delta.json"')
+                        saved = self.root / 'downloaded-selected-delta.json'
+                        saved.write_bytes(response.content)
+                        # Independent public loader consumes exactly the downloaded bytes.
+                        delta = load_delta(saved)
+                        report = client.get(route + '/result').json()['report']
+                        self.assertEqual(delta, response.json())
+                        self.assertEqual(delta['content_sha256'],
+                                         report['selected_delta_check']['content_sha256'])
+                        self.assertEqual(report['persisted_freeze']['selected_weight'], 'weight-0')
+                        candidate = approved_spec().to_dict()['operations']['candidates'][0]
+                        self.assertEqual((delta['column'], delta['scale']),
+                                         (candidate['column'], candidate['scale']))
+                        evidence = client.post(route + '/export',
+                                               json=dict(schema_version=1, kind='evidence'))
+                        self.assertEqual(evidence.status_code, 200)
+                        self.assertEqual(evidence.headers['content-disposition'],
+                                         'attachment; filename="lm-evidence.json"')
+                        self.assertEqual(evidence.json()['job']['id'], job_id)
+                        self.assertEqual(evidence.json()['job']['spec_sha256'], approved_spec().sha256)
+                        self.assertEqual(set(evidence.json()), {'schema_version', 'job', 'report',
+                                                              'attempts', 'interrupted_attempts'})
+        finally:
+            server.should_exit = True
+            thread.join(timeout=3)
+            sock.close()
+        self.assertFalse(thread.is_alive())
 
     def test_real_ephemeral_http_start_resolve_cancel(self):
         sock = socket.socket()

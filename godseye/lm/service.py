@@ -572,13 +572,10 @@ class LMService:
             if kind == 'evidence':
                 value = self.result(job_id)
             elif row['status'] == 'completed' and row['delta'] is not None:
-                value = dict(schema_version=1, job_id=job_id, spec_sha256=row['hash'],
-                             delta=json.loads(row['delta']),
-                             instructions=('Use godseye.lm.local_delta.load_delta with the pinned original '
-                                           'Qwen model, then local_delta.applied(model, delta). The context '
-                                           'manager verifies the original and edited hashes and restores and '
-                                           'verifies the original on exit. This is a numeric column delta, '
-                                           'not a standalone checkpoint.'))
+                from .local_delta import validate
+                # Download bytes are directly consumable by local_delta.load_delta.
+                # Job/spec provenance and instructions belong outside this fixed schema.
+                value = validate(json.loads(row['delta']))
             else:
                 raise ServiceError('conflict', 'No independently verified selected delta exists for this run.')
             if len(canonical(value).encode()) > MAX_RESPONSE:

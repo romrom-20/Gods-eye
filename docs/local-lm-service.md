@@ -130,8 +130,15 @@ Selected-delta export additionally requires a completed run, a frozen actual
 weight selection, the exact approved candidate operation, a validated numeric
 delta/content hash, matching task reload/rollback evidence and matching independent
 fresh-model verification hashes. Unchanged winners and unused candidate files
-never produce selected exports. Attachments include the pinned local delta-loader
-reload and context-manager rollback instructions. Filesystem paths from HTTP are
+never produce selected exports. The `lm-selected-delta.json` attachment contains
+only the exact validated raw numeric delta schema, so save its bytes and pass that
+file directly to `godseye.lm.local_delta.load_delta(path)` without unwrapping.
+Job/spec provenance remains in the separate `lm-evidence.json` envelope. Reload
+and rollback instructions remain in the UI and here: load the pinned original
+Qwen model, read the delta with `local_delta.load_delta(path)`, then use
+`with local_delta.applied(model, delta):` for the edit. That context manager checks
+the original and edited hashes and restores and verifies the original on exit;
+the delta is not a standalone checkpoint. Filesystem paths from HTTP are
 never used to select artifacts; job identity authorizes a fixed stored artifact.
 
 ## Verification recorded for this slice
@@ -161,11 +168,15 @@ unknown-cleanup failure, sanitized errors, complete negative/no-selection,
 incomplete development, rollback failure, malformed results and independently
 verified selected-delta fixture paths. A real uvicorn server binds an OS-selected
 loopback port and uses HTTPX for concurrent starts, exact resolution and actual
-child cancellation; it never binds the user's existing service ports.
+child cancellation; a second ephemeral HTTP check saves the selected-delta
+attachment bytes and independently parses them with the public delta loader,
+checking content hash and approved candidate identity as well as unchanged,
+incomplete and failed independent-reload rejection gates. These checks never bind
+the user's existing service ports.
 
 Core server/platform tests: 10 passed. Existing local-runner/runtime tests: 24
 collected, 16 passed and eight optional Torch numeric tests skipped in the base
-server environment. Focused service tests: 14 passed (including all seven evaluation fixture modes).
+server environment. Focused service tests: 15 passed (including all seven evaluation fixture modes).
 Lint and `git diff --check` passed. The server environment emits a pre-existing Starlette
 HTTPX deprecation warning; no environment modifications were made.
 
