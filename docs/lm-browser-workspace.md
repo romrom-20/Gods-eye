@@ -5,8 +5,9 @@ This child-branch slice adds `/lab#language-model` using only the frozen
 a full-width workspace and hides the Breakout board and inspector. Returning to a
 Breakout view restores them. Existing controllers, local CPU example, checkpoint
 import, board layout controls, recorded playback and export asset list are retained.
-No model inference, provider call, dependency installation or weight download was
-performed for this UI work.
+The initial scripted UI slice performed no inference, provider call, dependency
+installation or weight download. The separately authorized real integration below
+subsequently exercised one local model run.
 
 ## Request and evidence
 
@@ -124,13 +125,107 @@ they are not evidence of a newly executed model experiment. Subsequent small
 validation/message refinements were checked with the deterministic UI suite.
 Ego Lite reported an available update; no upgrade was performed.
 
-## Remaining integration
+## Actual service/browser integration — 2026-11-13
 
-The independent backend service commit was not present in this child workspace.
-The coordinator must integrate it and separately verify the actual capability,
-plan/admission/resolve, cancellation, partial result, and evidence attachment
-lifecycle on a dedicated port. Real runtime execution still requires explicit
-authorization; these scripted browser checks do not authorize or substitute for
-it. In particular, verify the operator setup and selected-delta export/rollback
-against real verified service artifacts when such an artifact exists. No useful
-selected Qwen edit is claimed by this slice or by the historical run.
+The child branch merged local main `b3c4330`, including the actual LMService
+(`2a41313`, coordinator integration of `efe4722`), before this separately authorized
+execution. This check reproduced the fixed public task through the actual browser
+transport; it is not an independent heldout quality experiment or tuning run.
+No LM route/response was intercepted, no runtime/scorer/backend code was changed,
+and no UI integration defect required a product fix.
+
+The actual app used a temporary Breakout Store and a new private 0700 LM directory
+under `/tmp/godseye-lm-browser-integration-20261113-01`. Only its dedicated
+`127.0.0.1:18997` server was started. Operator configuration used the existing cache
+`/tmp/godseye-lm-local-real-20261113/weights` and isolated interpreter
+`/tmp/godseye-lm-local-venv/bin/python`. No token/key material, other running
+servers, provider/cloud/GPU services, dependencies or weights were accessed or
+changed beyond the authorized local runtime and its in-deadline validation.
+
+The browser proved page load and preview had zero jobs and zero journals. The
+server's canonical TaskSpec hash
+`3a49a9cd1b743ba8935582e1e22673bf402d80e68a6136e559dd75fdf73aa08d`
+passed review. Keyboard consent and explicit Start admitted exactly one job:
+`44ba98e5-8d7a-4399-b95e-5acc9e238fc4`, created
+`2026-11-13T01:56:04.550408Z`, terminal `2026-11-13T01:56:45.503900Z`.
+Actual development progress included 19 finished/20 reserved, then 45 finished/46
+reserved. Those intermediate observations came from read-only service HTTP
+status during browser polling; screenshots capture the actual queued 0/0 and
+terminal UI states. No intermediate-state screenshot was staged or recreated.
+
+It terminated naturally as `failed/budget_limited`, report
+`incomplete/not_evaluated`: 70 reserved and recorded development calls, 69 complete
+responses and one decoding `dev-inventory` response capped at 96 tokens. There
+were zero heldout calls, interrupted reservations or retries, no persisted freeze,
+selected edit, selected-delta file or fresh selected-model reload. Usage was 6,515
+input and 1,154 generated tokens including EOS. The worker reported 38.10 seconds;
+admission-to-terminal elapsed 40.95 seconds. These timings are transport
+reproduction observations, not speedup evidence. The CPU runtime used two threads;
+its lifetime peak RSS was 3,402,596,352 bytes, including loading.
+
+Observed development counts (10 JSON targets and 4 text controls per variant):
+
+- Unchanged: 3 schema-valid, 1 semantically correct, 4 controls correct.
+- Prompt: 1 schema-valid, 0 semantically correct, 4 controls correct.
+- Decoding: 3 schema-valid, 1 semantically correct, 4 controls correct; incomplete arm due to the cap.
+- Column 0 × 0: 2 schema-valid, 0 semantically correct, 4 controls correct.
+- Column 1 × 0.5: 2 schema-valid, 0 semantically correct, 4 controls correct.
+
+The UI truthfully displayed “Not evaluated”, zero heldout attempts, the token
+limit, observed control counts/regressions, and no selected delta. Original and
+candidate response strings exactly matched the service attempts, including the
+partial 96-token response. Downloaded evidence JSON exactly equaled the service
+result envelope. A separate stdlib check verified all 155 journal event hashes,
+finish/report identity, all 70 attempt/spec bindings, equality of journal records
+with raw report/service/download attempts, and all five exact rollback boundaries.
+The journal file SHA256 is
+`d6456ddb32a56a07e540ff80a3443250ed87a5420f153d2d62aef8d779f353a0`;
+attachment SHA256 is
+`970ba7b1c0fdde6539eda8cbdc2e105378b4e2e9780e9defe2ee366f0397891c`.
+Original and final tensor hashes both remain
+`cdba20f7429dd67092a8861e2d3d51e28318ecd4a6b007e7f417f1c5aeac3ee5`.
+Weights were not rehashed outside the authorized worker validation.
+
+Reload, history selection and read-only resolution with the recorded admission key
+reopened the same job; the final audit contains exactly one Start POST and no
+cancellation POST. Desktop and 390px mobile reading had no horizontal page overflow.
+The real 13-file static export made zero API requests with both mock flags.
+Desktop review/results and mobile workspace/capped-response screenshots were
+visually inspected. Screenshots, actual attachment, HTTP audit, installed versions,
+raw journal/report and browser verification are retained in that private directory.
+See [the compact integration evidence report](lm-browser-integration-evidence.json)
+for hashes, identities, environment, counts and screenshot filenames.
+
+The incoming selected-delta attachment fix was merged from local main `f9c8a28`
+(coordinator integration of `f18c78f`) only after the real job terminated. It did
+not restart the job or generate additional text. The existing synthetic actual-HTTP
+selected-delta download/save/direct-load test passed against the corrected code.
+Real selected-delta behavior cannot be claimed from this no-selection run.
+Existing synthetic process tests supplied cancellation and lost-ACK coverage;
+no extra pretrained run was used to exercise those paths.
+
+Commands for this authorized integration (the new real fixture refuses an existing
+evidence directory; the browser driver records a durable one-Start intent and
+reuses any admitted job read-only):
+
+```sh
+GODSEYE_LM_CACHE=/tmp/godseye-lm-local-real-20261113/weights \
+GODSEYE_LM_PYTHON=/tmp/godseye-lm-local-venv/bin/python PYTHONPATH=. \
+/tmp/godseye-goal-contract-venv/bin/python tests/browser/lm_workspace_real_backend.py \
+  --directory /tmp/godseye-lm-browser-integration-20261113-01 --port 18997
+ego-browser nodejs < tests/browser/lm_workspace_real_journey.cjs
+python3 tests/browser/lm_workspace_real_verify.py /tmp/godseye-lm-browser-integration-20261113-01
+node --test tests/ui/*.test.cjs
+PYTHONPATH=.:tests /tmp/godseye-goal-contract-venv/bin/python -m unittest \
+  test_lm_service.ServiceTests.test_simultaneous_duplicate_start_lost_ack_and_no_backlog \
+  test_lm_service.ServiceTests.test_cancel_waits_kills_and_retains_partial_evidence \
+  test_lm_service.ServiceTests.test_real_http_selected_delta_download_loads_without_unwrapping -v
+PYTHONPATH=. /tmp/godseye-goal-contract-venv/bin/python -m unittest discover -s tests/browser -p test_ui_contract.py -v
+```
+
+The 106 focused UI checks, bundled contract check and three named synthetic service
+checks passed. The browser task was finished and the owned server was stopped only
+after confirming its one terminal job and no child process; evidence/cache remain
+intact. Ego Lite reported an update; no upgrade was performed. There is no useful
+selected edit or new heldout quality claim, and no new execution is authorized by
+these reproduction results.

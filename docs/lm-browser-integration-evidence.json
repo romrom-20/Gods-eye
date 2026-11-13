@@ -1,0 +1,287 @@
+{
+  "format": "godseye-lm-browser-integration-v1",
+  "purpose": "One authorized real pretrained browser/service transport reproduction; not independent heldout quality evidence or tuning",
+  "recorded_at": "2026-11-13T01:59:46.742728+00:00",
+  "source": {
+    "initial_ui_commit": "eb164e4",
+    "merged_main_before_execution": "b3c4330",
+    "backend_equivalent_commit": "2a41313 (coordinator integration of efe4722)",
+    "selected_delta_fix_merged_after_termination": "f9c8a28 (coordinator integration of f18c78f)",
+    "ui_integration_fixes_required": false,
+    "backend_changes_by_this_worker": false
+  },
+  "evidence_directory": "/tmp/godseye-lm-browser-integration-20261113-01",
+  "operator_environment": {
+    "purpose": "ONE authorized pretrained browser transport reproduction; not independent quality evidence",
+    "created_at": "2026-11-13T01:54:29.420813+00:00",
+    "host": "macOS-26.6.2-arm64-arm-64bit",
+    "server_python": "3.12.14",
+    "port": 18997,
+    "lm_cache": "/tmp/godseye-lm-local-real-20261113/weights",
+    "lm_python": "/tmp/godseye-lm-local-venv/bin/python",
+    "lm_directory": "/tmp/godseye-lm-browser-integration-20261113-01/lm",
+    "server_packages": {
+      "fastapi": "0.162.3",
+      "uvicorn": "0.54.0",
+      "numpy": "2.0.2"
+    },
+    "intercepted_lm_responses": false,
+    "export_file_count": 13
+  },
+  "inference_environment": {
+    "python": "3.12.14",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "packages": {
+      "torch": "2.6.0",
+      "transformers": "4.51.3",
+      "safetensors": "0.5.3",
+      "numpy": "2.2.6",
+      "huggingface-hub": "0.30.2",
+      "tokenizers": "0.21.1"
+    }
+  },
+  "job": {
+    "created_at": "2026-11-13T01:56:04.550408Z",
+    "id": "44ba98e5-8d7a-4399-b95e-5acc9e238fc4",
+    "phase": "finalizing",
+    "progress": {
+      "finished_attempts": 70,
+      "max_attempts": 126,
+      "reserved_attempts": 70
+    },
+    "reason": "budget_limited",
+    "result_available": true,
+    "selected_delta_available": false,
+    "spec_sha256": "3a49a9cd1b743ba8935582e1e22673bf402d80e68a6136e559dd75fdf73aa08d",
+    "status": "failed",
+    "updated_at": "2026-11-13T01:56:45.503900Z"
+  },
+  "admission": {
+    "start_posts": 1,
+    "jobs": 1,
+    "explicit_keyboard_consent_and_start": true,
+    "load_and_preview_jobs": 0,
+    "load_and_preview_journals": 0,
+    "read_only_resolve_same_job": true,
+    "reload_and_history_same_job": true,
+    "no_real_cancellation_or_retry": true
+  },
+  "observed_progress": {
+    "first_observation": {
+      "finished_attempts": 19,
+      "reserved_attempts": 20,
+      "phase": "development"
+    },
+    "persisted_samples": [
+      {
+        "observed_at": "2026-11-13T01:56:33.713241+00:00",
+        "jobs": [
+          {
+            "created_at": "2026-11-13T01:56:04.550408Z",
+            "id": "44ba98e5-8d7a-4399-b95e-5acc9e238fc4",
+            "phase": "development",
+            "progress": {
+              "finished_attempts": 45,
+              "max_attempts": 126,
+              "reserved_attempts": 46
+            },
+            "reason": null,
+            "result_available": false,
+            "selected_delta_available": false,
+            "spec_sha256": "3a49a9cd1b743ba8935582e1e22673bf402d80e68a6136e559dd75fdf73aa08d",
+            "status": "running",
+            "updated_at": "2026-11-13T01:56:04.552220Z"
+          }
+        ]
+      }
+    ],
+    "snapshot_sources": {
+      "desktop-running.png": "Actual initial UI queued state, 0 finished / 0 reserved",
+      "19_finished_20_reserved": "Read-only service HTTP observation during browser polling",
+      "45_finished_46_reserved": "Persisted read-only service HTTP observation during browser polling",
+      "terminal": "Actual UI result and service job both report 70 finished / 70 reserved"
+    }
+  },
+  "measured": {
+    "attempts": 70,
+    "reserved_attempts": 70,
+    "interrupted_attempts": 0,
+    "development_attempts": 70,
+    "heldout_attempts": 0,
+    "status_counts": {
+      "complete": 69,
+      "budget_limited": 1
+    },
+    "input_tokens": 6515,
+    "output_tokens_including_eos": 1154,
+    "worker_elapsed_seconds": 38.09865645808168,
+    "job_admission_to_terminal_seconds": 40.953492,
+    "model_threads": 2,
+    "peak_process_rss_bytes": 3402596352,
+    "runtime_memory_measurement": "getrusage ru_maxrss; process lifetime peak, includes loading",
+    "preflight_items": 140
+  },
+  "evaluation": {
+    "status": "incomplete",
+    "verdict": "not_evaluated",
+    "development": {
+      "decoding": {
+        "attempts": 14,
+        "complete": false,
+        "target_n": 10,
+        "schema_successes": 3,
+        "semantic_successes": 1,
+        "regression_n": 4,
+        "regression_successes": 4
+      },
+      "prompt": {
+        "attempts": 14,
+        "complete": true,
+        "target_n": 10,
+        "schema_successes": 1,
+        "semantic_successes": 0,
+        "regression_n": 4,
+        "regression_successes": 4
+      },
+      "unchanged": {
+        "attempts": 14,
+        "complete": true,
+        "target_n": 10,
+        "schema_successes": 3,
+        "semantic_successes": 1,
+        "regression_n": 4,
+        "regression_successes": 4
+      },
+      "weight-0": {
+        "attempts": 14,
+        "complete": true,
+        "target_n": 10,
+        "schema_successes": 2,
+        "semantic_successes": 0,
+        "regression_n": 4,
+        "regression_successes": 4
+      },
+      "weight-1": {
+        "attempts": 14,
+        "complete": true,
+        "target_n": 10,
+        "schema_successes": 2,
+        "semantic_successes": 0,
+        "regression_n": 4,
+        "regression_successes": 4
+      }
+    },
+    "heldout_attempts": 0,
+    "persisted_freeze": null,
+    "selected_delta_available": false,
+    "fresh_selected_reload_performed": false
+  },
+  "independent_artifact_checks": {
+    "journal_chain_all_155_events_verified": true,
+    "finish_report_digest_verified": true,
+    "journal_records_equal_raw_report_and_service_and_attachment": true,
+    "download_exact_service_envelope_equality": true,
+    "all_attempt_spec_identities_match": true,
+    "all_five_variant_rollback_hashes_match_original": true,
+    "no_selected_delta_file": true,
+    "spec_sha256": "3a49a9cd1b743ba8935582e1e22673bf402d80e68a6136e559dd75fdf73aa08d",
+    "journal_sha256": "d6456ddb32a56a07e540ff80a3443250ed87a5420f153d2d62aef8d779f353a0",
+    "journal_head_sha256": "b08c903d5fad9137415e32d5d1f95cd250c9d2e7be18fee1c664ce6aef483f98",
+    "raw_report_file_sha256": "8f8c02b00e847f1d54505c13c2c24400740d96cfd819156350e276ff2908022e",
+    "raw_report_canonical_sha256": "5c2be464e0adce73bb19dabd6419220b0be8fb1b7212dcd32be0318f20e6a47c",
+    "service_result_file_sha256": "43a69a1c10df472224d59f60453644b746ef899e89d3540b3a26abc2b1d0ac37",
+    "downloaded_attachment_sha256": "970ba7b1c0fdde6539eda8cbdc2e105378b4e2e9780e9defe2ee366f0397891c",
+    "original_tensor_sha256": "cdba20f7429dd67092a8861e2d3d51e28318ecd4a6b007e7f417f1c5aeac3ee5",
+    "final_tensor_sha256": "cdba20f7429dd67092a8861e2d3d51e28318ecd4a6b007e7f417f1c5aeac3ee5",
+    "weight_sha256_from_runtime_verification_not_rehashed": "fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe"
+  },
+  "browser_checks": {
+    "actual_create_app_and_LMService_no_intercepted_responses": true,
+    "exact_canonical_spec_review": true,
+    "keyboard_explicit_start": true,
+    "actual_progress_visible": true,
+    "schema_and_semantic_labels_distinct": true,
+    "zero_heldout_and_incomplete_visible": true,
+    "original_and_candidate_text_exactly_match_service": true,
+    "actual_evidence_download_matches_service": true,
+    "no_false_selected_delta": true,
+    "desktop_no_horizontal_overflow": true,
+    "mobile_390_no_horizontal_overflow": true,
+    "actual_13_file_static_export_zero_api_with_mock_flags": true,
+    "visually_inspected": [
+      "desktop-review.png",
+      "desktop-result.png",
+      "mobile-responses.png",
+      "mobile-workspace.png",
+      "desktop-running.png"
+    ],
+    "browser_task_finished": true
+  },
+  "screenshots": [
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/desktop-responses.png",
+      "sha256": "b22cbd7bdb901b67a12612e09238e7a0572c9b5ca98318ff85b677c8cf345de8"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/desktop-result.png",
+      "sha256": "4a1aced08b6130b28f2e280f6f53ce5511133d803a3251219c2cd85a567698bc"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/desktop-review.png",
+      "sha256": "f3626d8e3f9c8b3f9ba7232d6aa9c6cabc7fd6061123594ef1a7744dce9ca45e"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/desktop-running.png",
+      "sha256": "e5a216e6e04129d9028ecbb1c592a55fc1fe8d17eaa352df212152b7cb2bc998"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/mobile-responses.png",
+      "sha256": "12716d0f74dd6735f66a21a2ef2a6f9cc32de18059bd490d8ef4bd7650de22d8"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/mobile-result.png",
+      "sha256": "6a5a4ac30f9a882599494162509d334c2eac052aebc26ebc89d69f2ee500bbf0"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/mobile-workspace.png",
+      "sha256": "b8a97ffedef95e91feb90de9614531a06905219097db5d9f66c572d2d0f54782"
+    },
+    {
+      "file": "/tmp/godseye-lm-browser-integration-20261113-01/static-local-only.png",
+      "sha256": "64d03ef837234762245d240d29956c50ade30c3acdc9498b11f9214d27a1705e"
+    }
+  ],
+  "focused_checks": {
+    "existing_and_qwen_ui_tests": "106 passed",
+    "bundled_browser_contract": "1 passed",
+    "synthetic_process_checks": [
+      "test_simultaneous_duplicate_start_lost_ack_and_no_backlog",
+      "test_cancel_waits_kills_and_retains_partial_evidence",
+      "test_real_http_selected_delta_download_loads_without_unwrapping"
+    ],
+    "synthetic_process_checks_result": "3 passed; no pretrained inference in these fixtures"
+  },
+  "limitations": [
+    "Same fixed public fixture, weights and settings as prior scientific run; this is reproduction/transport evidence, not independent quality evidence.",
+    "No heldout calls, frozen selection, selected delta or fresh-model selected reload occurred.",
+    "No real cancellation/lost-ack/positive-selection run was performed; those paths use clearly synthetic tests.",
+    "Selected-delta attachment fix was merged after terminal execution; direct-load behavior was checked with the existing synthetic actual-HTTP test.",
+    "No UI integration defect required a product code change.",
+    "Ego Lite update available; no upgrade performed.",
+    "Screenshots capture actual queued and terminal UI states; intermediate 19/20 and 45/46 development observations were read-only service snapshots, not staged screenshots."
+  ],
+  "independent_verifier": "tests/browser/lm_workspace_real_verify.py",
+  "verification_harness_sha256": {
+    "tests/browser/lm_workspace_real_backend.py": "ffed17f6b2188c7485158c6dca63367f0b096826f829e7a14dc34a3e34ae0c6d",
+    "tests/browser/lm_workspace_real_journey.cjs": "b14a82640f9e27c453b9abdc8d93593b6c710e7c634c7ae5ab50aa40d4c28a46",
+    "tests/browser/lm_workspace_real_verify.py": "85cd63d1259dac2422a53e92600c20447840a8668619b896908366857441ccfd"
+  },
+  "shutdown": {
+    "server_pid": 83882,
+    "shutdown_requested_at": "2026-11-13T02:00:07.826711+00:00",
+    "terminal_job_before_shutdown": true,
+    "no_owned_child_before_shutdown": true,
+    "browser_task_finished": true,
+    "server_process_stopped": true
+  }
+}
