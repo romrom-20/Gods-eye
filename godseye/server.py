@@ -132,22 +132,30 @@ class Boundary:
                 self.import_slot.release()
 
 
-def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orchestration=None):
+def create_app(store=None, readonly=False, allowed_hosts=None, token=None, orchestration=None, lm_service=None):
     store = store or Store(DATA_DIR / 'demo' if readonly else None)
     jobs = None if readonly else JobQueue(store)
     mutation_lock = threading.Lock()
+    from .lm.service import LMService
+    lm_service = lm_service or (LMService() if readonly else LMService.from_env())
 
     @asynccontextmanager
     async def lifespan(app):
-        yield
-        if orchestration:
-            orchestration.close()
-        if jobs:
-            jobs.close()
+        try:
+            yield
+        finally:
+            lm_service.close()
+            if orchestration:
+                orchestration.close()
+            if jobs:
+                jobs.close()
 
     app = FastAPI(title="God's Eye weight-space API", version='0.3.0',
                   description='Inspect → preview → branch → evaluate. Local CPU execution.',
                   docs_url=None, redoc_url=None, openapi_url='/api/v1/openapi.json', lifespan=lifespan)
+    from .lm.service_api import lm_router
+    app.include_router(lm_router(lm_service, readonly=readonly))
+    app.state.lm_service = lm_service
     from .activity_api import activity_router
     app.include_router(activity_router(orchestration, readonly=readonly))
     app.state.jobs = jobs
