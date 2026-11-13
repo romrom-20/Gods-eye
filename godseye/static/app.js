@@ -20,6 +20,7 @@ const fmt = (v, digits = 1) =>
     : Number(v).toLocaleString(undefined, { maximumFractionDigits: digits });
 const label = (id) => state.checkpoints.find((c) => c.id === id)?.name || id;
 const viewInfo = {
+  "language-model": ["Qwen workspace", "A question. A measured change", "A bounded local Qwen experiment."],
   goal: ["Describe a goal", "What should the Breakout player do better?", "Request a supported improvement, review the limits, then measure what changed."],
   overview: [
     "Start here",
@@ -57,6 +58,8 @@ function showView(name) {
   if (staticDemo && name === "evaluate") name = "history";
   if (name !== "overview") stopReplay();
   state.view = name;
+  document.body.classList.toggle("lm-active", name === "language-model");
+  window.lmWorkspace?.view(name === "language-model");
   for (const section of document.querySelectorAll("[data-view]"))
     section.hidden = section.dataset.view !== name;
   for (const nav of document.querySelectorAll("[data-nav]")) {
@@ -198,6 +201,7 @@ $("connect-token").onclick = async () => {
   state.token = $("api-token").value;
   $("api-token").value = "";
   await initialize();
+  if (state.view === "language-model") window.lmWorkspace?.connect();
 };
 
 function message(id, text, error = false) {
@@ -1939,5 +1943,370 @@ const experimentContract = {"schemas":{"spec":{"type":"object","properties":{"sc
   } catch { say('Saved recovery data unavailable. Review again before starting.'); }
   $('goal-consent').checked = false; lock();
 })();
+
+// Local Qwen workspace: contract v1; injected transport is used only by scripted tests.
+function createLmWorkspace(env) {
+  const { $, document: doc, storage, transport, uuid, token, staticMode, clock } = env;
+  const root = '/api/v1/lm', storeKey = 'godseye.lm.recovery.v1';
+  const terminal = j => ['completed','failed','cancelled','interrupted'].includes(j?.status);
+  const hash = v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
+  const id = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v);
+  const integer = v => Number.isSafeInteger(v) && v >= 0;
+  const verdictLabels = {not_evaluated:'Not evaluated',no_improvement:'No improvement',inconclusive:'Inconclusive',improved_on_public_fixture:'Improved on this public fixture'};
+  const plain = value => String(value).replaceAll('_',' ');
+  const names = {unchanged:'Unchanged original',prompt:'Prompt prefix',decoding:'Repetition penalty 1.1','weight-0':'Column 0 × 0','weight-1':'Column 1 × 0.5'};
+  let cap = null, plan = null, pending = null, job = null, result = null;
+  let active = false, connected = false, busy = false, epoch = 0, timer = null, failures = 0, polls = 0, retryAllowed = false;
+  const say = text => { $('lm-notice').textContent = text; };
+  const node = (tag,text) => { const n = doc.createElement(tag); n.textContent = text; return n; };
+  function invalid() { throw Error('The local service returned an unsupported response. Check the service version and setup.'); }
+  function envelope(v) { if (!v || v.schema_version !== 1) invalid(); return v; }
+  function validJob(v) {
+    if (!v || !id(v.id) || !hash(v.spec_sha256) || !['queued','running','cancelling','completed','failed','cancelled','interrupted'].includes(v.status)
+      || !['queued','verifying','development','freeze','heldout','finalizing','unknown'].includes(v.phase)
+      || !Number.isFinite(Date.parse(v.created_at)) || !Number.isFinite(Date.parse(v.updated_at)) || !(v.reason === null || typeof v.reason === 'string')
+      || typeof v.result_available !== 'boolean' || typeof v.selected_delta_available !== 'boolean'
+      || !integer(v.progress?.reserved_attempts) || !integer(v.progress?.finished_attempts) || v.progress.max_attempts !== 126
+      || v.progress.finished_attempts > v.progress.reserved_attempts || v.progress.reserved_attempts > 126
+      || v.selected_delta_available && v.status !== 'completed') invalid();
+    return v;
+  }
+  async function request(path, body, attachment = false) {
+    if (staticMode) throw Error('Qwen execution requires the local lab.');
+    const controller = new AbortController(), timeout = clock.setTimeout(() => controller.abort(),15000);
+    try {
+      const headers = {'Content-Type':'application/json'};
+      if (token()) headers.Authorization = 'Bearer ' + token();
+      const r = await transport(root + path,{headers,signal:controller.signal,...(body === undefined ? {} : {method:'POST',body:JSON.stringify(body)})});
+      const raw = await r.text(); if (raw.length > 4 * 1024 * 1024) invalid();
+      let v; try { v = JSON.parse(raw); } catch { invalid(); }
+      if (!r.ok) {
+        const e = Error(r.status === 401 ? 'Authentication required. Open Connection settings and enter the local API token.'
+          : r.status === 404 ? 'This route is unavailable. Check that the local server supports Qwen contract v1.'
+          : typeof v.error === 'string' ? v.error : 'Local service request failed.');
+        e.status = r.status; e.code = v.schema_version === 1 ? v.code : undefined; throw e;
+      }
+      if (attachment) { if (!v || typeof v !== 'object') invalid(); return v; }
+      return envelope(v);
+    } finally { clock.clearTimeout(timeout); }
+  }
+  function save() {
+    // Persist only identities; never requests, credentials, specifications or output.
+    try { storage.setItem(storeKey,JSON.stringify({pending,job_id:job?.id || null})); return true; }
+    catch { say('Tab recovery storage is unavailable. Start is disabled until session storage works.'); return false; }
+  }
+  function stop() { if (timer !== null) clock.clearTimeout(timer); timer = null; }
+  function controls() {
+    const usable = cap?.available && !cap.readonly && !staticMode;
+    $('lm-controls').hidden = !usable && !pending;
+    $('lm-plan').disabled = busy || !usable || !!pending || !!job && !terminal(job);
+    $('lm-request').disabled = busy || !!pending;
+    $('lm-sample').disabled = busy || !!pending;
+    $('lm-start').disabled = busy || !usable || !plan || !!pending || !$('lm-consent').checked;
+    $('lm-resolve').disabled = busy;
+    $('lm-retry').hidden = !retryAllowed;
+    $('lm-retry').disabled = busy || !usable;
+    $('lm-recovery').hidden = !pending;
+    $('lm-discard').hidden = !(retryAllowed && pending?.rejected);
+    $('lm-discard').disabled = busy;
+    $('lm-cancel').hidden = !job || terminal(job);
+    $('lm-cancel').disabled = busy || job?.status === 'cancelling' || !usable;
+    $('lm-refresh').disabled = busy;
+    $('lm-history-refresh').disabled = busy || !!pending;
+  }
+  async function perform(fn) {
+    if (busy || staticMode) return;
+    busy = true; controls();
+    try { await fn(); } catch(e) { say(e.message || 'Connection lost. No automatic execution retry was made.'); }
+    finally { busy = false; controls(); }
+  }
+  function schedule(delay = 3000) {
+    stop(); if (!active || doc.hidden || !job || terminal(job) || polls >= 200) return;
+    timer = clock.setTimeout(() => observe(),delay);
+  }
+  function renderJob(v) {
+    job = v; save(); $('lm-job').hidden = false;
+    $('lm-job-title').textContent = `${v.status} · ${v.id}`;
+    $('lm-progress').textContent = `Phase: ${v.phase === 'unknown' ? 'unknown — no phase reported' : v.phase}. ${v.progress.finished_attempts} finished / ${v.progress.reserved_attempts} reserved attempts; ceiling ${v.progress.max_attempts}. This is not percent complete.${v.reason ? ' Reason: ' + v.reason + '.' : ''}`;
+    $('lm-map').replaceChildren(node('span','Reviewed specification · ' + v.spec_sha256.slice(0,12)),node('span','→ Job · ' + v.id),node('span','→ ' + (v.result_available ? 'Recorded evidence available' : 'Evidence not yet available')));
+    if (v.status === 'cancelling') say('Cancellation requested. Waiting for the owned process to exit; cancellation is not yet confirmed.');
+    else if (terminal(v)) say(v.status === 'cancelled' ? 'Cancellation confirmed by the service. No automatic resume or retry.' : 'Job ' + v.status + '. Inspect the recorded evidence and its separate evaluation verdict.');
+    controls();
+  }
+  function accept(v, expectedId, expectedHash) {
+    validJob(v);
+    if (expectedId && v.id !== expectedId || expectedHash && v.spec_sha256 !== expectedHash) invalid();
+    if (job?.id === v.id && (terminal(job) && !terminal(v) || Date.parse(v.updated_at) < Date.parse(job.updated_at))) return false;
+    renderJob(v); return true;
+  }
+  async function observe() {
+    if (!job || staticMode || doc.hidden || !active) return;
+    stop(); const fence = epoch, current = job.id, spec = job.spec_sha256; polls++;
+    try {
+      const v = await request('/jobs/' + encodeURIComponent(current));
+      if (fence !== epoch) return;
+      if (!accept(v.job,current,spec)) return;
+      failures = 0;
+      if (terminal(job)) { await loadResult(fence); }
+      else { say('Observing the local job. Status checks never run inference.'); schedule(); }
+    } catch(e) {
+      if (fence !== epoch) return;
+      const delay = [5000,10000,20000][failures++];
+      say(`${e.message} ${delay ? 'Read-only status check in ' + delay/1000 + ' seconds.' : 'Automatic polling paused. Use Refresh status to check again.'}`);
+      if (delay) schedule(delay);
+    }
+    if (polls >= 200) say('Automatic observation limit reached. The job may still be running. Use Refresh status for a read-only check.');
+  }
+  function invalidatePlan() { plan = null; $('lm-review').hidden = true; $('lm-consent').checked = false; controls(); }
+  function reviewFacts(p) {
+    const s = p.spec;
+    $('lm-review-facts').replaceChildren();
+    for (const [label,value] of [
+      ['Target',s.model.id + ' · local CPU · no provider fee'],
+      ['Public fixture','28 cases · 10 JSON targets + 4 text controls per split'],
+      ['Weight edits',s.operations.parameter + ': column 0 × 0; column 1 × 0.5. Each starts from the untouched original.'],
+      ['Alternatives','Unchanged original; JSON-target-only prompt prefix; repetition penalty 1.1.'],
+      ['Finite ceilings',`${s.budgets.max_attempts} attempts · ${s.budgets.max_output_tokens_per_attempt} output tokens each · ${s.budgets.max_worker_seconds / 60} minutes total · 1 worker · no retries. These are ceilings, not a time estimate.`],
+      ['Evaluation','Development selects once; heldout only after persisted freeze. Zero allowed text-control regressions.'],
+      ['Plan expiry',p.expires_at]
+    ]) $('lm-review-facts').append(node('dt',label),node('dd',value));
+    $('lm-spec').textContent = JSON.stringify(s,null,2) + '\nSpecification SHA256: ' + p.spec_sha256;
+  }
+  function canonical(v, key = '') {
+    // TaskSpec v1 uses Python float spelling at these two fixed recipe fields.
+    // JSON numbers lose that distinction after parsing in JavaScript.
+    if (Array.isArray(v)) return '[' + v.map(x=>canonical(x)).join(',') + ']';
+    if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k=>canonical(k)+':'+canonical(v[k],k)).join(',') + '}';
+    if (typeof v === 'number' && Number.isInteger(v) && ['scale','repetition_penalty'].includes(key)) return v.toFixed(1);
+    return JSON.stringify(v).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
+  }
+  async function review() {
+    invalidatePlan();
+    const v = await request('/plan',{schema_version:1,request:$('lm-request').value});
+    if (!['ready','unsupported','clarification_required'].includes(v.outcome) || typeof v.message !== 'string') invalid();
+    say(v.message);
+    if (v.outcome !== 'ready') {
+      if ([v.plan_id,v.spec_sha256,v.spec,v.expires_at].some(x=>x!==null)) invalid();
+      return;
+    }
+    const s = v.spec;
+    if (!id(v.plan_id) || !hash(v.spec_sha256) || typeof v.expires_at !== 'string' || !s
+      || s.model?.id !== 'Qwen/Qwen2.5-0.5B-Instruct' || !/^[a-f0-9]{40}$/.test(s.model.revision)
+      || s.budgets?.max_attempts !== 126 || s.budgets?.max_output_tokens_per_attempt !== 96 || s.budgets?.max_worker_seconds !== 1800
+      || s.operations?.parameter !== 'model.layers.0.mlp.down_proj.weight'
+      || JSON.stringify(s.operations.candidates) !== JSON.stringify([{column:0,scale:0},{column:1,scale:0.5}])
+      || s.baselines?.prompt?.scope !== 'json_targets_only' || s.baselines?.decoding?.repetition_penalty !== 1.1) invalid();
+    if (await env.digest(canonical(s)) !== v.spec_sha256) invalid();
+    plan = v; reviewFacts(v); $('lm-plan-message').textContent = v.message;
+    $('lm-review').hidden = false; $('lm-review-title').focus();
+    say('Plan ready. Review the exact specification, then explicitly Start. No inference has run.');
+  }
+  async function start(retry = false) {
+    if (!retry) {
+      if (!plan || pending || !$('lm-consent').checked) return;
+      pending = {schema_version:1,plan_id:plan.plan_id,spec_sha256:plan.spec_sha256,idempotency_key:uuid()};
+    } else if (!pending || !retryAllowed) return;
+    retryAllowed = false;
+    if (!save()) return;
+    const tuple = {schema_version:1,plan_id:pending.plan_id,spec_sha256:pending.spec_sha256,idempotency_key:pending.idempotency_key};
+    epoch++; stop(); result = null; $('lm-result').hidden = true;
+    try {
+      const v = await request('/jobs',tuple);
+      if (!accept(v.job,null,tuple.spec_sha256)) invalid();
+      pending = null; save(); invalidatePlan(); polls = 0;
+      say('Start admitted. Observing this job; no second execution was submitted.');
+      if (terminal(job)) await loadResult(epoch); else schedule();
+    } catch(e) {
+      // Even a failed transport or malformed acknowledgment can follow admission.
+      if (!pending) { say(e.message + ' The job was admitted; use Refresh status to read its evidence.'); return; }
+      pending.rejected = ['plan_expired','invalid_request','conflict'].includes(e.code);
+      save(); say(e.message + ' Start outcome is uncertain. Check pending start before any explicit same-key retry.');
+    }
+  }
+  async function resolve() {
+    if (!pending) return;
+    retryAllowed = false;
+    try {
+      const v = await request('/resolve',{schema_version:1,spec_sha256:pending.spec_sha256,idempotency_key:pending.idempotency_key});
+      epoch++; stop(); accept(v.job,null,pending.spec_sha256); pending = null; save(); invalidatePlan(); polls = 0;
+      say('The pending start was admitted. Reopened its original job.');
+      if (terminal(job)) await loadResult(epoch); else schedule();
+    } catch(e) {
+      if (e.status === 404 && e.code === 'not_found' && pending) { retryAllowed = true; say('No admission found for this exact key and specification. You may explicitly retry the same start; its original identity will be retained.'); }
+      else throw e;
+    }
+  }
+  async function select(v) {
+    if (pending) return;
+    epoch++; stop(); result = null; $('lm-result').hidden = true; invalidatePlan();
+    accept(v); polls = 0;
+    if (terminal(job)) await loadResult(epoch); else schedule();
+  }
+  function validResult(v) {
+    if (!Array.isArray(v.attempts) || !integer(v.interrupted_attempts) || !(v.report === null || typeof v.report === 'object')) invalid();
+    const fields = ['attempt_id','spec_sha256','case_id','split','variant','status','output','input_tokens','output_tokens','elapsed_seconds'].sort().join(',');
+    if (v.attempts.length > 126 || new Set(v.attempts.map(a=>a?.attempt_id)).size !== v.attempts.length) invalid();
+    for (const a of v.attempts) if (!a || Object.keys(a).sort().join(',') !== fields || a.spec_sha256 !== job.spec_sha256
+      || typeof a.output !== 'string' || a.output.length > 16384 || !id(a.attempt_id) || !['complete','failed','budget_limited','cancelled','incomplete'].includes(a.status)
+      || !['dev','heldout'].includes(a.split) || !names[a.variant] || typeof a.case_id !== 'string') invalid();
+    if (v.report?.spec_sha256 && v.report.spec_sha256 !== job.spec_sha256) invalid();
+    return v;
+  }
+  async function loadResult(fence) {
+    if (!job.result_available) {
+      $('lm-result').hidden = false; $('lm-result-content').hidden = true; $('lm-verdict').textContent = 'No recorded result available';
+      $('lm-result-reason').textContent = `${plain(job.reason || job.status)}. No selected result is available. Review the stop reason before explicitly reviewing a new plan.`;
+      $('lm-evidence').hidden = true; $('lm-delta').hidden = true; return;
+    }
+    const current = job.id, spec = job.spec_sha256;
+    const v = await request('/jobs/' + encodeURIComponent(current) + '/result');
+    if (fence !== epoch) return;
+    validJob(v.job); if (v.job.id !== current || v.job.spec_sha256 !== spec || !terminal(v.job)) invalid();
+    validResult(v); result = v; renderResult();
+  }
+  function renderResult() {
+    const r = result.report, attempts = result.attempts;
+    $('lm-result').hidden = false; $('lm-result-content').hidden = false;
+    $('lm-verdict').textContent = verdictLabels[r?.verdict] || 'Not evaluated';
+    const dev = attempts.filter(a=>a.split === 'dev').length, heldout = attempts.filter(a=>a.split === 'heldout').length;
+    const capped = attempts.filter(a=>a.status === 'budget_limited' || ['token_cap','max_new_tokens','length'].includes(a.termination)).length;
+    $('lm-result-reason').textContent = `${dev} development attempts · ${heldout} heldout attempts · ${result.interrupted_attempts} interrupted reservations. ${job.reason === 'budget_limited' ? 'A finite execution or token limit stopped evaluation. Development output is partial evidence; heldout evaluation and selection were not completed.' : (job.reason ? plain(job.reason) : null) || 'Read the verdict with the public fixture limitations.'} ${job.selected_delta_available ? 'Server reports a verified selected delta available.' : 'No verified selected delta is available. Unchanged or unused candidates are not selected edits.'}${capped ? ' Token-capped responses remain partial.' : ''}`;
+    $('lm-report').textContent = JSON.stringify({job:result.job,report:r,interrupted_attempts:result.interrupted_attempts},null,2);
+    $('lm-counts').replaceChildren();
+    // Counts come from recomputed service arms; never invent missing evaluations.
+    for (const [split,arms] of [['Development',r?.development],['Heldout',r?.heldout]]) {
+      for (const [variant,a] of Object.entries(arms || {})) {
+        const c = r?.comparisons?.[variant];
+        const card = node('article',''); card.append(node('h3',`${split} · ${names[variant] || variant}`));
+        if (a.attempts === 0) {
+          card.append(node('p','No recorded attempts. Schema, semantics and text controls were not evaluated.'));
+          $('lm-counts').append(card); continue;
+        }
+        card.append(node('p',`Schema-valid: ${a.schema_successes ?? 'unknown'}/${a.target_n ?? 'unknown'} · Semantically correct: ${a.semantic_successes ?? 'unknown'}/${a.target_n ?? 'unknown'}`));
+        card.append(node('p',`Text controls correct: ${a.regression_successes ?? 'unknown'}/${a.regression_n ?? 'unknown'} · Arm ${a.complete ? 'complete' : 'incomplete'}`));
+        if (split === 'Development') {
+          const original = r?.development?.unchanged?.records || [];
+          const controls = (a.records || []).filter(x=>x.task === 'regression');
+          const paired = controls.map(x=>[x,original.find(b=>b.case_id === x.case_id)]);
+          const known = paired.length === 4 && paired.every(([x,b])=>b && x.status === 'complete' && b.status === 'complete');
+          card.append(node('p','Observed control regressions: ' + (known ? paired.filter(([x,b])=>b.correct && !x.correct).length + '/4' : 'unknown')));
+        }
+        if (split === 'Heldout' && c) card.append(node('p',`Control regressions: ${c.regression_failures ?? 'unknown'} · Semantic regressions: ${c.semantic_regressions ?? 'unknown'} · ${verdictLabels[c.verdict] || 'Not evaluated'}`));
+        $('lm-counts').append(card);
+      }
+    }
+    if (!r) $('lm-counts').append(node('p','No recomputed report is available. Inspect recorded responses; scores and regressions remain unknown.'));
+    $('lm-evidence').hidden = false;
+    $('lm-delta').hidden = !job.selected_delta_available;
+    $('lm-rollback').hidden = !job.selected_delta_available;
+    choices($('lm-variant'),Object.keys(names).map(value=>[value,names[value]]));
+    if (attempts.some(a=>a.variant === 'weight-0')) $('lm-variant').value = 'weight-0';
+    updateCases();
+  }
+  function choices(el,entries) {
+    el.replaceChildren(); for (const [value,label] of entries) { const o = node('option',label); o.value = value; el.append(o); }
+    if (entries.length) el.value = entries[0][0];
+  }
+  function updateCases() {
+    if (!result) return;
+    const a = result.attempts.filter(a=>a.split === $('lm-split').value);
+    choices($('lm-case'),[...new Set(a.map(a=>a.case_id))].map(x=>[x,x])); compare();
+  }
+  function compare() {
+    if (!result) return;
+    const split = $('lm-split').value, variant = $('lm-variant').value, caseId = $('lm-case').value;
+    const score = a => !a ? 'No recorded attempt' : `${plain(a.status)} · ${a.output_tokens ?? 'unknown'} output tokens · schema-valid: ${a.schema_ok ?? 'unknown / text control'} · semantically correct: ${a.correct ?? 'unknown'}`;
+    for (const [prefix,v] of [['original','unchanged'],['candidate',variant]]) {
+      const a = result.attempts.find(a=>a.split === split && a.variant === v && a.case_id === caseId);
+      // Attempt scores may be absent in the public record; use recomputed arm records if present.
+      const arm = (split === 'dev' ? result.report?.development : result.report?.heldout)?.[v];
+      const scored = arm?.records?.find(r=>r.case_id === caseId) || a;
+      $('lm-' + prefix).textContent = a?.output ?? 'No output was recorded for this case and variant.';
+      $('lm-' + prefix + '-score').textContent = score(scored);
+    }
+    $('lm-candidate-title').textContent = names[variant] || 'Candidate';
+  }
+  async function history() {
+    const v = await request('/jobs'); if (!Array.isArray(v.jobs) || v.jobs.length > 20) invalid();
+    v.jobs.forEach(validJob); $('lm-history').replaceChildren();
+    if (!v.jobs.length) $('lm-history').append(node('p','No saved local Qwen jobs. Review a supported request to begin.'));
+    for (const j of v.jobs) { const b = node('button',`${j.status} · ${j.id} · ${j.created_at}`); b.className = 'secondary'; b.disabled = !!pending; b.onclick = () => perform(()=>select(j)); $('lm-history').append(b); }
+  }
+  async function connect() {
+    if (staticMode) return;
+    try {
+      const v = await request('/capabilities');
+      if (typeof v.available !== 'boolean' || typeof v.readonly !== 'boolean' || v.execution !== 'local_cpu'
+        || v.model?.id !== 'Qwen/Qwen2.5-0.5B-Instruct' || v.supported_goal !== 'correct_bounded_json'
+        || v.limits?.max_attempts !== 126 || v.limits?.max_new_tokens !== 96 || v.limits?.max_worker_seconds !== 1800 || v.limits?.max_concurrency !== 1) invalid();
+      cap = v; connected = true;
+      $('lm-setup').hidden = v.available && !v.readonly;
+      say(v.readonly ? 'This server is read-only. Local Qwen execution is disabled. See local service setup.' : v.available ? 'Local Qwen service ready for review. Model hashes are checked only after explicit Start.' : 'Qwen runtime unavailable. ' + (v.reason || 'Configure the local service using the setup links.'));
+      await history();
+      if (pending) await resolve();
+      else if (job) { const current = job.id; const r = await request('/jobs/' + encodeURIComponent(current)); validJob(r.job); if (r.job.id !== current) invalid(); await select(r.job); }
+    } catch(e) { $('lm-setup').hidden = false; say(e.message + ' See local service setup below.'); }
+    controls();
+  }
+  async function download(kind) {
+    if (!job || !terminal(job) || !job.result_available || kind === 'selected_delta' && !job.selected_delta_available) return;
+    const fence = epoch, current = job.id;
+    const v = await request('/jobs/' + encodeURIComponent(current) + '/export',{schema_version:1,kind},true);
+    if (fence !== epoch) return;
+    env.download(v,`${current}-${kind}.json`); say('Downloaded ' + kind.replace('_',' ') + ' JSON.');
+  }
+  function view(visible) {
+    active = visible; if (!visible) { stop(); return; }
+    if (!staticMode && !connected) perform(connect); else if (job && !terminal(job)) schedule();
+  }
+  if (staticMode) {
+    $('lm-notice').textContent = 'Qwen experiments run only in the local lab. This static export contains no executable Qwen controls and never contacts the API, including with mock flags.';
+    $('lm-setup').hidden = false; $('lm-connect').hidden = true; $('lm-history-refresh').hidden = true;
+    $('lm-controls').hidden = true;
+    return {view,connect:async()=>{}};
+  }
+  try {
+    const saved = JSON.parse(storage.getItem(storeKey) || 'null');
+    if (saved?.pending) {
+      const p = saved.pending;
+      if (p.schema_version !== 1 || !id(p.plan_id) || !hash(p.spec_sha256) || !/^[0-9a-f-]{36}$/i.test(p.idempotency_key)) invalid();
+      pending = {schema_version:1,plan_id:p.plan_id,spec_sha256:p.spec_sha256,idempotency_key:p.idempotency_key,...(p.rejected ? {rejected:true} : {})};
+    }
+    if (saved?.job_id && id(saved.job_id)) job = {id:saved.job_id};
+  } catch { say('Saved identity could not be read. Check session storage before starting.'); $('lm-setup').hidden = false; busy = true; }
+  $('lm-sample').onclick = () => { $('lm-request').value = cap?.sample_request || 'Improve JSON schema adherence'; invalidatePlan(); $('lm-request').focus(); };
+  $('lm-request').oninput = invalidatePlan;
+  $('lm-consent').onchange = controls;
+  $('lm-plan').onclick = () => perform(review);
+  $('lm-start').onclick = () => perform(()=>start());
+  $('lm-resolve').onclick = () => perform(resolve);
+  $('lm-retry').onclick = () => perform(()=>start(true));
+  $('lm-discard').onclick = () => { if (!busy && pending?.rejected && retryAllowed) { pending = null; save(); invalidatePlan(); say('Rejected, unadmitted plan released. Review a fresh plan before Start.'); } };
+  $('lm-connect').onclick = () => perform(connect);
+  $('lm-refresh').onclick = () => { failures = 0; polls = 0; observe(); };
+  $('lm-history-refresh').onclick = () => perform(history);
+  $('lm-cancel').onclick = () => perform(async()=>{
+    if (!job || terminal(job)) return;
+    epoch++; stop(); const current = job.id, spec = job.spec_sha256;
+    try {
+      const v = await request('/jobs/' + encodeURIComponent(current) + '/cancel',{schema_version:1});
+      accept(v.job,current,spec); if (terminal(job)) await loadResult(epoch);
+    } finally { schedule(); }
+  });
+  $('lm-split').onchange = updateCases; $('lm-case').onchange = compare; $('lm-variant').onchange = compare;
+  $('lm-evidence').onclick = () => perform(()=>download('evidence'));
+  $('lm-delta').onclick = () => perform(()=>download('selected_delta'));
+  doc.addEventListener('visibilitychange',()=>{ if (doc.hidden) stop(); else if(active) { failures = 0; polls = 0; schedule(); } });
+  controls();
+  return {view,connect:()=>perform(connect)};
+}
+// End local Qwen controller.
+if (typeof window !== "undefined" && typeof document !== "undefined") window.lmWorkspace = createLmWorkspace({ $, document, staticMode:staticDemo,
+  digest:async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join(''),
+  storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value)}, transport:(...args)=>fetch(...args), uuid:()=>crypto.randomUUID(), token:()=>state.token,
+  clock:{setTimeout:(fn,ms)=>setTimeout(fn,ms),clearTimeout:id=>clearTimeout(id)},
+  download:(value,name)=>{ const url = URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
+});
+
 
 initialize();
