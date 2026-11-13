@@ -28,9 +28,9 @@ const viewInfo = {
     "A hands-on experiment with a tiny game-playing neural network.",
   ],
   workbench: [
-    "Edit weights",
-    "Make your own change",
-    "Weights are the numbers inside the model. Save a new version without replacing the original.",
+    "Edit Breakout weights",
+    "Edit the Breakout network",
+    "Manual editing is for the tiny Breakout policy. Qwen uses only the two fixed edits reviewed in its JSON experiment plan.",
   ],
   evaluate: [
     "Compare",
@@ -57,6 +57,7 @@ function showView(name) {
   if (!viewInfo[name]) name = "overview";
   if (staticDemo && name === "evaluate") name = "history";
   if (name !== "overview") stopReplay();
+  const leavingQwen = state.view === "language-model" && name !== "language-model";
   state.view = name;
   document.body.classList.toggle("lm-active", name === "language-model");
   window.lmWorkspace?.view(name === "language-model");
@@ -75,6 +76,7 @@ function showView(name) {
   $("page-description").textContent = viewInfo[name][2];
   document.querySelector(".page-heading > .primary").hidden =
     staticDemo || name === "workbench" || name === "goal";
+  if (leavingQwen) { renderExperimentBoard(); fitExperimentBoard(); }
   if (location.hash !== `#${name}`)
     window.history.replaceState(null, "", `#${name}`);
 }
@@ -1353,7 +1355,15 @@ function renderCheckpointDetail(){
   if(c.patch)detail.append(boardElement("pre","saved-patch",c.patch));
   document.querySelector(".weights").prepend(detail);
 }
-function fitExperimentBoard(){const graph=$("board-graph");boardZoom=Math.min(1,($("board-viewport").clientWidth-12)/(parseFloat(graph.style.width)||520));graph.style.transform=`scale(${boardZoom})`;$("board-viewport").style.height=Math.max(240,(parseFloat(graph.style.height)||350)*boardZoom+15)+"px";}
+function fitExperimentBoard() {
+  const viewport = $("board-viewport"), graph = $("board-graph");
+  // Hidden Qwen/List layouts have width zero: never persist a negative zoom.
+  if (!graph || !viewport || viewport.clientWidth <= 12) return;
+  boardZoom = Math.max(0.02, Math.min(1, (viewport.clientWidth - 12) / (parseFloat(graph.style.width) || 520)));
+  graph.style.transform = `scale(${boardZoom})`;
+  viewport.style.height = Math.max(240, (parseFloat(graph.style.height) || 350) * boardZoom + 15) + "px";
+  viewport.scrollLeft = 0; viewport.scrollTop = 0;
+}
 $("board-reset").onclick=()=>{
   if(boardDragging)return;
   boardPositions.clear();
@@ -1364,7 +1374,7 @@ $("board-reset").onclick=()=>{
 $("board-fit").onclick=fitExperimentBoard;
 $("board-zoom-in").onclick=()=>{boardZoom=Math.min(1.5,boardZoom+.15);renderExperimentBoard();};
 $("board-zoom-out").onclick=()=>{boardZoom=Math.max(.35,boardZoom-.15);renderExperimentBoard();};
-$("board-list-toggle").onclick=()=>{const list=$("board-list");list.hidden=!list.hidden;$("board-viewport").hidden=!list.hidden;$("board-list-toggle").setAttribute("aria-pressed",String(!list.hidden));};
+$("board-list-toggle").onclick=()=>{const list=$("board-list");list.hidden=!list.hidden;$("board-viewport").hidden=!list.hidden;$("board-list-toggle").setAttribute("aria-pressed",String(!list.hidden));if(list.hidden){renderExperimentBoard();fitExperimentBoard();}};
 $("board-request").onclick=()=>{showView(staticDemo?"overview":"goal");$("board-selection").textContent=staticDemo?"Recorded evidence · select a saved comparison for paired playback.":"Request · review the supported goal and exact limits before Start."; (staticDemo?$("overview-run"):$("goal-draft")).focus();};
 $("copy-agent-brief").onclick=async()=>{try{await navigator.clipboard.writeText($("agent-brief").textContent);$("copy-brief-status").textContent=" Brief copied.";}catch{$("copy-brief-status").textContent=" Select and copy the brief above.";}};
 
@@ -1955,7 +1965,7 @@ function createLmWorkspace(env) {
   const verdictLabels = {not_evaluated:'Not evaluated',no_improvement:'No improvement',inconclusive:'Inconclusive',improved_on_public_fixture:'Improved on this public fixture'};
   const plain = value => String(value).replaceAll('_',' ');
   const names = {unchanged:'Unchanged original',prompt:'Prompt prefix',decoding:'Repetition penalty 1.1','weight-0':'Column 0 × 0','weight-1':'Column 1 × 0.5'};
-  let cap = null, plan = null, pending = null, job = null, result = null;
+  let cap = null, plan = null, pending = null, job = null, result = null, knownJobs = [];
   let active = false, connected = false, busy = false, epoch = 0, timer = null, failures = 0, polls = 0, retryAllowed = false;
   const say = text => { $('lm-notice').textContent = text; };
   const node = (tag,text) => { const n = doc.createElement(tag); n.textContent = text; return n; };
@@ -2015,6 +2025,7 @@ function createLmWorkspace(env) {
     $('lm-cancel').disabled = busy || job?.status === 'cancelling' || !usable;
     $('lm-refresh').disabled = busy;
     $('lm-history-refresh').disabled = busy || !!pending;
+    for (const row of $('lm-history').children) if (typeof row.onclick === 'function') row.disabled = busy || !!pending;
   }
   async function perform(fn) {
     if (busy || staticMode) return;
@@ -2028,11 +2039,19 @@ function createLmWorkspace(env) {
   }
   function renderJob(v) {
     job = v; save(); $('lm-job').hidden = false;
-    $('lm-job-title').textContent = `${v.status} · ${v.id}`;
+    $('lm-job-title').textContent = `${v.reason === 'budget_limited' ? 'Budget stopped' : plain(v.status)} · ${v.id}`;
+    knownJobs = [v, ...knownJobs.filter(j=>j.id !== v.id)].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+    renderHistory();
+    $('lm-view-evidence').hidden = !terminal(v) || !v.result_available;
     $('lm-progress').textContent = `Phase: ${v.phase === 'unknown' ? 'unknown — no phase reported' : v.phase}. ${v.progress.finished_attempts} finished / ${v.progress.reserved_attempts} reserved attempts; ceiling ${v.progress.max_attempts}. This is not percent complete.${v.reason ? ' Reason: ' + v.reason + '.' : ''}`;
     $('lm-map').replaceChildren(node('span','Reviewed specification · ' + v.spec_sha256.slice(0,12)),node('span','→ Job · ' + v.id),node('span','→ ' + (v.result_available ? 'Recorded evidence available' : 'Evidence not yet available')));
     if (v.status === 'cancelling') say('Cancellation requested. Waiting for the owned process to exit; cancellation is not yet confirmed.');
-    else if (terminal(v)) say(v.status === 'cancelled' ? 'Cancellation confirmed by the service. No automatic resume or retry.' : 'Job ' + v.status + '. Inspect the recorded evidence and its separate evaluation verdict.');
+    else if (terminal(v)) {
+      if (v.reason === 'budget_limited') say('Budget stopped: a token or execution limit ended this run. ' + (v.result_available ? 'Partial evidence is retained below. This is not a completed evaluation or a verified selected edit.' : 'No recorded response evidence is available. No result was selected.'));
+      else if (v.status === 'cancelled') say('Cancellation confirmed by the service. No automatic resume or retry.');
+      else if (v.status === 'completed') say('Evaluation completed. Inspect its measured verdict below; completion does not imply improvement.');
+      else say(plain(v.status) + (v.reason ? ' · ' + plain(v.reason) : '') + '. ' + (v.result_available ? 'Partial evidence is retained below; inspect its separate evaluation verdict.' : 'No response evidence was retained. No result is available.'));
+    }
     controls();
   }
   function accept(v, expectedId, expectedHash) {
@@ -2117,7 +2136,7 @@ function createLmWorkspace(env) {
       const v = await request('/jobs',tuple);
       if (!accept(v.job,null,tuple.spec_sha256)) invalid();
       pending = null; save(); invalidatePlan(); polls = 0;
-      say('Start admitted. Observing this job; no second execution was submitted.');
+      if (!terminal(job)) say('Start admitted. Observing this job; no second execution was submitted.');
       if (terminal(job)) await loadResult(epoch); else schedule();
     } catch(e) {
       // Even a failed transport or malformed acknowledgment can follow admission.
@@ -2157,7 +2176,7 @@ function createLmWorkspace(env) {
   }
   async function loadResult(fence) {
     if (!job.result_available) {
-      $('lm-result').hidden = false; $('lm-result-content').hidden = true; $('lm-verdict').textContent = 'No recorded result available';
+      $('lm-result').hidden = false; $('lm-result-content').hidden = true; $('lm-verdict').textContent = (job.status === 'interrupted' ? 'Interrupted' : job.status === 'failed' ? 'Run failed' : plain(job.status)) + ' — no recorded result';
       $('lm-result-reason').textContent = `${plain(job.reason || job.status)}. No selected result is available. Review the stop reason before explicitly reviewing a new plan.`;
       $('lm-evidence').hidden = true; $('lm-delta').hidden = true; return;
     }
@@ -2229,11 +2248,29 @@ function createLmWorkspace(env) {
     }
     $('lm-candidate-title').textContent = names[variant] || 'Candidate';
   }
+  function renderHistory() {
+    $('lm-history').replaceChildren();
+    $('lm-history-count').textContent = String(knownJobs.length);
+    if (!knownJobs.length) $('lm-history').append(node('p','No saved local Qwen jobs. Review a supported request to begin.'));
+    for (const j of knownJobs) {
+      const summary = j.reason === 'budget_limited' ? 'Budget stopped' + (j.result_available ? ' · retained evidence' : ' · no recorded result') : plain(j.status) + (j.result_available ? ' · evidence available' : ' · no recorded result');
+      const b = node('button',`${summary} · ${j.created_at} · ${j.id}`);
+      b.className = 'secondary'; b.disabled = busy || !!pending;
+      b.onclick = () => perform(async()=>{ await select(j); focusEvidence(); });
+      $('lm-history').append(b);
+    }
+  }
+  function focusEvidence() {
+    const target = $('lm-result').hidden ? $('lm-job-title') : $('lm-verdict');
+    target.scrollIntoView({block:'start',behavior:'auto'}); target.focus({preventScroll:true});
+  }
   async function history() {
     const v = await request('/jobs'); if (!Array.isArray(v.jobs) || v.jobs.length > 20) invalid();
-    v.jobs.forEach(validJob); $('lm-history').replaceChildren();
-    if (!v.jobs.length) $('lm-history').append(node('p','No saved local Qwen jobs. Review a supported request to begin.'));
-    for (const j of v.jobs) { const b = node('button',`${j.status} · ${j.id} · ${j.created_at}`); b.className = 'secondary'; b.disabled = !!pending; b.onclick = () => perform(()=>select(j)); $('lm-history').append(b); }
+    v.jobs.forEach(validJob); knownJobs = v.jobs;
+    // A late history snapshot cannot replace a more recently observed active job.
+    const reported = knownJobs.find(j=>j.id === job?.id);
+    if (job?.spec_sha256 && (!reported || Date.parse(job.updated_at) > Date.parse(reported.updated_at))) knownJobs = [job,...knownJobs.filter(j=>j.id !== job.id)].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+    renderHistory();
   }
   async function connect() {
     if (staticMode) return;
@@ -2265,8 +2302,8 @@ function createLmWorkspace(env) {
   if (staticMode) {
     $('lm-notice').textContent = 'Qwen experiments run only in the local lab. This static export contains no executable Qwen controls and never contacts the API, including with mock flags.';
     $('lm-setup').hidden = false; $('lm-connect').hidden = true; $('lm-history-refresh').hidden = true;
-    $('lm-controls').hidden = true;
-    return {view,connect:async()=>{}};
+    $('lm-controls').hidden = true; $('lm-history-count').textContent = '—';
+    return {view,connect:async()=>{},history:async()=>{}};
   }
   try {
     const saved = JSON.parse(storage.getItem(storeKey) || 'null');
@@ -2298,6 +2335,7 @@ function createLmWorkspace(env) {
   $('lm-connect').onclick = () => perform(connect);
   $('lm-refresh').onclick = () => { failures = 0; polls = 0; observe(); };
   $('lm-history-refresh').onclick = () => perform(history);
+  $('lm-view-evidence').onclick = () => perform(async()=>{ if (job?.result_available) { if (!result) await loadResult(epoch); focusEvidence(); } });
   $('lm-cancel').onclick = () => perform(async()=>{
     if (!job || terminal(job)) return;
     epoch++; stop(); const current = job.id, spec = job.spec_sha256;
@@ -2311,7 +2349,7 @@ function createLmWorkspace(env) {
   $('lm-delta').onclick = () => perform(()=>download('selected_delta'));
   doc.addEventListener('visibilitychange',()=>{ if (doc.hidden) stop(); else if(active) { failures = 0; polls = 0; schedule(); } });
   controls();
-  return {view,connect:()=>perform(connect)};
+  return {view,connect:()=>perform(connect),history:()=>perform(history)};
 }
 // End local Qwen controller.
 if (typeof window !== "undefined" && typeof document !== "undefined") window.lmWorkspace = createLmWorkspace({ $, document, staticMode:staticDemo,
@@ -2321,5 +2359,11 @@ if (typeof window !== "undefined" && typeof document !== "undefined") window.lmW
   download:(value,name)=>{ const url = URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
 });
 
+if (typeof window !== "undefined" && typeof document !== "undefined") $("lm-history-nav").onclick = () => {
+  showView("language-model");
+  $("lm-history-section").scrollIntoView({block:"start",behavior:"auto"});
+  $("lm-history-title").focus({preventScroll:true});
+  window.lmWorkspace?.history();
+};
 
 initialize();

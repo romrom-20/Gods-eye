@@ -3598,3 +3598,7 @@ body.lm-active .project-switch,body.lm-active .local-status > div > span { displ
 
 /* Task availability must remain readable alongside long custom requests. */
 .lm-card #lm-task { width:100%; max-width:100%; padding:12px; font:inherit; color:#193742; background:#fffef8; border:1px solid #82999c; border-radius:4px; }
+/* History and retained evidence remain reachable beneath the sticky workspace bar. */
+#lm-history-section,#lm-history-title,#lm-job-title,#lm-verdict { scroll-margin-top:96px; }
+.lm-workspace #lm-view-evidence { margin:0 0 22px; }
+.lm-workspace :is(#lm-history-title,#lm-verdict):focus { outline:2px solid #cf5838; outline-offset:5px; }

@@ -15,7 +15,7 @@ const wrap=j=>({schema_version:1,job:j});
 const response=(body,status=200)=>({ok:status<300,status,text:async()=>JSON.stringify(body)});
 function setup(options={}) {
  const nodes=new Map(), calls=[], timers=new Map(), events={}, downloads=[], storage=options.storage||new Map(); let timerId=0;
- const el=(tag='div')=>({tag,value:'',checked:false,disabled:false,hidden:false,textContent:'',children:[],className:'',append(...xs){this.children.push(...xs);},replaceChildren(...xs){this.children=xs;},focus(){this.focused=true;},set innerHTML(v){throw Error('Unsafe HTML');}});
+ const el=(tag='div')=>({tag,value:'',checked:false,disabled:false,hidden:false,textContent:'',children:[],className:'',append(...xs){this.children.push(...xs);},replaceChildren(...xs){this.children=xs;},focus(){this.focused=true;},scrollIntoView(){this.scrolled=true;},set innerHTML(v){throw Error('Unsafe HTML');}});
  const $=id=>{if(!nodes.has(id))nodes.set(id,el());return nodes.get(id);};
  $('lm-split').value='dev';
  const doc={hidden:false,createElement:el,addEventListener(name,fn){events[name]=fn;}};
@@ -87,7 +87,7 @@ test('poll errors back off 5/10/20 seconds, stop, and hidden tabs pause',async()
 test('late poll cannot overwrite a newly selected job',async()=>{
  const x=setup();await x.ready();await x.review();await x.start();x.app.view(true);let resolve;
  x.queue.push(()=>new Promise(r=>resolve=r));const old=x.tick();
- const next=job({id:'second-job'});x.queue.push(response({schema_version:1,jobs:[next]}));await x.click('lm-history-refresh');await x.$('lm-history').children[0].onclick();
+ const next=job({id:'second-job'});x.queue.push(response({schema_version:1,jobs:[next]}));await x.click('lm-history-refresh');await x.$('lm-history').children.find(row=>row.textContent.includes('second-job')).onclick();
  resolve(response(wrap(job({status:'failed'}))));await old;assert.match(x.$('lm-job-title').textContent,/second-job/);
 });
 test('70 development attempts and a cap never imply a selected edit; outputs stay inert',async()=>{
@@ -99,7 +99,7 @@ test('70 development attempts and a cap never imply a selected edit; outputs sta
 });
 for(const verdict of ['no_improvement','inconclusive'])test('complete '+verdict+' remains an honest verdict',async()=>{
  const x=setup();await x.ready();await x.review();const r=result(job({status:'completed',result_available:true}));r.report.status='complete';r.report.verdict=verdict;
- x.queue.push(response(wrap(r.job)),response(r));await x.start(null);assert.equal(x.$('lm-verdict').textContent,verdict==='no_improvement'?'No improvement':'Inconclusive');assert.equal(x.$('lm-delta').hidden,true);
+ x.queue.push(response(wrap(r.job)),response(r));await x.start(null);assert.equal(x.$('lm-verdict').textContent,verdict==='no_improvement'?'No improvement':'Inconclusive');assert.equal(x.$('lm-delta').hidden,true);assert.match(x.$('lm-notice').textContent,/Evaluation completed/);
 });
 test('verified delta export requires explicit click and server availability; rollback instructions visible',async()=>{
  const x=setup();await x.ready();await x.review();const r=result(job({status:'completed',result_available:true,selected_delta_available:true}));r.report.verdict='inconclusive';
@@ -168,5 +168,28 @@ test('unsupported free text keeps the original request and exposes no execution 
  assert.equal(x.calls.at(-1).body.request,request);assert.equal(x.$('lm-request').value,request);
  assert.equal(x.$('lm-review').hidden,true);assert.equal(x.$('lm-start').disabled,true);
  assert.match(x.$('lm-notice').textContent,/Driving-policy/);
+ assert.equal(x.calls.filter(c=>c.url.endsWith('/jobs')&&c.body).length,0);
+});
+
+test('observed admission and terminal state update Qwen history without an extra transport request',async()=>{
+ const x=setup();await x.ready();await x.review();await x.start();
+ assert.equal(x.$('lm-history-count').textContent,'1');assert.match(x.$('lm-history').children[0].textContent,/running/);
+ x.app.view(true);const r=result();x.queue.push(response(wrap(r.job)),response(r));await x.tick();
+ assert.match(x.$('lm-history').children[0].textContent,/Budget stopped.*retained evidence/);
+ assert.match(x.$('lm-notice').textContent,/Budget stopped.*Partial evidence/);
+ assert.equal(x.$('lm-view-evidence').hidden,false);await x.click('lm-view-evidence');
+ assert.equal(x.$('lm-verdict').scrolled,true);assert.equal(x.$('lm-verdict').focused,true);
+ assert.equal(x.calls.filter(c=>c.url==='/api/v1/lm/jobs'&&!c.body).length,1);
+});
+for(const status of ['failed','interrupted'])test(status+' without evidence is distinct from a budget stop with retained results',async()=>{
+ const x=setup();await x.ready();await x.review();await x.start(response(wrap(job({status,reason:'worker_crash',result_available:false}))));
+ assert.match(x.$('lm-verdict').textContent,/no recorded result/);assert.match(x.$('lm-notice').textContent,/No response evidence was retained/);
+ assert.equal(x.$('lm-view-evidence').hidden,true);assert.equal(x.$('lm-result-content').hidden,true);
+ assert.match(x.$('lm-history').children[0].textContent,/no recorded result/);
+});
+test('history selection scrolls to retained evidence and does not start a model',async()=>{
+ const x=setup(),r=result();x.queue.push(response(cap),response({schema_version:1,jobs:[r.job]}));await x.app.connect();
+ assert.equal(x.$('lm-history-count').textContent,'1');x.queue.push(response(r));await x.$('lm-history').children[0].onclick();
+ assert.equal(x.$('lm-verdict').focused,true);assert.equal(x.$('lm-result').hidden,false);
  assert.equal(x.calls.filter(c=>c.url.endsWith('/jobs')&&c.body).length,0);
 });

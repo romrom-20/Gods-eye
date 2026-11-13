@@ -30,6 +30,7 @@
       </div>
       <nav aria-label="Workspace navigation">
         <button class="nav-link" data-nav="language-model">Qwen · language model</button>
+        <button class="nav-link" id="lm-history-nav">Qwen history <span class="count" id="lm-history-count">…</span></button>
         <button class="nav-link active" data-nav="goal">Describe a goal</button>
         <button class="nav-link" data-nav="overview">
           <svg viewBox="0 0 20 20">
@@ -42,7 +43,7 @@
         <button class="nav-link" data-nav="workbench">
           <svg viewBox="0 0 20 20">
             <path d="m10 2 8 4-8 4-8-4 8-4ZM2 10l8 4 8-4M2 14l8 4 8-4" /></svg
-          >Edit weights<span class="nav-shortcut">02</span>
+          >Edit Breakout weights<span class="nav-shortcut">02</span>
         </button>
         <button class="nav-link" data-nav="evaluate">
           <svg viewBox="0 0 20 20">
@@ -52,7 +53,7 @@
         <button class="nav-link" data-nav="history">
           <svg viewBox="0 0 20 20">
             <path d="M3 6a8 8 0 1 1-1 7M2 2v5h5m3-2v5l3 2" /></svg
-          >History<span class="count" id="run-count">0</span>
+          >Breakout history<span class="count" id="run-count">0</span>
         </button>
       </nav>
       <details class="sidebar-section"><summary>Saved versions</summary>
@@ -122,6 +123,7 @@
           <header class="lm-heading"><div><span class="overline">LOCAL CPU / QWEN2.5</span><h1 id="lm-title">Local Qwen experiments.</h1><p>Available today: a fixed JSON benchmark. Custom math tasks and driving policies are not executable here yet.</p></div><span class="lm-chip">No provider fee</span></header>
           <ol class="lm-steps" aria-label="Qwen experiment steps"><li>1 / Request</li><li>2 / Review</li><li>3 / Observe</li><li>4 / Compare evidence</li></ol>
           <p id="lm-notice" class="lm-notice" role="status" aria-live="polite">Local-only experiment. Checking service setup…</p>
+          <button id="lm-view-evidence" class="primary" hidden>View retained evidence ↓</button>
           <section id="lm-setup" class="lm-card" hidden><h2>Connect the local Qwen runtime</h2><p>This workspace needs a local server with the pinned Qwen weights and isolated Python runtime configured by its operator. Set GODSEYE_LM_CACHE, GODSEYE_LM_PYTHON and GODSEYE_LM_DIR before starting it. Opening this view never loads the model.</p><p><a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/local-lm-service.md">Local service setup and limits ↗</a> · <a href="https://github.com/romrom-20/Gods-eye/blob/main/docs/local-lm-task-validation.md">Measured runtime evidence ↗</a></p><button id="lm-connect" class="secondary">Check connection</button></section>
           <div id="lm-controls" hidden>
             <div class="lm-columns"><section class="lm-card"><span class="overline">01 / REQUEST</span><h2>Choose an experiment</h2><label for="lm-task">Task availability</label><select id="lm-task" aria-describedby="lm-task-help"><option value="json">JSON output · available locally</option><option value="math">Math problem solving · not implemented</option><option value="driving">Driving policy · not implemented</option></select><p id="lm-task-help" role="status">The JSON experiment uses bundled examples and two fixed weight edits. It does not discover edits from an arbitrary request.</p><label for="lm-request">Your request</label><textarea id="lm-request" rows="3" maxlength="2000" placeholder="Improve JSON schema adherence">Improve JSON schema adherence</textarea><p>Your request is checked before a plan is offered. Unsupported requests never start a different experiment.</p><div class="lm-actions"><button id="lm-sample" class="secondary">Use JSON benchmark goal</button><button id="lm-plan" class="primary">Check request &amp; review →</button></div></section>
@@ -130,8 +132,8 @@
             <div id="lm-recovery" class="lm-card" hidden><h2>Resolve the pending start</h2><p>The original plan, specification hash and idempotency key are preserved in this tab. Do not start a replacement while admission is unknown.</p><div class="lm-actions"><button id="lm-resolve" class="secondary">Check pending start</button><button id="lm-retry" class="secondary" hidden>Retry the same start</button><button id="lm-discard" class="secondary" hidden>Release rejected plan</button></div></div>
           </div>
           <section id="lm-job" class="lm-card" hidden><span class="overline">03 / OBSERVED JOB</span><h2 id="lm-job-title" tabindex="-1"></h2><p id="lm-progress"></p><div id="lm-map" class="lm-map" aria-label="Observed experiment relationships"></div><div class="lm-actions"><button id="lm-refresh" class="secondary">Refresh status</button><button id="lm-cancel" class="secondary">Cancel experiment</button></div></section>
-          <section id="lm-result" class="lm-card" hidden><span class="overline">04 / EVIDENCE</span><h2 id="lm-verdict"></h2><p id="lm-result-reason"></p><div id="lm-result-content"><div id="lm-counts" class="lm-counts"></div><div class="lm-actions"><button id="lm-evidence" class="secondary" hidden>Download evidence JSON</button><button id="lm-delta" class="primary" hidden>Download verified selected delta</button></div><p id="lm-rollback" hidden>Use godseye.lm.local_delta.load_delta and the applied context manager with the exact pinned model revision and original tensor hash in the attachment. Verify the selected tensor hash after loading. To roll back, reload the untouched pinned original and verify its original hash; never overwrite the original weights.</p><details><summary>Evaluation report and evidence identity</summary><pre id="lm-report"></pre></details><h3>Inspect actual responses</h3><p>Choose a case and variant to compare with its unchanged original. Text below is recorded output; a capped response is partial.</p><div class="lm-selectors"><label>Split<select id="lm-split"><option value="dev">Development</option><option value="heldout">Heldout</option></select></label><label>Variant<select id="lm-variant"></select></label><label>Case<select id="lm-case"></select></label></div><div class="lm-output-pair"><article><h3>Unchanged original</h3><p id="lm-original-score"></p><pre id="lm-original"></pre></article><article><h3 id="lm-candidate-title">Candidate</h3><p id="lm-candidate-score"></p><pre id="lm-candidate"></pre></article></div></div></section>
-          <section class="lm-card lm-history"><div><h2>Local experiment history</h2><p>Status lookups are read-only. Selecting a run never restarts it.</p></div><button id="lm-history-refresh" class="secondary">Refresh history</button><div id="lm-history"></div></section>
+          <section id="lm-result" class="lm-card" hidden><span class="overline">04 / EVIDENCE</span><h2 id="lm-verdict" tabindex="-1"></h2><p id="lm-result-reason"></p><div id="lm-result-content"><div id="lm-counts" class="lm-counts"></div><div class="lm-actions"><button id="lm-evidence" class="secondary" hidden>Download evidence JSON</button><button id="lm-delta" class="primary" hidden>Download verified selected delta</button></div><p id="lm-rollback" hidden>Use godseye.lm.local_delta.load_delta and the applied context manager with the exact pinned model revision and original tensor hash in the attachment. Verify the selected tensor hash after loading. To roll back, reload the untouched pinned original and verify its original hash; never overwrite the original weights.</p><details><summary>Evaluation report and evidence identity</summary><pre id="lm-report"></pre></details><h3>Inspect actual responses</h3><p>Choose a case and variant to compare with its unchanged original. Text below is recorded output; a capped response is partial.</p><div class="lm-selectors"><label>Split<select id="lm-split"><option value="dev">Development</option><option value="heldout">Heldout</option></select></label><label>Variant<select id="lm-variant"></select></label><label>Case<select id="lm-case"></select></label></div><div class="lm-output-pair"><article><h3>Unchanged original</h3><p id="lm-original-score"></p><pre id="lm-original"></pre></article><article><h3 id="lm-candidate-title">Candidate</h3><p id="lm-candidate-score"></p><pre id="lm-candidate"></pre></article></div></div></section>
+          <section id="lm-history-section" class="lm-card lm-history" aria-labelledby="lm-history-title"><div><h2 id="lm-history-title" tabindex="-1">Qwen experiment history</h2><p>Status lookups are read-only. Selecting a run never restarts it.</p></div><button id="lm-history-refresh" class="secondary">Refresh history</button><div id="lm-history"></div></section>
         </section>
         <div class="experiment-layout">
         <section class="experiment-board" aria-labelledby="board-title">
@@ -495,10 +497,10 @@
 
         <section data-view="workbench" class="view" hidden>
           <div class="workbench-intro">
-            <span class="tag orange-tag">DIRECT WEIGHT EDITING</span>
+            <span class="tag orange-tag">BREAKOUT / MANUAL WEIGHT EDITING</span>
             <p>
-              Branch from a checkpoint, make an explicit change, and keep its
-              history.
+              This editor changes only the tiny Breakout policy. Qwen edits are the two
+              fixed candidates in its reviewed JSON experiment; there is no manual Qwen editor here.
             </p>
           </div>
           <section class="checkpoint-import panel" aria-labelledby="import-title">

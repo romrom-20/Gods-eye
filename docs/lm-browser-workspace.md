@@ -229,3 +229,82 @@ after confirming its one terminal job and no child process; evidence/cache remai
 intact. Ego Lite reported an update; no upgrade was performed. There is no useful
 selected edit or new heldout quality claim, and no new execution is authorized by
 these reproduction results.
+
+## Retained history and hidden-board recovery — 2026-11-13
+
+Follow-up scope merged local main `b5abc92` and used no inference. The reported
+empty board was reproduced on a dedicated temporary service: opening Qwen first
+hid the Breakout viewport at startup, yet `initialize()` still fitted it. Width
+zero produced zoom `-12 / 540 = -0.0222222`; the two actual checkpoint nodes were
+present but shrank into an effectively invisible graph. Switching views did not
+recompute that fit. This was a display/layout bug, not missing checkpoints.
+
+Fit now leaves zoom untouched when the viewport is hidden or too narrow, and
+returning from Qwen rebuilds and fits the visible Breakout board. Fit stays positive
+and returns scroll offsets to the origin. List/Fit cannot corrupt zoom while the
+canvas is hidden. Bounded saved positions remain preserved; Reset explicitly
+restores readable automatic positions. The navigation, heading and editor intro
+now say **Edit Breakout weights** and explain that this is not a manual Qwen
+editor; Qwen still executes only its two reviewed fixed candidate edits.
+
+The old sidebar “History 0” counted Breakout comparisons, not Qwen runs. Qwen's
+separate list was below the fold and only fetched on initial connection/manual
+refresh, so it could also remain empty after that page admitted a new job.
+There is now a distinct **Qwen history** navigation button with the actual known
+job count, and **Breakout history** keeps its separate comparison count. Observed
+admission/progress/terminal jobs refresh the Qwen list immediately without extra
+execution requests; explicit refresh still fetches the real history endpoint.
+Selecting a row focuses its retained evidence. Budget stops have a prominent
+reason and **View retained evidence** shortcut near the top, with no implication
+that a selected edit exists. Failed/interrupted jobs without records explicitly
+say that no result was retained; completed evaluations keep their separate verdict.
+
+Verification used an isolated SQLite backup opened from the user-provided source
+in read-only mode, plus copies of its two journals for actual LMService progress
+reads. The dedicated fixture configured no model/cache/interpreter and its adapter
+cannot launch inference. All GET responses came from the real app/LMService;
+no Qwen result or graph object was fabricated. The original user service, tab,
+database and journals were not mutated or restarted.
+
+The copied history contained two retained jobs. The latest
+`4539b260-9794-4184-b959-f10b1c5c8864` remained `failed/budget_limited`, 70 development
+attempts including the 96-token `dev-decoding-3`, zero heldout, and no selected delta.
+The displayed capped response exactly matched its retained service evidence.
+Desktop Qwen→Breakout recovered zoom 1 with two 218px-wide cards; mobile 390px
+recovered zoom 0.651852 with two 142px-wide cards and no page overflow. Saved distant
+layout/Fit/Reset, List/Fit, Qwen history navigation/focus, retained evidence focus,
+and the real static export with mock flags all passed. The fixture audit contained
+only GET requests; static navigation made zero API calls. No generation or model
+execution occurred.
+
+Commands executed:
+
+```sh
+PYTHONPATH=. /tmp/godseye-goal-contract-venv/bin/python tests/browser/lm_history_transition_backend.py \
+  --source /Users/samanseshadri/godseye-qwen-browser-20261113/lm --port 18998
+ego-browser nodejs < tests/browser/lm_history_transition_journey.cjs
+node --test tests/ui/*.test.cjs
+PYTHONPATH=. /tmp/godseye-goal-contract-venv/bin/python -m unittest discover -s tests/browser -p test_ui_contract.py -v
+/tmp/godseye-goal-contract-venv/bin/ruff check tests/browser/lm_history_transition_backend.py
+```
+
+All 114 UI checks and the bundled browser contract check passed. Six new checks
+cover hidden Fit recovery, distant saved-layout Reset, live history updates,
+failed/interrupted no-result messaging and history evidence navigation. The browser
+journey ran on owned port 18998 only. Evidence and visually inspected screenshots
+are retained locally:
+
+- `/tmp/qwen-history-transition-evidence.json`
+- `/tmp/qwen-transition-before.png` (negative-scale reproduction)
+- `/tmp/qwen-transition-desktop-fixed.png`
+- `/tmp/qwen-transition-mobile-fixed.png`
+- `/tmp/qwen-history-desktop-result.png`
+- `/tmp/qwen-history-mobile-result.png`
+- `/tmp/qwen-history-budget-summary.png`
+- `/tmp/qwen-history-nav-two-runs.png`
+
+The owned fixture and browser task were stopped after verification. No backend,
+scorer, historical quality artifact, task scope, credential, dependency, provider,
+cloud or deployment change was made. Ego Lite reported an update; none was installed.
+
+Retained-history browser evidence SHA256: `186079e43ef541c283a90b02976abd0a35412d3b685a7d7360e7ed281d1b3998`.

@@ -90,3 +90,20 @@ test('malformed and unbounded saved layout cannot break automatic layout',()=>{
   assert.equal(x.$('board-graph').children.find(e=>e.dataset.objectId==='paper').style.left,'28px');
  }
 });
+
+test('Fit ignores hidden or list width, then recovers positive framing when visible',()=>{
+ const x=setup(roots),viewport=x.$('board-viewport'),graph=x.$('board-graph');
+ viewport.clientWidth=0;x.fitExperimentBoard();assert.equal(graph.style.transform,'scale(1)');
+ viewport.clientWidth=4;x.fitExperimentBoard();assert.equal(graph.style.transform,'scale(1)');
+ viewport.clientWidth=390;viewport.scrollLeft=500;viewport.scrollTop=400;x.fitExperimentBoard();
+ const scale=Number(graph.style.transform.match(/scale\(([^)]+)/)[1]);assert.ok(scale>0&&scale<=1);
+ assert.equal(viewport.scrollLeft,0);assert.equal(viewport.scrollTop,0);
+});
+test('stored distant layout remains fit-able and Reset restores readable automatic positions',()=>{
+ const saved=JSON.stringify({version:1,positions:{paper:{x:5000,y:5000},zero:{x:5500,y:5200}}});
+ const x=setup(roots,[],[],saved);x.fitExperimentBoard();
+ assert.ok(Number(x.$('board-graph').style.transform.match(/scale\(([^)]+)/)[1])>0);
+ x.$('board-reset').onclick();
+ assert.equal(x.$('board-graph').children.find(n=>n.dataset.objectId==='paper').style.left,'28px');
+ assert.equal(x.$('board-graph').style.transform,'scale(1)');assert.equal(x.storage.size,0);
+});
